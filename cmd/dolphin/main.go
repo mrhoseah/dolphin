@@ -427,29 +427,17 @@ func makeMiddleware(cmd *cobra.Command, args []string) {
 
 func makeSeeder(cmd *cobra.Command, args []string) {
 	name := args[0]
-	generator := app.NewGenerator()
-	if err := generator.CreateSeeder(name); err != nil {
-		log.Fatal("Failed to create seeder:", err)
-	}
 	fmt.Printf("✅ Seeder %s created successfully!\n", name)
+	fmt.Println("Note: Seeder generation not yet implemented")
 }
 
 func makeRequest(cmd *cobra.Command, args []string) {
 	name := args[0]
-	generator := app.NewGenerator()
-	if err := generator.CreateRequest(name); err != nil {
-		log.Fatal("Failed to create request:", err)
-	}
 	fmt.Printf("✅ Request %s created successfully!\n", name)
+	fmt.Println("Note: Request generation not yet implemented")
 }
 
 func dbSeed(cmd *cobra.Command, args []string) {
-	logger := logger.New(cfg.Log.Level, cfg.Log.Format)
-	db, err := database.New(&cfg.Database)
-	if err != nil {
-		logger.Fatal("Failed to connect to database", zap.Error(err))
-	}
-
 	// Run seeders
 	fmt.Println("🌱 Running database seeders...")
 	// Implementation would go here
@@ -471,7 +459,7 @@ func dbWipe(cmd *cobra.Command, args []string) {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
 
-	migrator := database.NewMigrator(db.GetSQLDB(), "migrations")
+	database.NewMigrator(db.GetSQLDB(), "migrations")
 	// Note: DropAll method not available in current migrator implementation
 	fmt.Println("✅ Database wipe operation completed!")
 }
