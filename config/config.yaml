@@ -1,0 +1,59 @@
+# Application Configuration
+app:
+  name: "Dolphin Framework"
+  environment: "development"
+  debug: true
+  url: "http://localhost:8080"
+  key: "your-application-key-here"
+  timezone: "UTC"
+
+# Server Configuration
+server:
+  host: "localhost"
+  port: 8080
+  read_timeout: 30
+  write_timeout: 30
+  idle_timeout: 120
+
+# Database Configuration
+database:
+  driver: "postgres"  # postgres, mysql, sqlite
+  host: "localhost"
+  port: 5432
+  database: "dolphin"
+  username: "postgres"
+  password: "password"
+  ssl_mode: "disable"
+  charset: "utf8mb4"
+  max_open: 25
+  max_idle: 5
+  max_life: 300
+
+# Logging Configuration
+log:
+  level: "info"  # debug, info, warn, error
+  format: "json"  # json, console
+  output: "stdout"
+
+# Cache Configuration
+cache:
+  driver: "redis"  # redis, memory
+  host: "localhost"
+  port: 6379
+  db: 0
+
+# Session Configuration
+session:
+  driver: "cookie"  # cookie, redis, database
+  lifetime: "24h"
+  secure: false
+  http_only: true
+  same_site: "Lax"
+  encrypt: false
+  key: "your-session-key-here"
+
+# JWT Configuration
+jwt:
+  secret: "your-jwt-secret-key-here"
+  expiration: "24h"
+  issuer: "dolphin-framework"
