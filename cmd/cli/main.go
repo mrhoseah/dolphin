@@ -77,10 +77,10 @@ func createNewProject(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Printf("🚀 Creating new Dolphin application: %s\n", projectName)
-	
+
 	// Create project structure
 	createProjectStructure(projectName)
-	
+
 	fmt.Printf("✅ Dolphin application '%s' created successfully!\n", projectName)
 	fmt.Printf("\n📋 Next steps:\n")
 	fmt.Printf("  cd %s\n", projectName)
@@ -131,7 +131,7 @@ go 1.21
 require (
 	github.com/mrhoseah/dolphin v1.0.0
 )`, projectName)
-	
+
 	if err := os.WriteFile(filepath.Join(projectName, "go.mod"), []byte(goModContent), 0644); err != nil {
 		fmt.Printf("❌ Failed to create go.mod: %v\n", err)
 		return
@@ -424,7 +424,7 @@ func generateSwagger(cmd *cobra.Command, args []string) {
 	fmt.Println("Then visit: http://localhost:8080/swagger/index.html")
 }
 `
-	
+
 	if err := os.WriteFile(filepath.Join(projectName, "main.go"), []byte(mainGoContent), 0644); err != nil {
 		fmt.Printf("❌ Failed to create main.go: %v\n", err)
 		return
@@ -473,7 +473,7 @@ log:
   level: "info"
   format: "json"
 `
-	
+
 	if err := os.WriteFile(filepath.Join(projectName, "config", "config.yaml"), []byte(configContent), 0644); err != nil {
 		fmt.Printf("❌ Failed to create config file: %v\n", err)
 		return
@@ -498,7 +498,7 @@ JWT_EXPIRES_IN=24
 CACHE_DRIVER=memory
 SESSION_DRIVER=cookie
 `
-	
+
 	if err := os.WriteFile(filepath.Join(projectName, ".env"), []byte(envContent), 0644); err != nil {
 		fmt.Printf("❌ Failed to create .env file: %v\n", err)
 		return
@@ -512,31 +512,31 @@ A Dolphin Framework application.
 ## Getting Started
 
 1. Install dependencies:
-   \`\`\`bash
+   `+"```"+`bash
    go mod tidy
-   \`\`\`
+   `+"```"+`
 
 2. Start the development server:
-   \`\`\`bash
+   `+"```"+`bash
    dolphin serve
-   \`\`\`
+   `+"```"+`
 
 3. Visit http://localhost:8080
 
 ## Available Commands
 
-- \`dolphin serve\` - Start the development server
-- \`dolphin migrate\` - Run database migrations
-- \`dolphin make:controller [name]\` - Create a new controller
-- \`dolphin make:model [name]\` - Create a new model
-- \`dolphin make:migration [name]\` - Create a new migration
-- \`dolphin swagger\` - Generate API documentation
+- `+"`"+`dolphin serve`+"`"+` - Start the development server
+- `+"`"+`dolphin migrate`+"`"+` - Run database migrations
+- `+"`"+`dolphin make:controller [name]`+"`"+` - Create a new controller
+- `+"`"+`dolphin make:model [name]`+"`"+` - Create a new model
+- `+"`"+`dolphin make:migration [name]`+"`"+` - Create a new migration
+- `+"`"+`dolphin swagger`+"`"+` - Generate API documentation
 
 ## Documentation
 
 Visit https://github.com/mrhoseah/dolphin for complete documentation.
 `, projectName)
-	
+
 	if err := os.WriteFile(filepath.Join(projectName, "README.md"), []byte(readmeContent), 0644); err != nil {
 		fmt.Printf("❌ Failed to create README: %v\n", err)
 		return
