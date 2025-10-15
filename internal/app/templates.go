@@ -536,3 +536,58 @@ func (c *%sController) Destroy(w http.ResponseWriter, r *http.Request) {
 		name, name, pluralName, lowerName, lowerName, lowerName, name, pluralName, name,
 		lowerName, name)
 }
+
+// generateProviderContent generates service provider template
+func (g *Generator) generateProviderContent(name, providerType string, priority int) string {
+	lowerName := strings.ToLower(name)
+	return `package providers
+
+import (
+	"github.com/mrhoseah/dolphin/internal/providers"
+)
+
+// ` + name + `Provider implements ` + providerType + ` functionality
+type ` + name + `Provider struct {
+	config ` + name + `Config
+}
+
+// ` + name + `Config holds configuration for ` + providerType + ` provider
+type ` + name + `Config struct {
+	// Add your configuration fields here
+	Enabled bool
+}
+
+// New` + name + `Provider creates a new ` + name + ` provider
+func New` + name + `Provider() providers.ServiceProvider {
+	return &` + name + `Provider{
+		config: ` + name + `Config{
+			Enabled: true,
+		},
+	}
+}
+
+func (p *` + name + `Provider) Name() string {
+	return "` + lowerName + `"
+}
+
+func (p *` + name + `Provider) Priority() int {
+	return ` + fmt.Sprintf("%d", priority) + `
+}
+
+func (p *` + name + `Provider) Register() error {
+	// Register services in the container
+	// Example: container.Bind("` + lowerName + `", p)
+	return nil
+}
+
+func (p *` + name + `Provider) Boot() error {
+	// Initialize services after registration
+	return nil
+}
+
+// Add your provider-specific methods here
+func (p *` + name + `Provider) ExampleMethod() error {
+	// Implement your provider logic
+	return nil
+}`
+}

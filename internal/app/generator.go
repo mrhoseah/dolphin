@@ -134,6 +134,20 @@ func (g *Generator) CreateAPIController(name string) error {
 	return os.WriteFile(filepath, []byte(content), 0644)
 }
 
+// CreateProvider generates a service provider
+func (g *Generator) CreateProvider(name, providerType string, priority int) error {
+	providersDir := "app/providers"
+	if err := os.MkdirAll(providersDir, 0755); err != nil {
+		return err
+	}
+
+	filename := fmt.Sprintf("%s.go", strings.ToLower(name))
+	filepath := filepath.Join(providersDir, filename)
+	content := g.generateProviderContent(name, providerType, priority)
+
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
 // createHTMXView creates a specific HTMX view
 func (g *Generator) createHTMXView(name, viewType, viewsDir string) error {
 	filename := fmt.Sprintf("%s.html", viewType)

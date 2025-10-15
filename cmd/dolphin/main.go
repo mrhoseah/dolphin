@@ -155,6 +155,16 @@ Examples:
 		Run:   makeRepository,
 	}
 
+	var makeProviderCmd = &cobra.Command{
+		Use:   "make:provider [name]",
+		Short: "Create a service provider",
+		Long:  "Generate a service provider for modular architecture",
+		Args:  cobra.ExactArgs(1),
+		Run:   makeProvider,
+	}
+	makeProviderCmd.Flags().StringP("type", "t", "custom", "Provider type (email, storage, cache, queue, etc.)")
+	makeProviderCmd.Flags().IntP("priority", "p", 100, "Provider priority (lower = higher priority)")
+
 	var makeSeederCmd = &cobra.Command{
 		Use:   "make:seeder [name]",
 		Short: "Create a new database seeder",
@@ -243,6 +253,7 @@ Examples:
 	rootCmd.AddCommand(makeViewCmd)
 	rootCmd.AddCommand(makeResourceCmd)
 	rootCmd.AddCommand(makeRepositoryCmd)
+	rootCmd.AddCommand(makeProviderCmd)
 	rootCmd.AddCommand(makeSeederCmd)
 	rootCmd.AddCommand(makeRequestCmd)
 
@@ -509,6 +520,22 @@ func makeRepository(cmd *cobra.Command, args []string) {
 	}
 	fmt.Printf("✅ Repository %s created successfully!\n", name)
 	fmt.Printf("   📚 Repository: app/repositories/%s.go\n", name)
+}
+
+func makeProvider(cmd *cobra.Command, args []string) {
+	name := args[0]
+	providerType, _ := cmd.Flags().GetString("type")
+	priority, _ := cmd.Flags().GetInt("priority")
+
+	generator := app.NewGenerator()
+	fmt.Printf("🔧 Creating %s provider %s...\n", providerType, name)
+	if err := generator.CreateProvider(name, providerType, priority); err != nil {
+		log.Fatal("Failed to create provider:", err)
+	}
+	fmt.Printf("✅ Provider %s created successfully!\n", name)
+	fmt.Printf("   🔧 Provider: app/providers/%s.go\n", name)
+	fmt.Printf("   📋 Type: %s\n", providerType)
+	fmt.Printf("   ⚡ Priority: %d\n", priority)
 }
 
 func makeSeeder(cmd *cobra.Command, args []string) {
