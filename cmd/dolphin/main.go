@@ -165,6 +165,65 @@ Examples:
 	makeProviderCmd.Flags().StringP("type", "t", "custom", "Provider type (email, storage, cache, queue, etc.)")
 	makeProviderCmd.Flags().IntP("priority", "p", 100, "Provider priority (lower = higher priority)")
 
+	var storageCmd = &cobra.Command{
+		Use:   "storage",
+		Short: "Storage management commands",
+		Long:  "Manage file storage operations",
+	}
+
+	var storageListCmd = &cobra.Command{
+		Use:   "list [path]",
+		Short: "List files in storage",
+		Long:  "List files in the specified storage path",
+		Args:  cobra.MaximumNArgs(1),
+		Run:   storageList,
+	}
+
+	var storagePutCmd = &cobra.Command{
+		Use:   "put <local-path> <remote-path>",
+		Short: "Upload file to storage",
+		Long:  "Upload a local file to storage",
+		Args:  cobra.ExactArgs(2),
+		Run:   storagePut,
+	}
+
+	var storageGetCmd = &cobra.Command{
+		Use:   "get <remote-path> <local-path>",
+		Short: "Download file from storage",
+		Long:  "Download a file from storage to local filesystem",
+		Args:  cobra.ExactArgs(2),
+		Run:   storageGet,
+	}
+
+	var cacheCmd = &cobra.Command{
+		Use:   "cache",
+		Short: "Cache management commands",
+		Long:  "Manage cache operations",
+	}
+
+	var cacheClearCmd = &cobra.Command{
+		Use:   "clear",
+		Short: "Clear all cache",
+		Long:  "Clear all cached data",
+		Run:   cacheClear,
+	}
+
+	var cacheGetCmd = &cobra.Command{
+		Use:   "get <key>",
+		Short: "Get value from cache",
+		Long:  "Retrieve a value from cache by key",
+		Args:  cobra.ExactArgs(1),
+		Run:   cacheGet,
+	}
+
+	var cachePutCmd = &cobra.Command{
+		Use:   "put <key> <value>",
+		Short: "Store value in cache",
+		Long:  "Store a value in cache with the specified key",
+		Args:  cobra.ExactArgs(2),
+		Run:   cachePut,
+	}
+
 	var makeSeederCmd = &cobra.Command{
 		Use:   "make:seeder [name]",
 		Short: "Create a new database seeder",
@@ -202,21 +261,6 @@ Examples:
 		Short: "Generate Swagger documentation",
 		Long:  "Generate and serve Swagger/OpenAPI documentation for your API",
 		Run:   generateSwagger,
-	}
-
-	// Cache commands
-	var cacheClearCmd = &cobra.Command{
-		Use:   "cache:clear",
-		Short: "Clear application cache",
-		Long:  "Clear all cached data from Redis and memory cache",
-		Run:   cacheClear,
-	}
-
-	var cacheWarmCmd = &cobra.Command{
-		Use:   "cache:warm",
-		Short: "Warm up application cache",
-		Long:  "Pre-populate cache with frequently accessed data",
-		Run:   cacheWarm,
 	}
 
 	// Route commands
@@ -257,16 +301,24 @@ Examples:
 	rootCmd.AddCommand(makeSeederCmd)
 	rootCmd.AddCommand(makeRequestCmd)
 
+	// Storage commands
+	storageCmd.AddCommand(storageListCmd)
+	storageCmd.AddCommand(storagePutCmd)
+	storageCmd.AddCommand(storageGetCmd)
+	rootCmd.AddCommand(storageCmd)
+
+	// Cache commands
+	cacheCmd.AddCommand(cacheClearCmd)
+	cacheCmd.AddCommand(cacheGetCmd)
+	cacheCmd.AddCommand(cachePutCmd)
+	rootCmd.AddCommand(cacheCmd)
+
 	// Database commands
 	rootCmd.AddCommand(dbSeedCmd)
 	rootCmd.AddCommand(dbWipeCmd)
 
 	// Documentation
 	rootCmd.AddCommand(swaggerCmd)
-
-	// Cache commands
-	rootCmd.AddCommand(cacheClearCmd)
-	rootCmd.AddCommand(cacheWarmCmd)
 
 	// Route commands
 	rootCmd.AddCommand(routeListCmd)
@@ -538,6 +590,50 @@ func makeProvider(cmd *cobra.Command, args []string) {
 	fmt.Printf("   ⚡ Priority: %d\n", priority)
 }
 
+func storageList(cmd *cobra.Command, args []string) {
+	path := ""
+	if len(args) > 0 {
+		path = args[0]
+	}
+
+	fmt.Printf("📁 Listing files in storage: %s\n", path)
+	fmt.Println("Note: Storage commands require provider integration")
+}
+
+func storagePut(cmd *cobra.Command, args []string) {
+	localPath := args[0]
+	remotePath := args[1]
+
+	fmt.Printf("📤 Uploading %s to %s\n", localPath, remotePath)
+	fmt.Println("Note: Storage commands require provider integration")
+}
+
+func storageGet(cmd *cobra.Command, args []string) {
+	remotePath := args[0]
+	localPath := args[1]
+
+	fmt.Printf("📥 Downloading %s to %s\n", remotePath, localPath)
+	fmt.Println("Note: Storage commands require provider integration")
+}
+
+func cacheClear(cmd *cobra.Command, args []string) {
+	fmt.Println("🗑️  Clearing all cache...")
+	fmt.Println("Note: Cache commands require provider integration")
+}
+
+func cacheGet(cmd *cobra.Command, args []string) {
+	key := args[0]
+	fmt.Printf("🔍 Getting cache value for key: %s\n", key)
+	fmt.Println("Note: Cache commands require provider integration")
+}
+
+func cachePut(cmd *cobra.Command, args []string) {
+	key := args[0]
+	value := args[1]
+	fmt.Printf("💾 Storing cache value: %s = %s\n", key, value)
+	fmt.Println("Note: Cache commands require provider integration")
+}
+
 func makeSeeder(cmd *cobra.Command, args []string) {
 	name := args[0]
 	fmt.Printf("✅ Seeder %s created successfully!\n", name)
@@ -581,12 +677,6 @@ func generateSwagger(cmd *cobra.Command, args []string) {
 	fmt.Println("📚 Generating Swagger documentation...")
 	fmt.Println("Run: swag init -g main.go")
 	fmt.Println("Then visit: http://localhost:8080/swagger/index.html")
-}
-
-func cacheClear(cmd *cobra.Command, args []string) {
-	fmt.Println("🧹 Clearing application cache...")
-	// Implementation would go here
-	fmt.Println("✅ Cache cleared!")
 }
 
 func cacheWarm(cmd *cobra.Command, args []string) {

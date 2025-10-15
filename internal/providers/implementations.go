@@ -2,10 +2,15 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"html/template"
+	"io"
 	"net/smtp"
 	"time"
+
+	"github.com/mrhoseah/dolphin/internal/cache"
+	"github.com/mrhoseah/dolphin/internal/storage"
 )
 
 // EmailProvider implementation
@@ -236,24 +241,38 @@ func (p *configProvider) Reload() error {
 
 // StorageProvider implementation
 type storageProvider struct {
-	config StorageConfig
-}
-
-// StorageConfig holds storage configuration
-type StorageConfig struct {
-	Driver   string // local, s3, gcs, azure
-	RootPath string
-	BaseURL  string
+	config  *storage.StorageConfig
+	manager *storage.StorageManager
 }
 
 // NewStorageProvider creates a new storage provider
 func NewStorageProvider() ServiceProvider {
+	config := storage.DefaultStorageConfig()
+
+	// Create appropriate driver based on config
+	var driver storage.Driver
+	switch config.Default {
+	case "local":
+		localConfig := config.Disks["local"]
+		driver = storage.NewLocalDriver(
+			localConfig.Options["root"],
+			localConfig.Options["base_url"],
+		)
+	case "s3":
+		s3Config := config.Disks["s3"]
+		driver = storage.NewS3Driver(
+			s3Config.Options["bucket"],
+			s3Config.Options["region"],
+			s3Config.Options["base_url"],
+			s3Config.Options["endpoint"],
+		)
+	default:
+		driver = storage.NewLocalDriver("./storage/app", "/storage")
+	}
+
 	return &storageProvider{
-		config: StorageConfig{
-			Driver:   "local",
-			RootPath: "./storage",
-			BaseURL:  "/storage",
-		},
+		config:  config,
+		manager: storage.NewStorageManager(driver),
 	}
 }
 
@@ -266,40 +285,38 @@ func (p *storageProvider) Priority() int {
 }
 
 func (p *storageProvider) Register() error {
+	// Register storage manager in container
+	// This would be called by the service container
 	return nil
 }
 
 func (p *storageProvider) Boot() error {
+	// Initialize storage service
 	return nil
 }
 
-func (p *storageProvider) Put(path string, content interface{}) error {
-	// Implementation would depend on the storage driver
-	return nil
+func (p *storageProvider) Put(path string, content io.Reader) error {
+	return p.manager.Put(path, content)
 }
 
-func (p *storageProvider) Get(path string) (interface{}, error) {
-	// Implementation would depend on the storage driver
-	return nil, nil
+func (p *storageProvider) Get(path string) (io.ReadCloser, error) {
+	return p.manager.Get(path)
 }
 
 func (p *storageProvider) Delete(path string) error {
-	// Implementation would depend on the storage driver
-	return nil
+	return p.manager.Delete(path)
 }
 
 func (p *storageProvider) Exists(path string) bool {
-	// Implementation would depend on the storage driver
-	return false
+	return p.manager.Exists(path)
 }
 
 func (p *storageProvider) URL(path string) string {
-	return p.config.BaseURL + "/" + path
+	return p.manager.URL(path)
 }
 
 func (p *storageProvider) Size(path string) (int64, error) {
-	// Implementation would depend on the storage driver
-	return 0, nil
+	return p.manager.Size(path)
 }
 
 // Placeholder implementations for other providers
@@ -315,8 +332,81 @@ func NewNotificationProvider() ServiceProvider {
 	return &notificationProvider{}
 }
 
+// CacheProvider implementation
+type cacheProvider struct {
+	manager *cache.CacheManager
+}
+
+// NewCacheProvider creates a new cache provider
 func NewCacheProvider() ServiceProvider {
-	return &cacheProvider{}
+	// Create memory cache by default
+	cacheInstance := cache.NewMemoryCache()
+
+	return &cacheProvider{
+		manager: cache.NewCacheManager(cacheInstance),
+	}
+}
+
+func (p *cacheProvider) Name() string {
+	return "cache"
+}
+
+func (p *cacheProvider) Priority() int {
+	return 30
+}
+
+func (p *cacheProvider) Register() error {
+	// Register cache manager in container
+	return nil
+}
+
+func (p *cacheProvider) Boot() error {
+	// Initialize cache service
+	return nil
+}
+
+func (p *cacheProvider) Get(key string) (interface{}, error) {
+	value, err := p.manager.Get(context.Background(), key)
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
+}
+
+func (p *cacheProvider) Put(key string, value interface{}, ttl time.Duration) error {
+	return p.manager.Set(context.Background(), key, value, ttl)
+}
+
+func (p *cacheProvider) Delete(key string) error {
+	return p.manager.Delete(context.Background(), key)
+}
+
+func (p *cacheProvider) Exists(key string) bool {
+	exists, err := p.manager.Exists(context.Background(), key)
+	return err == nil && exists
+}
+
+func (p *cacheProvider) Clear() error {
+	return p.manager.Flush(context.Background())
+}
+
+func (p *cacheProvider) Increment(key string, delta int64) (int64, error) {
+	// Simple increment implementation using Get/Set
+	// This is a basic implementation - in production you'd want atomic operations
+	value, err := p.manager.Get(context.Background(), key)
+	if err != nil {
+		// Key doesn't exist, start with delta
+		err = p.manager.Set(context.Background(), key, delta, 0)
+		return delta, err
+	}
+
+	// Parse current value and increment
+	var current int64
+	fmt.Sscanf(value, "%d", &current)
+	newValue := current + delta
+
+	err = p.manager.Set(context.Background(), key, newValue, 0)
+	return newValue, err
 }
 
 func NewQueueProvider() ServiceProvider {
@@ -355,7 +445,6 @@ func NewMonitoringProvider() ServiceProvider {
 type logProvider struct{}
 type securityProvider struct{}
 type notificationProvider struct{}
-type cacheProvider struct{}
 type queueProvider struct{}
 type searchProvider struct{}
 type paymentProvider struct{}
@@ -379,11 +468,6 @@ func (p *notificationProvider) Name() string    { return "notification" }
 func (p *notificationProvider) Priority() int   { return 60 }
 func (p *notificationProvider) Register() error { return nil }
 func (p *notificationProvider) Boot() error     { return nil }
-
-func (p *cacheProvider) Name() string    { return "cache" }
-func (p *cacheProvider) Priority() int   { return 30 }
-func (p *cacheProvider) Register() error { return nil }
-func (p *cacheProvider) Boot() error     { return nil }
 
 func (p *queueProvider) Name() string    { return "queue" }
 func (p *queueProvider) Priority() int   { return 40 }

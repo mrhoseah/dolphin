@@ -43,7 +43,7 @@ func (r *RedisCache) Get(ctx context.Context, key string) (string, error) {
 // Set stores a value in cache
 func (r *RedisCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
 	var val string
-	
+
 	switch v := value.(type) {
 	case string:
 		val = v
@@ -54,7 +54,7 @@ func (r *RedisCache) Set(ctx context.Context, key string, value interface{}, exp
 		}
 		val = string(jsonData)
 	}
-	
+
 	return r.client.Set(ctx, key, val, expiration).Err()
 }
 
@@ -97,19 +97,19 @@ func (m *MemoryCache) Get(ctx context.Context, key string) (string, error) {
 	if !exists {
 		return "", fmt.Errorf("key not found")
 	}
-	
+
 	if time.Now().After(item.expiration) {
 		delete(m.data, key)
 		return "", fmt.Errorf("key expired")
 	}
-	
+
 	return item.value, nil
 }
 
 // Set stores a value in cache
 func (m *MemoryCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
 	var val string
-	
+
 	switch v := value.(type) {
 	case string:
 		val = v
@@ -120,12 +120,12 @@ func (m *MemoryCache) Set(ctx context.Context, key string, value interface{}, ex
 		}
 		val = string(jsonData)
 	}
-	
+
 	m.data[key] = cacheItem{
 		value:      val,
 		expiration: time.Now().Add(expiration),
 	}
-	
+
 	return nil
 }
 
@@ -141,12 +141,12 @@ func (m *MemoryCache) Exists(ctx context.Context, key string) (bool, error) {
 	if !exists {
 		return false, nil
 	}
-	
+
 	if time.Now().After(item.expiration) {
 		delete(m.data, key)
 		return false, nil
 	}
-	
+
 	return true, nil
 }
 
@@ -179,7 +179,7 @@ func (cm *CacheManager) GetJSON(ctx context.Context, key string, dest interface{
 	if err != nil {
 		return err
 	}
-	
+
 	return json.Unmarshal([]byte(value), dest)
 }
 
@@ -214,19 +214,19 @@ func (cm *CacheManager) Remember(ctx context.Context, key string, expiration tim
 	if value, err := cm.cache.Get(ctx, key); err == nil {
 		return value, nil
 	}
-	
+
 	// Execute function
 	result, err := fn()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Cache the result
 	if err := cm.cache.Set(ctx, key, result, expiration); err != nil {
 		// Log error but don't fail the operation
 		fmt.Printf("Failed to cache result: %v\n", err)
 	}
-	
+
 	return result, nil
 }
 
@@ -236,25 +236,25 @@ func (cm *CacheManager) RememberJSON(ctx context.Context, key string, expiration
 	if err := cm.GetJSON(ctx, key, dest); err == nil {
 		return nil
 	}
-	
+
 	// Execute function
 	result, err := fn()
 	if err != nil {
 		return err
 	}
-	
+
 	// Cache the result
 	if err := cm.cache.Set(ctx, key, result, expiration); err != nil {
 		// Log error but don't fail the operation
 		fmt.Printf("Failed to cache result: %v\n", err)
 	}
-	
+
 	// Unmarshal result into destination
 	jsonData, err := json.Marshal(result)
 	if err != nil {
 		return err
 	}
-	
+
 	return json.Unmarshal(jsonData, dest)
 }
 
@@ -268,12 +268,12 @@ func (cm *CacheManager) Increment(ctx context.Context, key string, delta int64) 
 		err = cm.cache.Set(ctx, key, delta, 0)
 		return delta, err
 	}
-	
+
 	var current int64
 	if err := json.Unmarshal([]byte(value), &current); err != nil {
 		return 0, err
 	}
-	
+
 	newValue := current + delta
 	err = cm.cache.Set(ctx, key, newValue, 0)
 	return newValue, err
