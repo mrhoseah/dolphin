@@ -14,6 +14,7 @@ import (
 	"github.com/mrhoseah/dolphin/internal/config"
 	"github.com/mrhoseah/dolphin/internal/database"
 	"github.com/mrhoseah/dolphin/internal/logger"
+	"github.com/mrhoseah/dolphin/internal/maintenance"
 	"github.com/mrhoseah/dolphin/internal/router"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -309,6 +310,39 @@ Examples:
 		Run:   eventWorker,
 	}
 
+	var maintenanceDownCmd = &cobra.Command{
+		Use:   "down",
+		Short: "Put application in maintenance mode",
+		Long:  "Enable maintenance mode with optional message and settings",
+		Run:   maintenanceDown,
+	}
+	maintenanceDownCmd.Flags().StringP("message", "m", "Application is currently under maintenance. Please try again later.", "Maintenance message")
+	maintenanceDownCmd.Flags().IntP("retry-after", "r", 3600, "Retry-after header value in seconds")
+	maintenanceDownCmd.Flags().StringSliceP("allow", "a", []string{}, "Allowed IP addresses")
+	maintenanceDownCmd.Flags().StringP("secret", "s", "", "Bypass secret for access")
+
+	var maintenanceUpCmd = &cobra.Command{
+		Use:   "up",
+		Short: "Bring application out of maintenance mode",
+		Long:  "Disable maintenance mode and restore normal operation",
+		Run:   maintenanceUp,
+	}
+
+	var maintenanceStatusCmd = &cobra.Command{
+		Use:   "status",
+		Short: "Check maintenance mode status",
+		Long:  "Display current maintenance mode status and information",
+		Run:   maintenanceStatus,
+	}
+
+	var maintenanceCmd = &cobra.Command{
+		Use:   "maintenance",
+		Short: "Maintenance mode management",
+		Long:  "Manage application maintenance mode for graceful deployments",
+	}
+
+	maintenanceCmd.AddCommand(maintenanceDownCmd, maintenanceUpCmd, maintenanceStatusCmd)
+
 	var eventCmd = &cobra.Command{
 		Use:   "event",
 		Short: "Manage events",
@@ -355,6 +389,9 @@ Examples:
 
 	// Event commands
 	rootCmd.AddCommand(eventCmd)
+
+	// Maintenance commands
+	rootCmd.AddCommand(maintenanceCmd)
 
 	// Cache commands
 	cacheCmd.AddCommand(cacheClearCmd)
@@ -810,4 +847,85 @@ func keyGenerate(cmd *cobra.Command, args []string) {
 	fmt.Println("🔑 Generating application key...")
 	// Implementation would go here
 	fmt.Println("✅ Application key generated!")
+}
+
+func maintenanceDown(cmd *cobra.Command, args []string) {
+	message, _ := cmd.Flags().GetString("message")
+	retryAfter, _ := cmd.Flags().GetInt("retry-after")
+	allowedIPs, _ := cmd.Flags().GetStringSlice("allow")
+	secret, _ := cmd.Flags().GetString("secret")
+
+	// Create maintenance manager
+	manager := maintenance.NewManager("storage/framework/maintenance.json")
+
+	// Enable maintenance mode
+	if err := manager.Enable(message, retryAfter, allowedIPs, secret); err != nil {
+		fmt.Printf("❌ Failed to enable maintenance mode: %v\n", err)
+		return
+	}
+
+	fmt.Println("🔧 Maintenance mode enabled!")
+	fmt.Printf("   Message: %s\n", message)
+	fmt.Printf("   Retry After: %d seconds\n", retryAfter)
+	if len(allowedIPs) > 0 {
+		fmt.Printf("   Allowed IPs: %v\n", allowedIPs)
+	}
+	if secret != "" {
+		fmt.Printf("   Bypass Secret: %s\n", secret)
+		fmt.Println("   Access URL: ?bypass=" + secret)
+	}
+	fmt.Println("   Use 'dolphin maintenance up' to disable")
+}
+
+func maintenanceUp(cmd *cobra.Command, args []string) {
+	// Create maintenance manager
+	manager := maintenance.NewManager("storage/framework/maintenance.json")
+
+	// Disable maintenance mode
+	if err := manager.Disable(); err != nil {
+		fmt.Printf("❌ Failed to disable maintenance mode: %v\n", err)
+		return
+	}
+
+	fmt.Println("✅ Maintenance mode disabled!")
+	fmt.Println("   Application is now accessible")
+}
+
+func maintenanceStatus(cmd *cobra.Command, args []string) {
+	// Create maintenance manager
+	manager := maintenance.NewManager("storage/framework/maintenance.json")
+
+	// Get status
+	status := manager.Status()
+
+	fmt.Println("🔧 Maintenance Mode Status:")
+	fmt.Println("==========================")
+
+	if enabled, ok := status["enabled"].(bool); ok && enabled {
+		fmt.Println("Status: 🔴 ENABLED")
+		if message, ok := status["message"].(string); ok {
+			fmt.Printf("Message: %s\n", message)
+		}
+		if retryAfter, ok := status["retry_after"].(int); ok {
+			fmt.Printf("Retry After: %d seconds\n", retryAfter)
+		}
+		if allowedIPs, ok := status["allowed_ips"].([]string); ok && len(allowedIPs) > 0 {
+			fmt.Printf("Allowed IPs: %v\n", allowedIPs)
+		}
+		if startedAt, ok := status["started_at"].(time.Time); ok {
+			fmt.Printf("Started At: %s\n", startedAt.Format("2006-01-02 15:04:05"))
+		}
+		if endsAt, ok := status["ends_at"].(time.Time); ok {
+			fmt.Printf("Ends At: %s\n", endsAt.Format("2006-01-02 15:04:05"))
+		}
+		if expiresIn, ok := status["expires_in"].(int); ok {
+			fmt.Printf("Expires In: %d seconds\n", expiresIn)
+		}
+		if hasSecret, ok := status["bypass_secret"].(bool); ok && hasSecret {
+			fmt.Println("Bypass Secret: ✅ Available")
+		}
+	} else {
+		fmt.Println("Status: 🟢 DISABLED")
+		fmt.Println("Application is running normally")
+	}
 }

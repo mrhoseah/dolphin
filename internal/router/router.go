@@ -1,6 +1,7 @@
 package router
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -8,6 +9,7 @@ import (
 	"github.com/go-chi/cors"
 
 	"github.com/mrhoseah/dolphin/internal/app"
+	"github.com/mrhoseah/dolphin/internal/maintenance"
 	loggingMiddleware "github.com/mrhoseah/dolphin/internal/middleware/logging"
 	recoveryMiddleware "github.com/mrhoseah/dolphin/internal/middleware/recovery"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -15,15 +17,17 @@ import (
 
 // Router handles HTTP routing
 type Router struct {
-	app    *app.App
-	router *chi.Mux
+	app                *app.App
+	router             *chi.Mux
+	maintenanceManager *maintenance.Manager
 }
 
 // New creates a new router instance
 func New(app *app.App) *Router {
 	r := &Router{
-		app:    app,
-		router: chi.NewRouter(),
+		app:                app,
+		router:             chi.NewRouter(),
+		maintenanceManager: maintenance.NewManager("storage/framework/maintenance.json"),
 	}
 
 	r.setupMiddleware()
@@ -39,6 +43,10 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // setupMiddleware configures global middleware
 func (r *Router) setupMiddleware() {
+	// Maintenance mode middleware (should be first)
+	maintenanceMiddleware := maintenance.NewMiddleware(r.maintenanceManager)
+	r.router.Use(maintenanceMiddleware.Handle)
+
 	// Request ID middleware
 	r.router.Use(middleware.RequestID)
 
@@ -73,6 +81,9 @@ func (r *Router) setupMiddleware() {
 func (r *Router) setupRoutes() {
 	// Health check endpoint
 	r.router.Get("/health", r.healthCheck)
+
+	// Maintenance status endpoint
+	r.router.Get("/maintenance/status", r.maintenanceStatus)
 
 	// Swagger documentation
 	r.router.Get("/swagger/*", httpSwagger.Handler(
@@ -119,4 +130,25 @@ func (r *Router) healthCheck(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"ok","service":"dolphin-framework"}`))
+}
+
+func (r *Router) maintenanceStatus(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	status := r.maintenanceManager.Status()
+
+	if enabled, ok := status["enabled"].(bool); ok && enabled {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
+
+	// Convert status to JSON
+	jsonData, err := json.Marshal(status)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(jsonData)
 }

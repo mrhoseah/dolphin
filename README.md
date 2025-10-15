@@ -27,6 +27,7 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, ins
 - **🗂️ File Storage**: Multi-driver storage system (Local, S3, GCS, Azure)
 - **🔌 Service Providers**: Modular architecture with dependency injection
 - **🎨 HTMX Support**: Modern web interactions without heavy JavaScript
+- **🔧 Maintenance Mode**: Graceful application maintenance with bypass options
 
 ## 🚀 Quick Start
 
@@ -201,6 +202,11 @@ dolphin event:list
 dolphin event:dispatch <event-name> <payload>
 dolphin event:listen <event-name>
 dolphin event:worker
+
+# Maintenance mode
+dolphin maintenance:down              # Enable maintenance mode
+dolphin maintenance:up               # Disable maintenance mode
+dolphin maintenance:status           # Check maintenance status
 
 # Route listing
 dolphin route:list
@@ -390,6 +396,97 @@ views, _ := cache.Increment("views:123", 1)
 taggedCache := cache.Tags("users", "profiles")
 taggedCache.Put("123", userData, time.Hour)
 taggedCache.Flush() // Clears all tagged items
+```
+
+### 🔧 **Maintenance Mode**
+
+Dolphin provides enterprise-grade maintenance mode for graceful deployments:
+
+#### **Enable Maintenance Mode**
+```bash
+# Basic maintenance mode
+dolphin maintenance down
+
+# With custom message and settings
+dolphin maintenance down \
+  --message "We're upgrading our systems. Back in 30 minutes!" \
+  --retry-after 1800 \
+  --allow 192.168.1.100,10.0.0.50 \
+  --secret "bypass123"
+```
+
+#### **Maintenance Mode Features**
+```go
+// Automatic maintenance detection
+if maintenance.IsEnabled() {
+    // Show maintenance page
+    return maintenance.HTMLResponse(w, r)
+}
+
+// IP-based bypass
+if maintenance.IsIPAllowed(clientIP) {
+    // Allow access for specific IPs
+    next.ServeHTTP(w, r)
+    return
+}
+
+// Secret-based bypass
+if maintenance.IsBypassSecretValid(secret) {
+    // Allow access with bypass secret
+    next.ServeHTTP(w, r)
+    return
+}
+```
+
+#### **Maintenance Response**
+```json
+{
+  "error": "Service Unavailable",
+  "message": "We're upgrading our systems. Back in 30 minutes!",
+  "status": "maintenance",
+  "code": 503,
+  "retry_after": 1800,
+  "timestamp": 1640995200
+}
+```
+
+#### **HTML Maintenance Page**
+- Beautiful, responsive design
+- Auto-refresh every 30 seconds
+- Bypass secret form
+- Retry-after information
+- Customizable styling
+
+#### **Maintenance Status API**
+```bash
+# Check maintenance status
+curl http://localhost:8080/maintenance/status
+
+# Response when enabled
+{
+  "enabled": true,
+  "message": "System maintenance in progress",
+  "retry_after": 3600,
+  "allowed_ips": ["192.168.1.100"],
+  "started_at": "2023-12-01T10:00:00Z",
+  "ends_at": "2023-12-01T11:00:00Z",
+  "expires_in": 1800
+}
+```
+
+#### **Production Deployment Workflow**
+```bash
+# 1. Enable maintenance mode
+dolphin maintenance down --message "Deploying new version..."
+
+# 2. Deploy your application
+# (Your deployment process here)
+
+# 3. Disable maintenance mode
+dolphin maintenance up
+
+# 4. Verify status
+dolphin maintenance status
 ```
 
 ### ⚡ **Concurrency & Performance**
