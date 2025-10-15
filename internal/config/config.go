@@ -191,7 +191,7 @@ func setDefaults() {
 	// Auth defaults
 	viper.SetDefault("auth.jwt_secret", "your-jwt-secret-key")
 	viper.SetDefault("auth.token_expiry", "1h")
-	viper.SetDefault("auth.refresh_expiry", "7d")
+	viper.SetDefault("auth.refresh_expiry", "168h") // 7 days
 	viper.SetDefault("auth.password_salt", "")
 }
 

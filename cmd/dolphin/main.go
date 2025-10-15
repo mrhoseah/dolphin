@@ -123,6 +123,38 @@ Examples:
 		Run:   makeMiddleware,
 	}
 
+	var makeModuleCmd = &cobra.Command{
+		Use:   "make:module [name]",
+		Short: "Create a complete module",
+		Long:  "Generate a complete module with model, controller, repository, HTMX views, and migration",
+		Args:  cobra.ExactArgs(1),
+		Run:   makeModule,
+	}
+
+	var makeViewCmd = &cobra.Command{
+		Use:   "make:view [name]",
+		Short: "Create HTMX views",
+		Long:  "Generate HTMX-based views (index, show, create, edit, form) for a module",
+		Args:  cobra.ExactArgs(1),
+		Run:   makeView,
+	}
+
+	var makeResourceCmd = &cobra.Command{
+		Use:   "make:resource [name]",
+		Short: "Create an API resource",
+		Long:  "Generate an API resource with model, API controller, repository, and migration",
+		Args:  cobra.ExactArgs(1),
+		Run:   makeResource,
+	}
+
+	var makeRepositoryCmd = &cobra.Command{
+		Use:   "make:repository [name]",
+		Short: "Create a repository",
+		Long:  "Generate a repository for data access layer",
+		Args:  cobra.ExactArgs(1),
+		Run:   makeRepository,
+	}
+
 	var makeSeederCmd = &cobra.Command{
 		Use:   "make:seeder [name]",
 		Short: "Create a new database seeder",
@@ -207,6 +239,10 @@ Examples:
 	rootCmd.AddCommand(makeModelCmd)
 	rootCmd.AddCommand(makeMigrationCmd)
 	rootCmd.AddCommand(makeMiddlewareCmd)
+	rootCmd.AddCommand(makeModuleCmd)
+	rootCmd.AddCommand(makeViewCmd)
+	rootCmd.AddCommand(makeResourceCmd)
+	rootCmd.AddCommand(makeRepositoryCmd)
 	rootCmd.AddCommand(makeSeederCmd)
 	rootCmd.AddCommand(makeRequestCmd)
 
@@ -423,6 +459,56 @@ func makeMiddleware(cmd *cobra.Command, args []string) {
 		log.Fatal("Failed to create middleware:", err)
 	}
 	fmt.Printf("✅ Middleware %s created successfully!\n", name)
+}
+
+func makeModule(cmd *cobra.Command, args []string) {
+	name := args[0]
+	generator := app.NewGenerator()
+	fmt.Printf("🐬 Creating module %s...\n", name)
+	if err := generator.CreateModule(name); err != nil {
+		log.Fatal("Failed to create module:", err)
+	}
+	fmt.Printf("✅ Module %s created successfully!\n", name)
+	fmt.Printf("   📝 Model: app/models/%s.go\n", name)
+	fmt.Printf("   🎮 Controller: app/http/controllers/%s.go\n", name)
+	fmt.Printf("   📚 Repository: app/repositories/%s.go\n", name)
+	fmt.Printf("   🎨 Views: resources/views/%s/\n", name)
+	fmt.Printf("   🔄 Migration: migrations/*_%s.go\n", name)
+}
+
+func makeView(cmd *cobra.Command, args []string) {
+	name := args[0]
+	generator := app.NewGenerator()
+	fmt.Printf("🎨 Creating HTMX views for %s...\n", name)
+	if err := generator.CreateHTMXViews(name); err != nil {
+		log.Fatal("Failed to create views:", err)
+	}
+	fmt.Printf("✅ HTMX views created successfully!\n")
+	fmt.Printf("   Views: resources/views/%s/\n", name)
+}
+
+func makeResource(cmd *cobra.Command, args []string) {
+	name := args[0]
+	generator := app.NewGenerator()
+	fmt.Printf("🚀 Creating API resource %s...\n", name)
+	if err := generator.CreateResource(name); err != nil {
+		log.Fatal("Failed to create resource:", err)
+	}
+	fmt.Printf("✅ API resource %s created successfully!\n", name)
+	fmt.Printf("   📝 Model: app/models/%s.go\n", name)
+	fmt.Printf("   🎮 API Controller: app/http/controllers/api/%s.go\n", name)
+	fmt.Printf("   📚 Repository: app/repositories/%s.go\n", name)
+	fmt.Printf("   🔄 Migration: migrations/*_%s.go\n", name)
+}
+
+func makeRepository(cmd *cobra.Command, args []string) {
+	name := args[0]
+	generator := app.NewGenerator()
+	if err := generator.CreateRepository(name); err != nil {
+		log.Fatal("Failed to create repository:", err)
+	}
+	fmt.Printf("✅ Repository %s created successfully!\n", name)
+	fmt.Printf("   📚 Repository: app/repositories/%s.go\n", name)
 }
 
 func makeSeeder(cmd *cobra.Command, args []string) {

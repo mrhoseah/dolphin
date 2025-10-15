@@ -16,6 +16,132 @@ func NewGenerator() *Generator {
 	return &Generator{}
 }
 
+// CreateModule generates a complete module with model, controller, repository, and HTMX views
+func (g *Generator) CreateModule(name string) error {
+	// Create model
+	if err := g.CreateModel(name); err != nil {
+		return fmt.Errorf("failed to create model: %w", err)
+	}
+
+	// Create controller
+	if err := g.CreateController(name); err != nil {
+		return fmt.Errorf("failed to create controller: %w", err)
+	}
+
+	// Create repository
+	if err := g.CreateRepository(name); err != nil {
+		return fmt.Errorf("failed to create repository: %w", err)
+	}
+
+	// Create HTMX views
+	if err := g.CreateHTMXViews(name); err != nil {
+		return fmt.Errorf("failed to create HTMX views: %w", err)
+	}
+
+	// Create migration
+	if err := g.CreateMigration(name); err != nil {
+		return fmt.Errorf("failed to create migration: %w", err)
+	}
+
+	return nil
+}
+
+// CreateResource generates a complete API resource with CRUD operations
+func (g *Generator) CreateResource(name string) error {
+	// Create model
+	if err := g.CreateModel(name); err != nil {
+		return fmt.Errorf("failed to create model: %w", err)
+	}
+
+	// Create API controller
+	if err := g.CreateAPIController(name); err != nil {
+		return fmt.Errorf("failed to create API controller: %w", err)
+	}
+
+	// Create repository
+	if err := g.CreateRepository(name); err != nil {
+		return fmt.Errorf("failed to create repository: %w", err)
+	}
+
+	// Create migration
+	if err := g.CreateMigration(name); err != nil {
+		return fmt.Errorf("failed to create migration: %w", err)
+	}
+
+	return nil
+}
+
+// CreateHTMXViews generates HTMX-based views for a module
+func (g *Generator) CreateHTMXViews(name string) error {
+	viewsDir := fmt.Sprintf("resources/views/%s", strings.ToLower(name))
+	if err := os.MkdirAll(viewsDir, 0755); err != nil {
+		return err
+	}
+
+	// Create index view
+	if err := g.createHTMXView(name, "index", viewsDir); err != nil {
+		return err
+	}
+
+	// Create show view
+	if err := g.createHTMXView(name, "show", viewsDir); err != nil {
+		return err
+	}
+
+	// Create create view
+	if err := g.createHTMXView(name, "create", viewsDir); err != nil {
+		return err
+	}
+
+	// Create edit view
+	if err := g.createHTMXView(name, "edit", viewsDir); err != nil {
+		return err
+	}
+
+	// Create form partial
+	if err := g.createHTMXView(name, "form", viewsDir); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateRepository generates a repository for data access
+func (g *Generator) CreateRepository(name string) error {
+	repositoriesDir := "app/repositories"
+	if err := os.MkdirAll(repositoriesDir, 0755); err != nil {
+		return err
+	}
+
+	filename := fmt.Sprintf("%s.go", strings.ToLower(name))
+	filepath := filepath.Join(repositoriesDir, filename)
+	content := g.generateRepositoryContent(name)
+
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
+// CreateAPIController generates an API-specific controller
+func (g *Generator) CreateAPIController(name string) error {
+	controllersDir := "app/http/controllers/api"
+	if err := os.MkdirAll(controllersDir, 0755); err != nil {
+		return err
+	}
+
+	filename := fmt.Sprintf("%s.go", strings.ToLower(name))
+	filepath := filepath.Join(controllersDir, filename)
+	content := g.generateAPIControllerContent(name)
+
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
+// createHTMXView creates a specific HTMX view
+func (g *Generator) createHTMXView(name, viewType, viewsDir string) error {
+	filename := fmt.Sprintf("%s.html", viewType)
+	filepath := filepath.Join(viewsDir, filename)
+	content := g.generateHTMXViewContent(name, viewType)
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
 // CreateController generates a new controller
 func (g *Generator) CreateController(name string) error {
 	// Ensure controllers directory exists
