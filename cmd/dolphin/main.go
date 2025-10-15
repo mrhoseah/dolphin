@@ -263,6 +263,13 @@ Examples:
 		Run:   generateSwagger,
 	}
 
+	var postmanGenerateCmd = &cobra.Command{
+		Use:   "postman:generate",
+		Short: "Generate Postman collection",
+		Long:  "Generate a Postman collection for API testing",
+		Run:   postmanGenerate,
+	}
+
 	// Route commands
 	var routeListCmd = &cobra.Command{
 		Use:   "route:list",
@@ -361,6 +368,7 @@ Examples:
 
 	// Documentation
 	rootCmd.AddCommand(swaggerCmd)
+	rootCmd.AddCommand(postmanGenerateCmd)
 
 	// Route commands
 	rootCmd.AddCommand(routeListCmd)
@@ -721,6 +729,27 @@ func generateSwagger(cmd *cobra.Command, args []string) {
 	fmt.Println("Then visit: http://localhost:8080/swagger/index.html")
 }
 
+func postmanGenerate(cmd *cobra.Command, args []string) {
+	fmt.Println("📮 Generating Postman collection...")
+
+	// Create postman directory if it doesn't exist
+	if err := os.MkdirAll("postman", 0755); err != nil {
+		fmt.Printf("❌ Failed to create postman directory: %v\n", err)
+		return
+	}
+
+	// Generate Postman collection
+	generator := app.NewGenerator()
+	if err := generator.CreatePostmanCollection(); err != nil {
+		fmt.Printf("❌ Failed to generate Postman collection: %v\n", err)
+		return
+	}
+
+	fmt.Println("✅ Postman collection generated successfully!")
+	fmt.Println("📁 Collection saved to: postman/Dolphin-Framework-API.postman_collection.json")
+	fmt.Println("📖 Import this file into Postman to start testing your API")
+}
+
 func eventList(cmd *cobra.Command, args []string) {
 	fmt.Println("📋 Registered Events:")
 	fmt.Println("No events registered yet.")
@@ -730,7 +759,7 @@ func eventList(cmd *cobra.Command, args []string) {
 func eventDispatch(cmd *cobra.Command, args []string) {
 	eventName := args[0]
 	payload := args[1]
-	
+
 	fmt.Printf("🚀 Dispatching event: %s\n", eventName)
 	fmt.Printf("📦 Payload: %s\n", payload)
 	fmt.Println("✅ Event dispatched successfully!")
@@ -739,7 +768,7 @@ func eventDispatch(cmd *cobra.Command, args []string) {
 
 func eventListen(cmd *cobra.Command, args []string) {
 	eventName := args[0]
-	
+
 	fmt.Printf("👂 Listening to events: %s\n", eventName)
 	fmt.Println("Press Ctrl+C to stop listening...")
 	fmt.Println("Note: Event listening requires provider integration")

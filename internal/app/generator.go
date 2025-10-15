@@ -134,6 +134,21 @@ func (g *Generator) CreateAPIController(name string) error {
 	return os.WriteFile(filepath, []byte(content), 0644)
 }
 
+// CreatePostmanCollection generates a Postman collection for API testing
+func (g *Generator) CreatePostmanCollection() error {
+	// Ensure postman directory exists
+	postmanDir := "postman"
+	if err := os.MkdirAll(postmanDir, 0755); err != nil {
+		return err
+	}
+
+	filename := "Dolphin-Framework-API.postman_collection.json"
+	filepath := filepath.Join(postmanDir, filename)
+	content := g.generatePostmanCollectionContent()
+
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
 // CreateProvider generates a service provider
 func (g *Generator) CreateProvider(name, providerType string, priority int) error {
 	providersDir := "app/providers"
