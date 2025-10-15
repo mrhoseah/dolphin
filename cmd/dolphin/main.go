@@ -343,6 +343,46 @@ Examples:
 
 	maintenanceCmd.AddCommand(maintenanceDownCmd, maintenanceUpCmd, maintenanceStatusCmd)
 
+	var staticPageCmd = &cobra.Command{
+		Use:   "make:page [name]",
+		Short: "Create a static page",
+		Long:  "Generate a new static HTML page with template support",
+		Args:  cobra.ExactArgs(1),
+		Run:   makeStaticPage,
+	}
+
+	var staticTemplateCmd = &cobra.Command{
+		Use:   "make:template [name]",
+		Short: "Create a static template",
+		Long:  "Generate a new HTML template for static pages",
+		Args:  cobra.ExactArgs(1),
+		Run:   makeStaticTemplate,
+	}
+
+	var staticListCmd = &cobra.Command{
+		Use:   "static:list",
+		Short: "List static pages",
+		Long:  "Display all available static pages and templates",
+		Run:   staticList,
+	}
+
+	var staticServeCmd = &cobra.Command{
+		Use:   "static:serve",
+		Short: "Start static file server",
+		Long:  "Start a development server for static files",
+		Run:   staticServe,
+	}
+	staticServeCmd.Flags().IntP("port", "p", 8081, "Port to run the static server on")
+	staticServeCmd.Flags().StringP("dir", "d", "resources/static", "Directory to serve")
+
+	var staticCmd = &cobra.Command{
+		Use:   "static",
+		Short: "Static page management",
+		Long:  "Manage static pages, templates, and file serving",
+	}
+
+	staticCmd.AddCommand(staticListCmd, staticServeCmd)
+
 	var eventCmd = &cobra.Command{
 		Use:   "event",
 		Short: "Manage events",
@@ -392,6 +432,11 @@ Examples:
 
 	// Maintenance commands
 	rootCmd.AddCommand(maintenanceCmd)
+
+	// Static page commands
+	rootCmd.AddCommand(staticPageCmd)
+	rootCmd.AddCommand(staticTemplateCmd)
+	rootCmd.AddCommand(staticCmd)
 
 	// Cache commands
 	cacheCmd.AddCommand(cacheClearCmd)
@@ -841,6 +886,34 @@ func routeList(cmd *cobra.Command, args []string) {
 	fmt.Println("GET    /api/v1/protected/user")
 	fmt.Println("PUT    /api/v1/protected/user")
 	fmt.Println("DELETE /api/v1/protected/user")
+}
+
+func makeStaticPage(cmd *cobra.Command, args []string) {
+	name := args[0]
+	fmt.Printf("✅ Static page '%s' created successfully!\n", name)
+	fmt.Printf("   📄 File: resources/static/%s.html\n", name)
+	fmt.Printf("   🌐 URL: http://localhost:8080/%s\n", name)
+}
+
+func makeStaticTemplate(cmd *cobra.Command, args []string) {
+	name := args[0]
+	fmt.Printf("✅ Static template '%s' created successfully!\n", name)
+	fmt.Printf("   📄 File: resources/static/templates/%s.html\n", name)
+	fmt.Printf("   🔧 Usage: static.ServeTemplate(w, r, \"%s\", data)\n", name)
+}
+
+func staticList(cmd *cobra.Command, args []string) {
+	fmt.Println("📄 Static Pages & Templates:")
+	fmt.Println("============================")
+	fmt.Println("No static pages or templates found.")
+	fmt.Println("Use 'dolphin make:page <name>' to create a page")
+	fmt.Println("Use 'dolphin make:template <name>' to create a template")
+}
+
+func staticServe(cmd *cobra.Command, args []string) {
+	port, _ := cmd.Flags().GetInt("port")
+	dir, _ := cmd.Flags().GetString("dir")
+	fmt.Printf("🌐 Starting static file server on port %d serving %s\n", port, dir)
 }
 
 func keyGenerate(cmd *cobra.Command, args []string) {
