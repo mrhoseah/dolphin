@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/mrhoseah/dolphin/internal/cache"
+	"github.com/mrhoseah/dolphin/internal/events"
 	"github.com/mrhoseah/dolphin/internal/storage"
 )
 
@@ -508,3 +509,100 @@ func (p *monitoringProvider) Name() string    { return "monitoring" }
 func (p *monitoringProvider) Priority() int   { return 120 }
 func (p *monitoringProvider) Register() error { return nil }
 func (p *monitoringProvider) Boot() error     { return nil }
+
+// EventProvider implementation
+type eventProvider struct {
+	eventBus      events.EventBus
+	eventFactory  events.EventFactory
+	eventSerializer events.EventSerializer
+	eventStore    events.EventStore
+}
+
+// NewEventProvider creates a new event provider
+func NewEventProvider() ServiceProvider {
+	return &eventProvider{
+		eventBus:       events.NewEventBus(),
+		eventFactory:   events.NewEventFactory(),
+		eventSerializer: events.NewEventSerializer(),
+		eventStore:     &memoryEventStore{events: make(map[string][]events.Event)},
+	}
+}
+
+func (p *eventProvider) Name() string {
+	return "events"
+}
+
+func (p *eventProvider) Priority() int {
+	return 25
+}
+
+func (p *eventProvider) Register() error {
+	// Register event services in container
+	return nil
+}
+
+func (p *eventProvider) Boot() error {
+	// Initialize event services
+	return nil
+}
+
+func (p *eventProvider) EventBus() events.EventBus {
+	return p.eventBus
+}
+
+func (p *eventProvider) EventFactory() events.EventFactory {
+	return p.eventFactory
+}
+
+func (p *eventProvider) EventSerializer() events.EventSerializer {
+	return p.eventSerializer
+}
+
+func (p *eventProvider) EventStore() events.EventStore {
+	return p.eventStore
+}
+
+// Memory-based event store implementation
+type memoryEventStore struct {
+	events map[string][]events.Event
+}
+
+func (s *memoryEventStore) Store(ctx context.Context, event events.Event) error {
+	s.events[event.GetName()] = append(s.events[event.GetName()], event)
+	return nil
+}
+
+func (s *memoryEventStore) GetEvents(ctx context.Context, eventName string, limit int) ([]events.Event, error) {
+	events := s.events[eventName]
+	if limit > 0 && len(events) > limit {
+		events = events[:limit]
+	}
+	return events, nil
+}
+
+func (s *memoryEventStore) GetEventsByTimeRange(ctx context.Context, start, end time.Time) ([]events.Event, error) {
+	var result []events.Event
+	for _, eventList := range s.events {
+		for _, event := range eventList {
+			if event.GetTimestamp().After(start) && event.GetTimestamp().Before(end) {
+				result = append(result, event)
+			}
+		}
+	}
+	return result, nil
+}
+
+func (s *memoryEventStore) GetEventByID(ctx context.Context, id string) (events.Event, error) {
+	for _, eventList := range s.events {
+		for _, event := range eventList {
+			if event.GetID() == id {
+				return event, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("event not found")
+}
+
+func (s *memoryEventStore) GetEventCount(ctx context.Context, eventName string) (int, error) {
+	return len(s.events[eventName]), nil
+}

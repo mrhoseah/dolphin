@@ -7,6 +7,7 @@ require (
 	github.com/go-chi/cors v1.2.1
 	github.com/go-chi/render v1.0.3
 	github.com/golang-jwt/jwt/v5 v5.0.0
+	github.com/google/uuid v1.1.2
 	github.com/gorilla/sessions v1.2.1
 	github.com/joho/godotenv v1.4.0
 	github.com/mrhoseah/raptor v1.0.0
@@ -55,8 +56,6 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/swaggo/files v1.0.1 // indirect
 	github.com/swaggo/swag v1.16.2 // indirect
-	go.uber.org/dig v1.19.0 // indirect
-	go.uber.org/fx v1.24.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect

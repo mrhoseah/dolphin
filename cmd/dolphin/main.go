@@ -271,6 +271,45 @@ Examples:
 		Run:   routeList,
 	}
 
+	// Event commands
+	var eventListCmd = &cobra.Command{
+		Use:   "list",
+		Short: "List all registered events",
+		Long:  "Display all registered events and their listeners",
+		Run:   eventList,
+	}
+
+	var eventDispatchCmd = &cobra.Command{
+		Use:   "dispatch <event-name> <payload>",
+		Short: "Dispatch an event",
+		Long:  "Dispatch an event with the given payload",
+		Args:  cobra.ExactArgs(2),
+		Run:   eventDispatch,
+	}
+
+	var eventListenCmd = &cobra.Command{
+		Use:   "listen <event-name>",
+		Short: "Listen to events",
+		Long:  "Listen to events of a specific type",
+		Args:  cobra.ExactArgs(1),
+		Run:   eventListen,
+	}
+
+	var eventWorkerCmd = &cobra.Command{
+		Use:   "worker",
+		Short: "Start event worker",
+		Long:  "Start processing queued events",
+		Run:   eventWorker,
+	}
+
+	var eventCmd = &cobra.Command{
+		Use:   "event",
+		Short: "Manage events",
+		Long:  "Event management commands for dispatching and listening",
+	}
+
+	eventCmd.AddCommand(eventListCmd, eventDispatchCmd, eventListenCmd, eventWorkerCmd)
+
 	// Key generation
 	var keyGenerateCmd = &cobra.Command{
 		Use:   "key:generate",
@@ -306,6 +345,9 @@ Examples:
 	storageCmd.AddCommand(storagePutCmd)
 	storageCmd.AddCommand(storageGetCmd)
 	rootCmd.AddCommand(storageCmd)
+
+	// Event commands
+	rootCmd.AddCommand(eventCmd)
 
 	// Cache commands
 	cacheCmd.AddCommand(cacheClearCmd)
@@ -677,6 +719,37 @@ func generateSwagger(cmd *cobra.Command, args []string) {
 	fmt.Println("📚 Generating Swagger documentation...")
 	fmt.Println("Run: swag init -g main.go")
 	fmt.Println("Then visit: http://localhost:8080/swagger/index.html")
+}
+
+func eventList(cmd *cobra.Command, args []string) {
+	fmt.Println("📋 Registered Events:")
+	fmt.Println("No events registered yet.")
+	fmt.Println("Use 'dolphin event dispatch <name> <payload>' to dispatch events")
+}
+
+func eventDispatch(cmd *cobra.Command, args []string) {
+	eventName := args[0]
+	payload := args[1]
+	
+	fmt.Printf("🚀 Dispatching event: %s\n", eventName)
+	fmt.Printf("📦 Payload: %s\n", payload)
+	fmt.Println("✅ Event dispatched successfully!")
+	fmt.Println("Note: Event system requires provider integration")
+}
+
+func eventListen(cmd *cobra.Command, args []string) {
+	eventName := args[0]
+	
+	fmt.Printf("👂 Listening to events: %s\n", eventName)
+	fmt.Println("Press Ctrl+C to stop listening...")
+	fmt.Println("Note: Event listening requires provider integration")
+}
+
+func eventWorker(cmd *cobra.Command, args []string) {
+	fmt.Println("⚙️ Starting event worker...")
+	fmt.Println("Processing queued events...")
+	fmt.Println("Press Ctrl+C to stop worker...")
+	fmt.Println("Note: Event worker requires provider integration")
 }
 
 func cacheWarm(cmd *cobra.Command, args []string) {

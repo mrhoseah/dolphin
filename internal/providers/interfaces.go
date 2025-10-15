@@ -3,6 +3,8 @@ package providers
 import (
 	"io"
 	"time"
+
+	"github.com/mrhoseah/dolphin/internal/events"
 )
 
 // ServiceProvider defines the interface for all service providers
@@ -389,4 +391,13 @@ type MonitoringMetrics struct {
 	DiskUsage   float64 `json:"disk_usage"`
 	RequestRate float64 `json:"request_rate"`
 	ErrorRate   float64 `json:"error_rate"`
+}
+
+// EventProvider handles event dispatching and listening
+type EventProvider interface {
+	ServiceProvider
+	EventBus() events.EventBus
+	EventFactory() events.EventFactory
+	EventSerializer() events.EventSerializer
+	EventStore() events.EventStore
 }
