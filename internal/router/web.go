@@ -24,7 +24,7 @@ func (r *Router) setupWebRoutes(router chi.Router) {
 		auth.Post("/login", r.handleLoginSubmit)
 		auth.Get("/register", r.handleRegisterPage)
 		auth.Post("/register", r.handleRegisterSubmit)
-		auth.Post("/logout", webAuthMiddleware.Authenticate(r.handleLogout))
+		auth.Post("/logout", webAuthMiddleware.Authenticate(http.HandlerFunc(r.handleLogout)).ServeHTTP)
 	})
 
 	// Dashboard (protected)
