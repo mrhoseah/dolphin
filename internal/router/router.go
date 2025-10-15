@@ -6,9 +6,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+
 	"github.com/mrhoseah/dolphin/app/http/controllers"
 	"github.com/mrhoseah/dolphin/internal/app"
-	AppMiddleware "github.com/mrhoseah/dolphin/internal/middleware/auth"
+	"github.com/mrhoseah/dolphin/internal/auth"
+	dolphinMiddleware "github.com/mrhoseah/dolphin/internal/middleware"
 	loggingMiddleware "github.com/mrhoseah/dolphin/internal/middleware/logging"
 	recoveryMiddleware "github.com/mrhoseah/dolphin/internal/middleware/recovery"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -97,66 +99,101 @@ func (r *Router) setupRoutes() {
 	r.setupStaticRoutes()
 }
 
+// placeholderHandler is a temporary handler for routes without controllers
+func (r *Router) placeholderHandler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message": "Controller not implemented yet"}`))
+}
+
 // setupAPIRoutes configures API routes
 func (r *Router) setupAPIRoutes(router chi.Router) {
+	// Setup Dolphin-style authentication
+	sessionStore := auth.NewMemorySessionStore()
+	authManager := auth.SetupAuth(r.app.DB().GetDB(), sessionStore)
+
+	// Initialize Dolphin-style auth middleware
+	dolphinAuthMiddleware := dolphinMiddleware.NewAuthMiddleware(authManager, r.app.Logger())
+
 	// Initialize controllers
-	authController := controllers.NewAuthController()
-	userController := controllers.NewUserController()
+	dolphinAuthController := controllers.NewAuthController(authManager, r.app.Logger())
 
-	// Authentication routes
+	// Authentication routes (Dolphin style)
 	router.Route("/auth", func(auth chi.Router) {
-		auth.Post("/login", authController.Login)
-		auth.Post("/register", authController.Register)
-		auth.Post("/logout", authController.Logout)
-		auth.Post("/refresh", authController.RefreshToken)
+		// Public routes (guests only)
+		auth.Group(func(guest chi.Router) {
+			guest.Use(dolphinAuthMiddleware.Guest)
+			guest.Post("/login", dolphinAuthController.Login)
+			guest.Post("/register", dolphinAuthController.Register)
+		})
+
+		// Protected routes (authenticated users only)
+		auth.Group(func(protected chi.Router) {
+			protected.Use(dolphinAuthMiddleware.Authenticate)
+			protected.Post("/logout", dolphinAuthController.Logout)
+			protected.Get("/me", dolphinAuthController.Me)
+		})
+
+		// Public status routes
+		auth.Get("/check", dolphinAuthController.Check)
+		auth.Get("/guest", dolphinAuthController.Guest)
 	})
 
-	// Protected routes
-	router.Route("/protected", func(protected chi.Router) {
-		protected.Use(AppMiddleware.New(r.app.Config().JWT.Secret))
+	// Protected API routes
+	router.Route("/api", func(api chi.Router) {
+		api.Use(dolphinAuthMiddleware.Authenticate)
 
-		protected.Get("/user", r.handleGetUser)
-		protected.Put("/user", userController.Update)
-		protected.Delete("/user", userController.Destroy)
-	})
+		// User routes
+		api.Route("/users", func(users chi.Router) {
+			users.Get("/", r.placeholderHandler)
+			users.Post("/", r.placeholderHandler)
+			users.Get("/{id}", r.placeholderHandler)
+			users.Put("/{id}", r.placeholderHandler)
+			users.Delete("/{id}", r.placeholderHandler)
+		})
 
-	// Resource routes
-	router.Route("/users", func(users chi.Router) {
-		users.Get("/", userController.Index)
-		users.Post("/", userController.Store)
-		users.Get("/{id}", userController.Show)
-		users.Put("/{id}", userController.Update)
-		users.Delete("/{id}", userController.Destroy)
-	})
+		// Admin routes (role-based)
+		api.Route("/admin", func(admin chi.Router) {
+			admin.Use(dolphinAuthMiddleware.RoleMiddleware("admin"))
+			admin.Get("/dashboard", r.placeholderHandler)
+			admin.Get("/users", r.placeholderHandler)
+		})
 
-	router.Route("/posts", func(posts chi.Router) {
-		posts.Get("/", r.handleGetPosts)
-		posts.Post("/", r.handleCreatePost)
-		posts.Get("/{id}", r.handleGetPost)
-		posts.Put("/{id}", r.handleUpdatePost)
-		posts.Delete("/{id}", r.handleDeletePost)
+		// Posts routes with permissions
+		api.Route("/posts", func(posts chi.Router) {
+			posts.Get("/", r.placeholderHandler) // read permission
+			posts.Post("/", dolphinAuthMiddleware.PermissionMiddleware("write")(http.HandlerFunc(r.placeholderHandler)).ServeHTTP)
+			posts.Get("/{id}", r.placeholderHandler)
+			posts.Put("/{id}", dolphinAuthMiddleware.PermissionMiddleware("write")(http.HandlerFunc(r.placeholderHandler)).ServeHTTP)
+			posts.Delete("/{id}", dolphinAuthMiddleware.PermissionMiddleware("delete")(http.HandlerFunc(r.placeholderHandler)).ServeHTTP)
+		})
 	})
 }
 
 // setupWebRoutes configures web routes
 func (r *Router) setupWebRoutes(router chi.Router) {
+	// Setup Dolphin-style authentication for web routes
+	sessionStore := auth.NewMemorySessionStore()
+	authManager := auth.SetupAuth(r.app.DB().GetDB(), sessionStore)
+	webAuthMiddleware := dolphinMiddleware.NewAuthMiddleware(authManager, r.app.Logger())
+
 	// Home page
-	router.Get("/", r.handleHome)
+	router.Get("/", r.placeholderHandler)
 
 	// Dashboard (protected)
 	router.Route("/dashboard", func(dashboard chi.Router) {
-		dashboard.Use(AppMiddleware.New(r.app.Config().JWT.Secret))
-		dashboard.Get("/", r.handleDashboard)
+		dashboard.Use(webAuthMiddleware.Authenticate)
+		dashboard.Get("/", r.placeholderHandler)
 	})
 
 	// Admin routes
 	router.Route("/admin", func(admin chi.Router) {
-		admin.Use(AppMiddleware.New(r.app.Config().JWT.Secret))
-		admin.Use(r.adminMiddleware)
+		admin.Use(webAuthMiddleware.Authenticate)
+		admin.Use(webAuthMiddleware.RoleMiddleware("admin"))
 
-		admin.Get("/", r.handleAdminDashboard)
-		admin.Get("/users", r.handleAdminUsers)
-		admin.Get("/posts", r.handleAdminPosts)
+		admin.Get("/", r.placeholderHandler)
+		admin.Get("/users", r.placeholderHandler)
+		admin.Get("/posts", r.placeholderHandler)
 	})
 }
 

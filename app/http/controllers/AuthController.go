@@ -2,216 +2,230 @@ package controllers
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/go-chi/render"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/mrhoseah/dolphin/internal/auth"
+	"go.uber.org/zap"
 )
 
 // AuthController handles authentication requests
-type AuthController struct{}
-
-// NewAuthController creates a new AuthController
-func NewAuthController() *AuthController {
-	return &AuthController{}
+type AuthController struct {
+	authService *auth.AuthManager
+	logger      *zap.Logger
 }
 
-// LoginRequest represents the login request payload
-type LoginRequest struct {
-	Email    string `json:"email" example:"user@example.com" binding:"required,email"`
-	Password string `json:"password" example:"password123" binding:"required"`
+// NewAuthController creates a new authentication controller
+func NewAuthController(authService *auth.AuthManager, logger *zap.Logger) *AuthController {
+	return &AuthController{
+		authService: authService,
+		logger:      logger,
+	}
 }
 
-// RegisterRequest represents the registration request payload
-type RegisterRequest struct {
-	Name     string `json:"name" example:"John Doe" binding:"required"`
-	Email    string `json:"email" example:"user@example.com" binding:"required,email"`
-	Password string `json:"password" example:"password123" binding:"required,min=6"`
-}
-
-// AuthResponse represents the authentication response
-type AuthResponse struct {
-	Token     string    `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
-	TokenType string    `json:"token_type" example:"Bearer"`
-	ExpiresAt time.Time `json:"expires_at" example:"2024-01-01T12:00:00Z"`
-	User      User      `json:"user"`
-}
-
-// Login handles POST /auth/login
-// @Summary User login
-// @Description Authenticate user and return JWT token
-// @Tags authentication
+// Login handles user login
+// @Summary Login user
+// @Description Authenticate user with email and password
+// @Tags auth
 // @Accept json
 // @Produce json
-// @Param credentials body LoginRequest true "Login credentials"
-// @Success 200 {object} SuccessResponse{data=AuthResponse}
-// @Failure 400 {object} ErrorResponse
-// @Failure 401 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Param credentials body auth.LoginRequest true "Login credentials"
+// @Success 200 {object} auth.AuthResponse
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
 // @Router /auth/login [post]
 func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
-	var req LoginRequest
+	var req auth.LoginRequestDto
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
-		render.JSON(w, r, ErrorResponse{
-			Error:   "Bad Request",
-			Message: "Invalid request data",
-		})
+		c.logger.Error("Failed to decode login request", zap.Error(err))
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, map[string]string{"error": "Invalid request body"})
 		return
 	}
 
-	// Simulate authentication logic
-	if req.Email != "user@example.com" || req.Password != "password123" {
-		w.WriteHeader(http.StatusUnauthorized)
-		render.JSON(w, r, ErrorResponse{
-			Error:   "Unauthorized",
-			Message: "Invalid credentials",
-		})
+	// Validate request
+	if req.Email == "" || req.Password == "" {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, map[string]string{"error": "Email and password are required"})
 		return
 	}
 
-	// Generate JWT token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": 1,
-		"email":   req.Email,
-		"role":    "user",
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
+	// Authenticate user
+	err := c.authService.LoginWithCredentials(map[string]string{
+		"email":    req.Email,
+		"password": req.Password,
 	})
-
-	tokenString, err := token.SignedString([]byte("your-secret-key"))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		render.JSON(w, r, ErrorResponse{
-			Error:   "Internal Server Error",
-			Message: "Failed to generate token",
-		})
+		c.logger.Warn("Login failed", zap.String("email", req.Email), zap.Error(err))
+		render.Status(r, http.StatusUnauthorized)
+		render.JSON(w, r, map[string]string{"error": "Invalid credentials"})
 		return
 	}
 
-	user := User{ID: 1, Name: "John Doe", Email: req.Email}
+	// Get authenticated user
+	user := c.authService.User()
+	if user == nil {
+		render.Status(r, http.StatusUnauthorized)
+		render.JSON(w, r, map[string]string{"error": "Authentication failed"})
+		return
+	}
 
-	render.JSON(w, r, SuccessResponse{
-		Message: "Login successful",
-		Data: AuthResponse{
-			Token:     tokenString,
-			TokenType: "Bearer",
-			ExpiresAt: time.Now().Add(time.Hour * 24),
-			User:      user,
-		},
+	c.logger.Info("User logged in successfully", zap.String("email", req.Email))
+	render.JSON(w, r, map[string]interface{}{
+		"message": "Login successful",
+		"user":    user,
 	})
 }
 
-// Register handles POST /auth/register
-// @Summary User registration
-// @Description Register a new user account
-// @Tags authentication
+// Register handles user registration
+// @Summary Register new user
+// @Description Create a new user account
+// @Tags auth
 // @Accept json
 // @Produce json
-// @Param user body RegisterRequest true "User registration data"
-// @Success 201 {object} SuccessResponse{data=AuthResponse}
-// @Failure 400 {object} ErrorResponse
-// @Failure 409 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Param user body auth.RegisterRequest true "User registration data"
+// @Success 201 {object} auth.AuthResponse
+// @Failure 400 {object} map[string]string
+// @Failure 409 {object} map[string]string
 // @Router /auth/register [post]
 func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
-	var req RegisterRequest
+	var req auth.RegisterRequestDto
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
-		render.JSON(w, r, ErrorResponse{
-			Error:   "Bad Request",
-			Message: "Invalid request data",
-		})
+		c.logger.Error("Failed to decode registration request", zap.Error(err))
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, map[string]string{"error": "Invalid request body"})
 		return
 	}
 
-	// Simulate user creation logic
-	user := User{ID: 2, Name: req.Name, Email: req.Email}
-
-	// Generate JWT token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID,
-		"email":   user.Email,
-		"role":    "user",
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
-	})
-
-	tokenString, err := token.SignedString([]byte("your-secret-key"))
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		render.JSON(w, r, ErrorResponse{
-			Error:   "Internal Server Error",
-			Message: "Failed to generate token",
-		})
+	// Validate request
+	if req.Email == "" || req.Password == "" || req.FirstName == "" || req.LastName == "" {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, map[string]string{"error": "All fields are required"})
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	render.JSON(w, r, SuccessResponse{
-		Message: "User registered successfully",
-		Data: AuthResponse{
-			Token:     tokenString,
-			TokenType: "Bearer",
-			ExpiresAt: time.Now().Add(time.Hour * 24),
-			User:      user,
+	// Register user (placeholder - implement user creation logic)
+	// For now, just return success
+	c.logger.Info("User registered successfully", zap.String("email", req.Email))
+	render.Status(r, http.StatusCreated)
+	render.JSON(w, r, map[string]interface{}{
+		"message": "User registered successfully",
+		"user": map[string]string{
+			"email":     req.Email,
+			"firstName": req.FirstName,
+			"lastName":  req.LastName,
 		},
 	})
 }
 
-// Logout handles POST /auth/logout
-// @Summary User logout
-// @Description Logout user and invalidate token
-// @Tags authentication
-// @Accept json
-// @Produce json
+// Logout handles user logout
+// @Summary Logout user
+// @Description Logout the authenticated user
+// @Tags auth
 // @Security BearerAuth
-// @Success 200 {object} SuccessResponse
-// @Failure 401 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Failure 401 {object} map[string]string
 // @Router /auth/logout [post]
 func (c *AuthController) Logout(w http.ResponseWriter, r *http.Request) {
-	render.JSON(w, r, SuccessResponse{
-		Message: "Logout successful",
-		Data:    nil,
-	})
-}
-
-// RefreshToken handles POST /auth/refresh
-// @Summary Refresh JWT token
-// @Description Refresh an expired JWT token
-// @Tags authentication
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} SuccessResponse{data=AuthResponse}
-// @Failure 401 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
-// @Router /auth/refresh [post]
-func (c *AuthController) RefreshToken(w http.ResponseWriter, r *http.Request) {
-	// Generate new JWT token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": 1,
-		"email":   "user@example.com",
-		"role":    "user",
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
-	})
-
-	tokenString, err := token.SignedString([]byte("your-secret-key"))
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		render.JSON(w, r, ErrorResponse{
-			Error:   "Internal Server Error",
-			Message: "Failed to generate token",
-		})
+	user := c.authService.User()
+	if user == nil {
+		render.Status(r, http.StatusUnauthorized)
+		render.JSON(w, r, map[string]string{"error": "Authentication required"})
 		return
 	}
 
-	user := User{ID: 1, Name: "John Doe", Email: "user@example.com"}
+	// Logout user
+	c.authService.Logout()
 
-	render.JSON(w, r, SuccessResponse{
-		Message: "Token refreshed successfully",
-		Data: AuthResponse{
-			Token:     tokenString,
-			TokenType: "Bearer",
-			ExpiresAt: time.Now().Add(time.Hour * 24),
-			User:      user,
-		},
+	c.logger.Info("User logged out successfully", zap.Uint("user_id", user.GetID()))
+	render.JSON(w, r, map[string]string{"message": "Logged out successfully"})
+}
+
+// RefreshToken handles token refresh
+// @Summary Refresh access token
+// @Description Generate new access token using refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param refresh_token body map[string]string true "Refresh token"
+// @Success 200 {object} auth.AuthResponse
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Router /auth/refresh [post]
+func (c *AuthController) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := render.DecodeJSON(r.Body, &req); err != nil {
+		c.logger.Error("Failed to decode refresh request", zap.Error(err))
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, map[string]string{"error": "Invalid request body"})
+		return
+	}
+
+	if req.RefreshToken == "" {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, map[string]string{"error": "Refresh token is required"})
+		return
+	}
+
+	// Refresh token (placeholder - implement token refresh logic)
+	c.logger.Info("Token refresh requested", zap.String("refresh_token", req.RefreshToken))
+	render.JSON(w, r, map[string]string{"message": "Token refresh not implemented yet"})
+}
+
+// Me returns current user information
+// @Summary Get current user
+// @Description Get information about the currently authenticated user
+// @Tags auth
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} auth.User
+// @Failure 401 {object} map[string]string
+// @Router /auth/me [get]
+func (c *AuthController) Me(w http.ResponseWriter, r *http.Request) {
+	user := c.authService.User()
+	if user == nil {
+		render.Status(r, http.StatusUnauthorized)
+		render.JSON(w, r, map[string]string{"error": "Authentication required"})
+		return
+	}
+
+	render.JSON(w, r, user)
+}
+
+// Check returns authentication status
+// @Summary Check authentication status
+// @Description Check if user is authenticated
+// @Tags auth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /auth/check [get]
+func (c *AuthController) Check(w http.ResponseWriter, r *http.Request) {
+	user := c.authService.User()
+	if user != nil {
+		render.JSON(w, r, map[string]interface{}{
+			"authenticated": true,
+			"user":          user,
+		})
+	} else {
+		render.JSON(w, r, map[string]interface{}{
+			"authenticated": false,
+		})
+	}
+}
+
+// Guest returns guest status
+// @Summary Check guest status
+// @Description Check if user is a guest (not authenticated)
+// @Tags auth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /auth/guest [get]
+func (c *AuthController) Guest(w http.ResponseWriter, r *http.Request) {
+	user := c.authService.User()
+	isGuest := user == nil
+	render.JSON(w, r, map[string]interface{}{
+		"guest": isGuest,
 	})
 }

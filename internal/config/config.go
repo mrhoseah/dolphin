@@ -18,6 +18,7 @@ type Config struct {
 	Cache    CacheConfig    `mapstructure:"cache"`
 	Session  SessionConfig  `mapstructure:"session"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
+	Auth     AuthConfig     `mapstructure:"auth"`
 }
 
 // AppConfig holds application-specific configuration
@@ -85,6 +86,14 @@ type JWTConfig struct {
 	Secret     string        `mapstructure:"secret"`
 	Expiration time.Duration `mapstructure:"expiration"`
 	Issuer     string        `mapstructure:"issuer"`
+}
+
+// AuthConfig holds authentication configuration
+type AuthConfig struct {
+	JWTSecret     string        `mapstructure:"jwt_secret"`
+	TokenExpiry   time.Duration `mapstructure:"token_expiry"`
+	RefreshExpiry time.Duration `mapstructure:"refresh_expiry"`
+	PasswordSalt  string        `mapstructure:"password_salt"`
 }
 
 // Load loads configuration from files and environment variables
@@ -178,6 +187,12 @@ func setDefaults() {
 	viper.SetDefault("jwt.secret", "your-secret-key")
 	viper.SetDefault("jwt.expiration", "24h")
 	viper.SetDefault("jwt.issuer", "dolphin-framework")
+
+	// Auth defaults
+	viper.SetDefault("auth.jwt_secret", "your-jwt-secret-key")
+	viper.SetDefault("auth.token_expiry", "1h")
+	viper.SetDefault("auth.refresh_expiry", "7d")
+	viper.SetDefault("auth.password_salt", "")
 }
 
 // overrideWithEnv overrides configuration with environment variables
@@ -254,6 +269,24 @@ func overrideWithEnv(config *Config) {
 	// JWT overrides
 	if val := os.Getenv("JWT_SECRET"); val != "" {
 		config.JWT.Secret = val
+	}
+
+	// Auth overrides
+	if val := os.Getenv("AUTH_JWT_SECRET"); val != "" {
+		config.Auth.JWTSecret = val
+	}
+	if val := os.Getenv("AUTH_TOKEN_EXPIRY"); val != "" {
+		if expiry, err := time.ParseDuration(val); err == nil {
+			config.Auth.TokenExpiry = expiry
+		}
+	}
+	if val := os.Getenv("AUTH_REFRESH_EXPIRY"); val != "" {
+		if expiry, err := time.ParseDuration(val); err == nil {
+			config.Auth.RefreshExpiry = expiry
+		}
+	}
+	if val := os.Getenv("AUTH_PASSWORD_SALT"); val != "" {
+		config.Auth.PasswordSalt = val
 	}
 }
 

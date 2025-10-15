@@ -91,77 +91,71 @@ func (g *Generator) CreateMiddleware(name string) error {
 
 // generateControllerContent creates controller template
 func (g *Generator) generateControllerContent(name string) string {
-	return fmt.Sprintf(`package controllers
+	lowerName := strings.ToLower(name)
+	return `package controllers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 )
 
-// %s handles %s related requests
-type %s struct{}
+// ` + name + ` handles ` + lowerName + ` related requests
+type ` + name + ` struct{}
 
-// New%s creates a new %s controller
-func New%s() *%s {
-	return &%s{}
+// New` + name + ` creates a new ` + name + ` controller
+func New` + name + `() *` + name + ` {
+	return &` + name + `{}
 }
 
-// Index handles GET /%s
-func (c *%s) Index(w http.ResponseWriter, r *http.Request) {
+// Index handles GET /` + lowerName + `
+func (c *` + name + `) Index(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, map[string]interface{}{
-		"message": "List of %s",
+		"message": "List of ` + lowerName + `",
 		"data":    []interface{}{},
 	})
 }
 
-// Show handles GET /%s/{id}
-func (c *%s) Show(w http.ResponseWriter, r *http.Request) {
+// Show handles GET /` + lowerName + `/{id}
+func (c *` + name + `) Show(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	
 	render.JSON(w, r, map[string]interface{}{
-		"message": "Show %s",
+		"message": "Show ` + lowerName + `",
 		"id":      id,
 		"data":    map[string]interface{}{},
 	})
 }
 
-// Store handles POST /%s
-func (c *%s) Store(w http.ResponseWriter, r *http.Request) {
+// Store handles POST /` + lowerName + `
+func (c *` + name + `) Store(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, map[string]interface{}{
-		"message": "%s created successfully",
+		"message": "` + lowerName + ` created successfully",
 		"data":    map[string]interface{}{},
 	})
 }
 
-// Update handles PUT /%s/{id}
-func (c *%s) Update(w http.ResponseWriter, r *http.Request) {
+// Update handles PUT /` + lowerName + `/{id}
+func (c *` + name + `) Update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	
 	render.JSON(w, r, map[string]interface{}{
-		"message": "%s updated successfully",
+		"message": "` + name + ` updated successfully",
 		"id":      id,
 		"data":    map[string]interface{}{},
 	})
 }
 
-// Destroy handles DELETE /%s/{id}
-func (c *%s) Destroy(w http.ResponseWriter, r *http.Request) {
+// Destroy handles DELETE /` + lowerName + `/{id}
+func (c *` + name + `) Destroy(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	
 	render.JSON(w, r, map[string]interface{}{
-		"message": "%s deleted successfully",
+		"message": "` + lowerName + ` deleted successfully",
 		"id":      id,
 	})
-}
-`, 
-		name, strings.ToLower(name), name, name, name, name, name, name, 
-		strings.ToLower(name), name, strings.ToLower(name), strings.ToLower(name), 
-		name, strings.ToLower(name), strings.ToLower(name), name, strings.ToLower(name), 
-		name, strings.ToLower(name), name, strings.ToLower(name), name, strings.ToLower(name), 
-		name, strings.ToLower(name), name, strings.ToLower(name), name, strings.ToLower(name))
+}`
 }
 
 // generateModelContent creates model template
@@ -175,14 +169,14 @@ import (
 
 // %s represents a %s model
 type %s struct {
-	ID        uint           ` + "`gorm:\"primarykey\"`" + `
+	ID        uint           `+"`gorm:\"primarykey\"`"+`
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt ` + "`gorm:\"index\"`" + `
+	DeletedAt gorm.DeletedAt `+"`gorm:\"index\"`"+`
 	
 	// Add your fields here
-	// Name string ` + "`gorm:\"not null\"`" + `
-	// Email string ` + "`gorm:\"uniqueIndex\"`" + `
+	// Name string `+"`gorm:\"not null\"`"+`
+	// Email string `+"`gorm:\"uniqueIndex\"`"+`
 }
 
 // TableName returns the table name for the %s model
