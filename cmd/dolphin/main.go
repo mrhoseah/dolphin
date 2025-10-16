@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -42,6 +44,14 @@ Examples:
   dolphin swagger                  # Generate API documentation`,
 		Version: version,
 	}
+	// Update command
+	var updateCmd = &cobra.Command{
+		Use:   "update",
+		Short: "Update the Dolphin CLI to the latest or specified version",
+		Long:  "Self-update the Dolphin CLI by installing the latest (or specified) version via 'go install'.",
+		Run:   updateSelf,
+	}
+	updateCmd.Flags().StringP("version", "V", "main", "Version to install (e.g., v0.1.0 or 'main')")
 	// New project command
 	var newCmd = &cobra.Command{
 		Use:   "new [name]",
@@ -446,6 +456,7 @@ Examples:
 
 	// Add commands to root
 	rootCmd.AddCommand(serveCmd)
+	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(newCmd)
 
 	// Migration commands
@@ -1054,6 +1065,53 @@ func main() {
 
 	fmt.Println("✅ Project created!")
 	fmt.Printf("   Next:\n   cd %s && go mod tidy && dolphin serve\n", name)
+}
+
+// --- Self-update ---
+func updateSelf(cmd *cobra.Command, args []string) {
+	version, _ := cmd.Flags().GetString("version")
+	if version == "" {
+		version = "main"
+	}
+	fmt.Printf("⬆️  Updating Dolphin CLI to %s...\n", version)
+
+	// Use go install to update
+	installArg := fmt.Sprintf("github.com/mrhoseah/dolphin/cmd/dolphin@%s", version)
+	env := append(os.Environ(), "GOPROXY=direct", "GOSUMDB=off")
+	cmdInstall := exec.Command("go", "install", installArg)
+	cmdInstall.Env = env
+	cmdInstall.Stdout = os.Stdout
+	cmdInstall.Stderr = os.Stderr
+	if err := cmdInstall.Run(); err != nil {
+		log.Fatalf("Failed to install %s: %v", installArg, err)
+	}
+
+	// Try to copy to /usr/local/bin if current binary is there
+	if path, err := exec.LookPath("dolphin"); err == nil {
+		// New binary location (GOBIN/GOPATH/bin)
+		gobin := os.Getenv("GOBIN")
+		if gobin == "" {
+			// derive from 'go env GOPATH'
+			out, _ := exec.Command("go", "env", "GOPATH").Output()
+			gp := string(out)
+			gp = strings.TrimSpace(gp)
+			gobin = gp + "/bin"
+		}
+		newBin := gobin + "/dolphin"
+		if _, err := os.Stat(newBin); err == nil {
+			// If current is writable location, overwrite, else try sudo copy
+			if file, err := os.OpenFile(path, os.O_WRONLY, 0); err == nil {
+				file.Close()
+				// we can write: copy
+				_ = exec.Command("cp", newBin, path).Run()
+			} else {
+				// try sudo copy
+				_ = exec.Command("sudo", "cp", newBin, path).Run()
+			}
+		}
+	}
+
+	fmt.Println("✅ Update complete. Run 'dolphin --help' to confirm.")
 }
 
 // --- Debug command handlers ---
