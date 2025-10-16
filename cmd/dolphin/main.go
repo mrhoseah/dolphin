@@ -999,17 +999,8 @@ func newProject(cmd *cobra.Command, args []string) {
 	// Directories
 	dirs := []string{
 		name,
-		name + "/app/http/controllers/api",
-		name + "/app/models",
-		name + "/app/repositories",
-		name + "/app/providers",
 		name + "/bootstrap",
 		name + "/config",
-		name + "/internal",
-		name + "/migrations",
-		name + "/resources/views",
-		name + "/public",
-		name + "/postman",
 	}
 	for _, d := range dirs {
 		if err := os.MkdirAll(d, 0755); err != nil {
