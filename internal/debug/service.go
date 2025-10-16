@@ -301,19 +301,19 @@ func (d *Debugger) dashboard(w http.ResponseWriter, r *http.Request) {
         }
         .stat-value {
             font-weight: bold;
-            color: #667eea;
+            color: #10b981; /* primary */
         }
         .btn {
             display: inline-block;
             padding: 10px 20px;
-            background: #667eea;
+            background: #10b981; /* primary */
             color: white;
             text-decoration: none;
             border-radius: 4px;
             margin: 5px;
         }
         .btn:hover {
-            background: #5a6fd8;
+            background: #0ea371;
         }
         .status {
             display: inline-block;
@@ -339,8 +339,13 @@ func (d *Debugger) dashboard(w http.ResponseWriter, r *http.Request) {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🐬 Dolphin Debug Dashboard</h1>
-            <p>Real-time debugging and monitoring for your Dolphin application</p>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <img src="/assets/logo.png" alt="Dolphin" style="height:40px;" />
+                <div>
+                    <h1 style="margin:0;">Dolphin Debug Dashboard</h1>
+                    <p style="margin:4px 0 0;color:#4b5563;">Real-time debugging and monitoring for your Dolphin application</p>
+                </div>
+            </div>
         </div>
         
         <div class="grid">

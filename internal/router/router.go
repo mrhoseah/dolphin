@@ -41,6 +41,16 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.router.ServeHTTP(w, req)
 }
 
+// Mount attaches a sub-router at a given pattern
+func (r *Router) Mount(pattern string, sr chi.Router) {
+	r.router.Mount(pattern, sr)
+}
+
+// Use adds a middleware to the router
+func (r *Router) Use(mwf func(http.Handler) http.Handler) {
+	r.router.Use(mwf)
+}
+
 // setupMiddleware configures global middleware
 func (r *Router) setupMiddleware() {
 	// Maintenance mode middleware (should be first)

@@ -13,6 +13,7 @@ import (
 	"github.com/mrhoseah/dolphin/internal/app"
 	"github.com/mrhoseah/dolphin/internal/config"
 	"github.com/mrhoseah/dolphin/internal/database"
+	"github.com/mrhoseah/dolphin/internal/debug"
 	"github.com/mrhoseah/dolphin/internal/logger"
 	"github.com/mrhoseah/dolphin/internal/maintenance"
 	"github.com/mrhoseah/dolphin/internal/router"
@@ -264,6 +265,42 @@ Examples:
 		Run:   generateSwagger,
 	}
 
+	// Debug commands
+	var debugServeCmd = &cobra.Command{
+		Use:   "serve",
+		Short: "Start debug dashboard server",
+		Long:  "Start the Dolphin debug dashboard and tools on a separate port",
+		Run:   debugServe,
+	}
+	debugServeCmd.Flags().IntP("port", "p", 8082, "Port for debug server")
+	debugServeCmd.Flags().IntP("profiler-port", "P", 8083, "Port for profiler endpoints")
+
+	var debugStatusCmd = &cobra.Command{
+		Use:   "status",
+		Short: "Show debug status",
+		Long:  "Display debug status and basic runtime stats if the server is running",
+		Run:   debugStatus,
+	}
+	debugStatusCmd.Flags().String("host", "http://localhost", "Debug server host")
+	debugStatusCmd.Flags().IntP("port", "p", 8082, "Debug server port")
+
+	var debugGCCmd = &cobra.Command{
+		Use:   "gc",
+		Short: "Trigger garbage collection via debug server",
+		Long:  "Trigger a garbage collection run on the running debug server",
+		Run:   debugGC,
+	}
+	debugGCCmd.Flags().String("host", "http://localhost", "Debug server host")
+	debugGCCmd.Flags().IntP("port", "p", 8082, "Debug server port")
+
+	var debugCmd = &cobra.Command{
+		Use:   "debug",
+		Short: "Debugging tools",
+		Long:  "Manage Dolphin debugging tools and dashboard",
+	}
+
+	debugCmd.AddCommand(debugServeCmd, debugStatusCmd, debugGCCmd)
+
 	var postmanGenerateCmd = &cobra.Command{
 		Use:   "postman:generate",
 		Short: "Generate Postman collection",
@@ -455,6 +492,9 @@ Examples:
 	// Route commands
 	rootCmd.AddCommand(routeListCmd)
 
+	// Debug commands
+	rootCmd.AddCommand(debugCmd)
+
 	// Key generation
 	rootCmd.AddCommand(keyGenerateCmd)
 
@@ -488,6 +528,15 @@ func serve(cmd *cobra.Command, args []string) {
 
 	// Initialize router
 	r := router.New(app)
+
+	// Optionally mount debug dashboard on main server when app debug enabled
+	if cfg.App.Debug {
+		dbg := debug.NewDebugger(debug.Config{Enabled: true, EnableProfiler: true})
+		if dr := dbg.Router(); dr != nil {
+			r.Mount("/debug", dr)
+			r.Use(dbg.Middleware())
+		}
+	}
 
 	// Create HTTP server
 	srv := &http.Server{
@@ -920,6 +969,64 @@ func keyGenerate(cmd *cobra.Command, args []string) {
 	fmt.Println("🔑 Generating application key...")
 	// Implementation would go here
 	fmt.Println("✅ Application key generated!")
+}
+
+// --- Debug command handlers ---
+func debugServe(cmd *cobra.Command, args []string) {
+	port, _ := cmd.Flags().GetInt("port")
+	profilerPort, _ := cmd.Flags().GetInt("profiler-port")
+
+	cfgLocal, err := config.Load()
+	if err != nil {
+		log.Fatal("Failed to load configuration:", err)
+	}
+
+	// Initialize logger so we keep consistent formatting
+	lg := logger.New(cfgLocal.Log.Level, cfgLocal.Log.Format)
+
+	dbg := debug.NewDebugger(debug.Config{Enabled: true, Port: port, ProfilerPort: profilerPort, EnableProfiler: true, EnableTracer: true, EnableInspector: true, LogLevel: cfgLocal.Log.Level})
+
+	r := debug.NewDebugger(debug.Config{Enabled: true}).Router()
+	// Use the router from the created debugger instance to ensure handlers reference same state
+	r = dbg.Router()
+
+	srv := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: r}
+	go func() {
+		lg.Info("🐬 Debug dashboard running", zap.String("url", fmt.Sprintf("http://localhost:%d/", port)))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			lg.Fatal("Failed to start debug server", zap.Error(err))
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+}
+
+func debugStatus(cmd *cobra.Command, args []string) {
+	host, _ := cmd.Flags().GetString("host")
+	port, _ := cmd.Flags().GetInt("port")
+	url := fmt.Sprintf("%s:%d/debug/stats", host, port)
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Printf("❌ Could not reach debug server at %s: %v\n", url, err)
+		return
+	}
+	defer resp.Body.Close()
+	fmt.Printf("✅ Debug server reachable: %s (status %d)\n", url, resp.StatusCode)
+}
+
+func debugGC(cmd *cobra.Command, args []string) {
+	host, _ := cmd.Flags().GetString("host")
+	port, _ := cmd.Flags().GetInt("port")
+	url := fmt.Sprintf("%s:%d/debug/memory/gc", host, port)
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Printf("❌ Request failed: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+	fmt.Printf("🧹 GC triggered via %s (status %d)\n", url, resp.StatusCode)
 }
 
 func maintenanceDown(cmd *cobra.Command, args []string) {
