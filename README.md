@@ -85,6 +85,46 @@ server:
   port: 8080
 ```
 
+## 🧭 Development Flow
+
+A typical Dolphin workflow from zero to feature:
+
+1) Scaffold a module
+```bash
+dolphin make:module Post
+```
+
+2) Run the server with debug tools
+```bash
+dolphin serve
+# visit http://localhost:8080/debug for dashboard (when app.debug=true)
+```
+
+3) Build HTMX views and iterate
+```bash
+dolphin make:view Post
+# edit templates in resources/views/post/
+```
+
+4) Generate API resource and test
+```bash
+dolphin make:resource Post
+dolphin postman:generate
+```
+
+5) Database work
+```bash
+dolphin migrate
+dolphin rollback --steps 1
+```
+
+6) Maintenance for safe deploys
+```bash
+dolphin maintenance down --message "Deploying..."
+# deploy
+dolphin maintenance up
+```
+
 ## 🔧 CLI Commands (Dolphin CLI - Like Laravel Artisan)
 
 Dolphin provides a powerful CLI tool similar to Laravel's Artisan. Install it globally for the best experience:

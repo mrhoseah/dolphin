@@ -411,8 +411,8 @@ func %s(next http.Handler) http.Handler {
 		// Example: Add custom header
 		// w.Header().Set("X-Custom-Header", "value")
 		
-		// Example: Log request
-		// log.Printf("Request: %s %s", r.Method, r.URL.Path)
+        // Example: Log request
+        // log.Println("Request:", r.Method, r.URL.Path)
 		
 		// Example: Authentication check
 		// if !isAuthenticated(r) {

@@ -268,93 +268,55 @@ func (g *Generator) generateRepositoryContent(name string) string {
 	return fmt.Sprintf(`package repositories
 
 import (
-	"github.com/mrhoseah/dolphin/app/models"
-	"gorm.io/gorm"
+    "github.com/mrhoseah/dolphin/app/models"
+    "gorm.io/gorm"
 )
 
-// %sRepository handles data access for %s
-type %sRepository struct {
-	db *gorm.DB
+// %[1]sRepository handles data access for %[2]s
+type %[1]sRepository struct {
+    db *gorm.DB
 }
 
-// New%sRepository creates a new %s repository
-func New%sRepository(db *gorm.DB) *%sRepository {
-	return &%sRepository{db: db}
+// New%[1]sRepository creates a new %[1]s repository
+func New%[1]sRepository(db *gorm.DB) *%[1]sRepository {
+    return &%[1]sRepository{db: db}
 }
 
-// FindAll retrieves all %s
-func (r *%sRepository) FindAll() ([]models.%s, error) {
-	var items []models.%s
-	err := r.db.Find(&items).Error
-	return items, err
+func (r *%[1]sRepository) FindAll() ([]models.%[1]s, error) {
+    var items []models.%[1]s
+    err := r.db.Find(&items).Error
+    return items, err
 }
 
-// FindByID retrieves a %s by ID
-func (r *%sRepository) FindByID(id uint) (*models.%s, error) {
-	var item models.%s
-	err := r.db.First(&item, id).Error
-	if err != nil {
-		return nil, err
-	}
-	return &item, nil
+func (r *%[1]sRepository) FindByID(id uint) (*models.%[1]s, error) {
+    var item models.%[1]s
+    if err := r.db.First(&item, id).Error; err != nil {
+        return nil, err
+    }
+    return &item, nil
 }
 
-// Create creates a new %s
-func (r *%sRepository) Create(item *models.%s) error {
-	return r.db.Create(item).Error
+func (r *%[1]sRepository) Create(item *models.%[1]s) error { return r.db.Create(item).Error }
+func (r *%[1]sRepository) Update(item *models.%[1]s) error { return r.db.Save(item).Error }
+func (r *%[1]sRepository) Delete(id uint) error { return r.db.Delete(&models.%[1]s{}, id).Error }
+
+func (r *%[1]sRepository) Count() (int64, error) {
+    var count int64
+    err := r.db.Model(&models.%[1]s{}).Count(&count).Error
+    return count, err
 }
 
-// Update updates a %s
-func (r *%sRepository) Update(item *models.%s) error {
-	return r.db.Save(item).Error
+func (r *%[1]sRepository) Paginate(page, pageSize int) ([]models.%[1]s, int64, error) {
+    var items []models.%[1]s
+    var total int64
+    offset := (page - 1) * pageSize
+    if err := r.db.Model(&models.%[1]s{}).Count(&total).Error; err != nil {
+        return nil, 0, err
+    }
+    err := r.db.Offset(offset).Limit(pageSize).Find(&items).Error
+    return items, total, err
 }
-
-// Delete deletes a %s by ID
-func (r *%sRepository) Delete(id uint) error {
-	return r.db.Delete(&models.%s{}, id).Error
-}
-
-// FindWhere finds %s with custom conditions
-func (r *%sRepository) FindWhere(conditions map[string]interface{}) ([]models.%s, error) {
-	var items []models.%s
-	query := r.db
-	for key, value := range conditions {
-		query = query.Where(key, value)
-	}
-	err := query.Find(&items).Error
-	return items, err
-}
-
-// Count returns the total count of %s
-func (r *%sRepository) Count() (int64, error) {
-	var count int64
-	err := r.db.Model(&models.%s{}).Count(&count).Error
-	return count, err
-}
-
-// Paginate retrieves paginated %s
-func (r *%sRepository) Paginate(page, pageSize int) ([]models.%s, int64, error) {
-	var items []models.%s
-	var total int64
-
-	offset := (page - 1) * pageSize
-
-	if err := r.db.Model(&models.%s{}).Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	err := r.db.Offset(offset).Limit(pageSize).Find(&items).Error
-	return items, total, err
-}
-`, name, lowerName, name, name, name, name, name, name,
-		lowerName, name, name, name,
-		lowerName, name, name, name,
-		lowerName, name, name,
-		lowerName, name, name,
-		lowerName, name, name,
-		lowerName, name, name, name,
-		lowerName, name, name,
-		lowerName, name, name, name, name)
+`, name, lowerName)
 }
 
 // generateAPIControllerContent generates API controller template
@@ -374,47 +336,43 @@ import (
 	"gorm.io/gorm"
 )
 
-// %sController handles API requests for %s
-type %sController struct {
-	repo *repositories.%sRepository
+// %[1]sController handles API requests for %[2]s
+type %[1]sController struct { repo *repositories.%[1]sRepository }
+
+// New%[1]sController creates a new %[1]s API controller
+func New%[1]sController(db *gorm.DB) *%[1]sController {
+    return &%[1]sController{ repo: repositories.New%[1]sRepository(db) }
 }
 
-// New%sController creates a new %s API controller
-func New%sController(db *gorm.DB) *%sController {
-	return &%sController{
-		repo: repositories.New%sRepository(db),
-	}
-}
-
-// Index handles GET /api/%s
-// @Summary List all %s
-// @Description Get a list of all %s
-// @Tags %s
+// Index handles GET /api/%[3]s
+// @Summary List all %[3]s
+// @Description Get a list of all %[3]s
+// @Tags %[1]s
 // @Accept json
 // @Produce json
-// @Success 200 {array} models.%s
-// @Router /api/%s [get]
-func (c *%sController) Index(w http.ResponseWriter, r *http.Request) {
+// @Success 200 {array} models.%[1]s
+// @Router /api/%[3]s [get]
+func (c *%[1]sController) Index(w http.ResponseWriter, r *http.Request) {
 	items, err := c.repo.FindAll()
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, map[string]string{"error": "Failed to retrieve %s"})
+        render.JSON(w, r, map[string]string{"error": "Failed to retrieve %[2]s"})
 		return
 	}
 	render.JSON(w, r, items)
 }
 
-// Show handles GET /api/%s/{id}
-// @Summary Get %s by ID
-// @Description Get a single %s by ID
-// @Tags %s
+// Show handles GET /api/%[3]s/{id}
+// @Summary Get %[2]s by ID
+// @Description Get a single %[2]s by ID
+// @Tags %[1]s
 // @Accept json
 // @Produce json
-// @Param id path int true "%s ID"
-// @Success 200 {object} models.%s
+// @Param id path int true "%[2]s ID"
+// @Success 200 {object} models.%[1]s
 // @Failure 404 {object} map[string]string
-// @Router /api/%s/{id} [get]
-func (c *%sController) Show(w http.ResponseWriter, r *http.Request) {
+// @Router /api/%[3]s/{id} [get]
+func (c *%[1]sController) Show(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
 		render.Status(r, http.StatusBadRequest)
@@ -422,37 +380,37 @@ func (c *%sController) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	item, err := c.repo.FindByID(uint(id))
+    item, err := c.repo.FindByID(uint(id))
 	if err != nil {
 		render.Status(r, http.StatusNotFound)
-		render.JSON(w, r, map[string]string{"error": "%s not found"})
+        render.JSON(w, r, map[string]string{"error": "%[2]s not found"})
 		return
 	}
 
 	render.JSON(w, r, item)
 }
 
-// Store handles POST /api/%s
-// @Summary Create %s
-// @Description Create a new %s
-// @Tags %s
+// Store handles POST /api/%[3]s
+// @Summary Create %[2]s
+// @Description Create a new %[2]s
+// @Tags %[1]s
 // @Accept json
 // @Produce json
-// @Param %s body models.%s true "%s data"
-// @Success 201 {object} models.%s
+// @Param %[2]s body models.%[1]s true "%[2]s data"
+// @Success 201 {object} models.%[1]s
 // @Failure 400 {object} map[string]string
-// @Router /api/%s [post]
-func (c *%sController) Store(w http.ResponseWriter, r *http.Request) {
-	var item models.%s
+// @Router /api/%[3]s [post]
+func (c *%[1]sController) Store(w http.ResponseWriter, r *http.Request) {
+    var item models.%[1]s
 	if err := render.DecodeJSON(r.Body, &item); err != nil {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, map[string]string{"error": "Invalid request body"})
 		return
 	}
 
-	if err := c.repo.Create(&item); err != nil {
+    if err := c.repo.Create(&item); err != nil {
 		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, map[string]string{"error": "Failed to create %s"})
+        render.JSON(w, r, map[string]string{"error": "Failed to create %[2]s"})
 		return
 	}
 
@@ -460,19 +418,19 @@ func (c *%sController) Store(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, item)
 }
 
-// Update handles PUT /api/%s/{id}
-// @Summary Update %s
-// @Description Update an existing %s
-// @Tags %s
+// Update handles PUT /api/%[3]s/{id}
+// @Summary Update %[2]s
+// @Description Update an existing %[2]s
+// @Tags %[1]s
 // @Accept json
 // @Produce json
-// @Param id path int true "%s ID"
-// @Param %s body models.%s true "%s data"
-// @Success 200 {object} models.%s
+// @Param id path int true "%[2]s ID"
+// @Param %[2]s body models.%[1]s true "%[2]s data"
+// @Success 200 {object} models.%[1]s
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /api/%s/{id} [put]
-func (c *%sController) Update(w http.ResponseWriter, r *http.Request) {
+// @Router /api/%[3]s/{id} [put]
+func (c *%[1]sController) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
 		render.Status(r, http.StatusBadRequest)
@@ -480,10 +438,10 @@ func (c *%sController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	item, err := c.repo.FindByID(uint(id))
+    item, err := c.repo.FindByID(uint(id))
 	if err != nil {
 		render.Status(r, http.StatusNotFound)
-		render.JSON(w, r, map[string]string{"error": "%s not found"})
+        render.JSON(w, r, map[string]string{"error": "%[2]s not found"})
 		return
 	}
 
@@ -493,26 +451,26 @@ func (c *%sController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := c.repo.Update(item); err != nil {
+    if err := c.repo.Update(item); err != nil {
 		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, map[string]string{"error": "Failed to update %s"})
+        render.JSON(w, r, map[string]string{"error": "Failed to update %[2]s"})
 		return
 	}
 
 	render.JSON(w, r, item)
 }
 
-// Destroy handles DELETE /api/%s/{id}
-// @Summary Delete %s
-// @Description Delete a %s by ID
-// @Tags %s
+// Destroy handles DELETE /api/%[3]s/{id}
+// @Summary Delete %[2]s
+// @Description Delete a %[2]s by ID
+// @Tags %[1]s
 // @Accept json
 // @Produce json
-// @Param id path int true "%s ID"
+// @Param id path int true "%[2]s ID"
 // @Success 200 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /api/%s/{id} [delete]
-func (c *%sController) Destroy(w http.ResponseWriter, r *http.Request) {
+// @Router /api/%[3]s/{id} [delete]
+func (c *%[1]sController) Destroy(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
 		render.Status(r, http.StatusBadRequest)
@@ -520,21 +478,15 @@ func (c *%sController) Destroy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := c.repo.Delete(uint(id)); err != nil {
+    if err := c.repo.Delete(uint(id)); err != nil {
 		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, map[string]string{"error": "Failed to delete %s"})
+        render.JSON(w, r, map[string]string{"error": "Failed to delete %[2]s"})
 		return
 	}
 
-	render.JSON(w, r, map[string]string{"message": "%s deleted successfully"})
+    render.JSON(w, r, map[string]string{"message": "%[2]s deleted successfully"})
 }
-`, name, lowerName, name, name, name, name, name, name, name, name,
-		pluralName, lowerName, lowerName, lowerName, name, pluralName, name, lowerName,
-		pluralName, lowerName, lowerName, lowerName, name, name, pluralName, name,
-		name, pluralName, lowerName, lowerName, lowerName, lowerName, name, name, name, pluralName, name, name,
-		lowerName, pluralName, lowerName, lowerName, lowerName, name, lowerName, name, name, pluralName, name,
-		name, name, pluralName, lowerName, lowerName, lowerName, name, pluralName, name,
-		lowerName, name)
+`, name, lowerName, pluralName)
 }
 
 // generateProviderContent generates service provider template
