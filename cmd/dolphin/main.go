@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -1156,6 +1157,31 @@ func updateSelf(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Println("✅ Update complete. Run 'dolphin --help' to confirm.")
+
+	// Also refresh installer script to latest and expose as dolphin-install
+	installerURL := "https://raw.githubusercontent.com/mrhoseah/dolphin/main/scripts/install.sh"
+	if resp, err := http.Get(installerURL); err == nil {
+		defer resp.Body.Close()
+		if resp.StatusCode == 200 {
+			data, _ := io.ReadAll(resp.Body)
+			// write to GOBIN first
+			gobin := os.Getenv("GOBIN")
+			if gobin == "" {
+				out, _ := exec.Command("go", "env", "GOPATH").Output()
+				gp := strings.TrimSpace(string(out))
+				gobin = gp + "/bin"
+			}
+			local := gobin + "/dolphin-install.sh"
+			_ = os.WriteFile(local, data, 0755)
+			// try to copy a convenience executable name
+			if path, err := exec.LookPath("dolphin-install"); err == nil {
+				_ = exec.Command("cp", local, path).Run()
+			} else {
+				// attempt to place into /usr/local/bin
+				_ = exec.Command("sudo", "cp", local, "/usr/local/bin/dolphin-install").Run()
+			}
+		}
+	}
 }
 
 // --- Debug command handlers ---

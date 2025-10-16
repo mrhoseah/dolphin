@@ -40,9 +40,5 @@ func (s *MemorySessionStore) Forget(key string) {
 
 // Regenerate regenerates the session ID
 func (s *MemorySessionStore) Regenerate() {
-	// In a real implementation, this would generate a new session ID
-	// For now, we'll just clear the data
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	s.data = make(map[string]interface{})
+	// No-op for in-memory demo to avoid losing session data on login.
 }
