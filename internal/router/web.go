@@ -139,13 +139,10 @@ func (r *Router) handleLoginSubmit(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// HTMX-friendly redirect
+	w.Header().Set("HX-Redirect", "/dashboard")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`
-<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-    Login successful! Redirecting...
-</div>
-<script>setTimeout(()=>{ window.location.href='/dashboard'; }, 800);</script>
-    `))
+	w.Write([]byte(`<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">Login successful.</div>`))
 }
 
 // handleRegisterPage renders the register page
@@ -180,13 +177,10 @@ func (r *Router) handleRegisterSubmit(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
+	// HTMX-friendly redirect
+	w.Header().Set("HX-Redirect", "/auth/login")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`
-<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-    Registration successful! Redirecting to login...
-</div>
-<script>setTimeout(()=>{ window.location.href='/auth/login'; }, 800);</script>
-    `))
+	w.Write([]byte(`<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">Registration successful.</div>`))
 }
 
 // handleLogout handles logout
