@@ -1006,6 +1006,10 @@ func newProject(cmd *cobra.Command, args []string) {
 		name,
 		name + "/bootstrap",
 		name + "/config",
+		name + "/ui/views/layouts",
+		name + "/ui/views/partials",
+		name + "/ui/views/pages",
+		name + "/ui/views/auth",
 	}
 	for _, d := range dirs {
 		if err := os.MkdirAll(d, 0755); err != nil {
@@ -1069,6 +1073,31 @@ func main() {
 	if err := os.WriteFile(name+"/README.md", []byte(readme), 0644); err != nil {
 		log.Fatalf("Failed to write README.md: %v", err)
 	}
+
+	// Scaffold minimal UI views and layout
+	_ = os.WriteFile(name+"/ui/views/layouts/base.html", []byte(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Dolphin</title><script src="https://unpkg.com/htmx.org@1.9.10"></script><style>body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif;background:#f6f7fb;color:#111827}</style></head><body>{{header}}<main>{{yield}}</main>{{footer}}</body></html>`), 0644)
+	_ = os.WriteFile(name+"/ui/views/partials/header.html", []byte(`<header style="background:#fff;border-bottom:1px solid #e5e7eb"><div style="max-width:1100px;margin:0 auto;padding:14px 16px;display:flex;justify-content:space-between"><a href="/" style="text-decoration:none;color:#0ea5a4;font-weight:800">🐬 DOLPHIN</a><nav style="display:flex;gap:16px"><a href="/auth/login">Login</a><a href="/auth/register">Register</a><a href="/dashboard">Dashboard</a></nav></div></header>`), 0644)
+	_ = os.WriteFile(name+"/ui/views/partials/footer.html", []byte(`<footer style="border-top:1px solid #e5e7eb;margin-top:32px;background:#fff"><div style="max-width:1100px;margin:0 auto;padding:18px 16px;color:#6b7280;font-size:14px;text-align:center">Built with ❤️ by the Dolphin community • MIT License</div></footer>`), 0644)
+	_ = os.WriteFile(name+"/ui/views/pages/home.html", []byte(`<section style="max-width:1100px;margin:24px auto;padding:0 16px"><div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px"><h1 style="font-size:32px;margin:0 0 8px">Welcome to Dolphin</h1><p style="color:#6b7280">Enterprise-grade Go web framework for rapid development.</p><div style="margin-top:12px;display:flex;gap:12px"><a href="/auth/register">Get Started</a><a href="/auth/login">Login</a></div></div></section>`), 0644)
+	_ = os.WriteFile(name+"/ui/views/pages/dashboard.html", []byte(`<section style="max-width:1100px;margin:24px auto;padding:0 16px"><h2>Dashboard</h2><div>Build your widgets here.</div></section>`), 0644)
+	_ = os.WriteFile(name+"/ui/views/auth/login.html", []byte(`<section style="max-width:480px;margin:32px auto;padding:0 16px"><div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px"><h2>Login</h2><form hx-post="/auth/login" hx-target="#login-result"><input name="email" placeholder="Email" style="width:100%;margin:6px 0;padding:8px;border:1px solid #e5e7eb;border-radius:8px"/><input name="password" type="password" placeholder="Password" style="width:100%;margin:6px 0;padding:8px;border:1px solid #e5e7eb;border-radius:8px"/><button type="submit" style="padding:8px 12px">Login</button></form><div id="login-result" style="margin-top:8px"></div></div></section>`), 0644)
+	_ = os.WriteFile(name+"/ui/views/auth/register.html", []byte(`<section style="max-width:480px;margin:32px auto;padding:0 16px"><div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px"><h2>Register</h2><form hx-post="/auth/register" hx-target="#register-result"><input name="firstName" placeholder="First Name" style="width:100%;margin:6px 0;padding:8px;border:1px solid #e5e7eb;border-radius:8px"/><input name="lastName" placeholder="Last Name" style="width:100%;margin:6px 0;padding:8px;border:1px solid #e5e7eb;border-radius:8px"/><input name="email" placeholder="Email" style="width:100%;margin:6px 0;padding:8px;border:1px solid #e5e7eb;border-radius:8px"/><input name="password" type="password" placeholder="Password" style="width:100%;margin:6px 0;padding:8px;border:1px solid #e5e7eb;border-radius:8px"/><button type="submit" style="padding:8px 12px">Create Account</button></form><div id="register-result" style="margin-top:8px"></div></div></section>`), 0644)
+
+	// routes placeholder for users to extend
+	_ = os.MkdirAll(name+"/routes", 0755)
+	_ = os.WriteFile(name+"/routes/web.go", []byte(`package routes
+
+import (
+    "net/http"
+    "github.com/go-chi/chi/v5"
+)
+
+// Register attaches app routes to the given router.
+func Register(r chi.Router) {
+    // Example custom route
+    r.Get("/hello", func(w http.ResponseWriter, _ *http.Request){ w.Write([]byte("hello from routes/web.go")) })
+}
+`), 0644)
 
 	fmt.Println("✅ Project created!")
 	fmt.Printf("   Next:\n   cd %s && go mod tidy && dolphin serve\n", name)
