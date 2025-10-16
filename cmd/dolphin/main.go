@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/mrhoseah/dolphin/internal/app"
 	"github.com/mrhoseah/dolphin/internal/config"
 	"github.com/mrhoseah/dolphin/internal/database"
@@ -553,8 +555,11 @@ func serve(cmd *cobra.Command, args []string) {
 	if cfg.App.Debug {
 		dbg := debug.NewDebugger(debug.Config{Enabled: true, EnableProfiler: true})
 		if dr := dbg.Router(); dr != nil {
-			r.Mount("/debug", dr)
-			r.Use(dbg.Middleware())
+			// Build a subrouter with middleware, then mount under /debug
+			sub := chi.NewRouter()
+			sub.Use(dbg.Middleware())
+			sub.Mount("/", dr)
+			r.Mount("/debug", sub)
 		}
 	}
 
