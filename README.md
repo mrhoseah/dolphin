@@ -33,11 +33,18 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, ins
 
 ### Installation
 
-#### Option 1: Install CLI Tool (Recommended)
+#### One-liner Installer (Recommended)
 ```bash
-# Install the Dolphin CLI globally
-go install github.com/mrhoseah/dolphin/cmd/cli@latest
+curl -fsSL https://raw.githubusercontent.com/mrhoseah/dolphin/main/scripts/install.sh | bash
+```
 
+Install a specific version:
+```bash
+VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/mrhoseah/dolphin/main/scripts/install.sh | bash
+```
+
+Then:
+```bash
 # Create a new project
 dolphin new my-app
 cd my-app
