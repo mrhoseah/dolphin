@@ -1089,6 +1089,14 @@ CMD ["./dolphin", "serve"]
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## 🫶 Community
+
+- **Community Chat**: Use the Go Community Discord (Gophers). Dolphin updates/discussions will be shared there.
+- **GitHub Discussions**: Participate in Q&A and ideas: https://github.com/mrhoseah/dolphin/discussions
+- **Contributing**: Read `CONTRIBUTING.md` before opening PRs
+- **Code of Conduct**: Please follow `CODE_OF_CONDUCT.md`
+- **Security**: Report vulnerabilities privately to `mrhoseah@gmail.com` (see `SECURITY.md`)
+
 ## 🙏 Acknowledgments
 
 - Inspired by Laravel's elegant architecture
