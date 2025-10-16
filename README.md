@@ -4,9 +4,9 @@
 
 > **You don't have to swim an ocean of hundreds of frameworks and boilerplates. Let Dolphin make your work easier!**
 
-Dolphin Framework is a modern, enterprise-grade web framework written in Go, inspired by the elegant syntax and developer experience of Laravel, CodeIgniter, and CakePHP. It combines Go's performance and concurrency capabilities with the productivity features of modern PHP frameworks.
+Dolphin Framework is a modern, enterprise-grade web framework written in Go, inspired by the elegant developer experience of Laravel. It combines Go's performance and concurrency capabilities with a productive, batteries-included developer workflow.
 
-**Why Dolphin?** Because building web applications shouldn't feel like navigating through endless documentation, configuring complex build systems, or wrestling with boilerplate code. Dolphin brings the best of Laravel's developer experience to Go, making rapid development not just possible, but delightful.
+**Why Dolphin?** Because building web applications shouldn't feel like navigating through endless documentation, configuring complex build systems, or wrestling with boilerplate code. Dolphin brings a polished developer experience to Go—taking inspiration from Laravel—so rapid development feels natural and delightful.
 
 ## ✨ Key Features
 
