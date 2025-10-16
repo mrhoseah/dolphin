@@ -215,6 +215,40 @@ dolphin route:list
 dolphin key:generate
 ```
 
+### 🐛 Debugging
+
+Run the built-in debug dashboard and tools.
+
+```bash
+# Start debug dashboard on a separate port
+./dolphin debug serve --port 8082 --profiler-port 8083
+
+# Check status
+./dolphin debug status --host http://localhost --port 8082
+
+# Trigger GC via API
+./dolphin debug gc --host http://localhost --port 8082
+```
+
+When `app.debug=true`, the main server mounts the dashboard at `/debug` and applies request profiling middleware.
+
+Endpoints under `/debug`:
+- `/` – Dashboard UI
+- `/stats` – Current stats JSON
+- `/stats/reset` – Reset stats
+- `/requests` – List recent requests
+- `/requests/{id}` – Request details
+- `/memory` – Memory stats
+- `/memory/gc` – Force GC
+- `/goroutines` – Goroutine profile
+- `/profile/cpu` – CPU profile
+- `/profile/memory` – Heap profile
+- `/profile/goroutine` – Goroutine pprof
+- `/profile/block` – Block profile
+- `/trace` – Trace snapshot (if enabled)
+- `/inspect` – Inspection summary (if enabled)
+- `/inspect/{type}` – Inspect specific type (if enabled)
+
 ### 🎯 Laravel Artisan Comparison
 
 | Laravel Artisan | Dolphin CLI | Description |
