@@ -1010,6 +1010,14 @@ func newProject(cmd *cobra.Command, args []string) {
 		name + "/ui/views/partials",
 		name + "/ui/views/pages",
 		name + "/ui/views/auth",
+		// app structure for controllers/models/providers/repositories
+		name + "/app/http/controllers/api",
+		name + "/app/models",
+		name + "/app/repositories",
+		name + "/app/providers",
+		// storage and migrations
+		name + "/storage/uploads",
+		name + "/migrations",
 	}
 	for _, d := range dirs {
 		if err := os.MkdirAll(d, 0755); err != nil {
