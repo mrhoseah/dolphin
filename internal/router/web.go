@@ -4,16 +4,13 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/mrhoseah/dolphin/internal/auth"
 	dolphinMiddleware "github.com/mrhoseah/dolphin/internal/middleware"
 )
 
 // setupWebRoutes configures web routes with HTMX support
 func (r *Router) setupWebRoutes(router chi.Router) {
-	// Setup Dolphin-style authentication for web routes
-	sessionStore := auth.NewMemorySessionStore()
-	authManager := auth.SetupAuth(r.app.DB().GetDB(), sessionStore)
-	webAuthMiddleware := dolphinMiddleware.NewAuthMiddleware(authManager, r.app.Logger())
+    // Setup Dolphin-style authentication for web routes using router's manager
+    webAuthMiddleware := dolphinMiddleware.NewAuthMiddleware(r.authManager, r.app.Logger())
 
 	// Home page with HTMX
 	router.Get("/", r.handleHome)
@@ -67,16 +64,27 @@ func (r *Router) handleHome(w http.ResponseWriter, req *http.Request) {
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
 <body class="bg-gray-100">
-    <div class="min-h-screen flex items-center justify-center">
-        <div class="max-w-md w-full bg-white rounded-lg shadow-md p-6">
-            <div class="text-center">
-                <h1 class="text-3xl font-bold text-gray-900 mb-4">🐬 Dolphin Framework</h1>
-                <p class="text-gray-600 mb-6">Enterprise-grade Go web framework with HTMX</p>
-                <div class="space-y-2">
-                    <a href="/auth/login" class="block w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">Login</a>
-                    <a href="/auth/register" class="block w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition">Register</a>
-                    <a href="/dashboard" class="block w-full bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 transition">Dashboard</a>
+    <div class="min-h-screen flex items-center justify-center p-6">
+        <div class="w-full max-w-6xl bg-white rounded-2xl shadow p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="flex flex-col justify-center">
+                <div class="flex items-center space-x-3 mb-6">
+                    <span class="text-3xl">🐬</span>
+                    <span class="text-emerald-600 font-bold tracking-wide">DOLPHIN</span>
                 </div>
+                <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">Dolphin<br/>Framework</h1>
+                <p class="text-gray-600 mt-4">Enterprise-grade Go web framework for rapid development</p>
+                <div class="flex items-center gap-4 mt-8">
+                    <a href="/auth/register" class="inline-flex items-center bg-emerald-600 text-white px-5 py-2.5 rounded-full shadow hover:bg-emerald-700 transition">Get Started</a>
+                    <a href="/auth/login" class="inline-flex items-center border-2 border-emerald-300 text-emerald-700 px-5 py-2.5 rounded-full hover:bg-emerald-50 transition">Learn More</a>
+                </div>
+                <div class="grid grid-cols-3 gap-6 mt-10 text-sm text-gray-600">
+                    <div class="flex items-center space-x-2"><span>🚀</span><span>Rapid Development</span></div>
+                    <div class="flex items-center space-x-2"><span>🗄️</span><span>Integrated ORM</span></div>
+                    <div class="flex items-center space-x-2"><span>🎨</span><span>Frontend Ready</span></div>
+                </div>
+            </div>
+            <div class="rounded-xl overflow-hidden bg-gray-50 border border-gray-100 p-2">
+                <img src="/static/hero.png" alt="Dolphin Framework" class="w-full rounded-lg shadow-sm"/>
             </div>
         </div>
     </div>
@@ -102,6 +110,7 @@ func (r *Router) handleLoginPage(w http.ResponseWriter, req *http.Request) {
 <body class="bg-gray-100">
     <div class="min-h-screen flex items-center justify-center">
         <div class="max-w-md w-full bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-center mb-4"><span class="text-3xl mr-2">🐬</span><span class="text-emerald-600 font-bold">DOLPHIN</span></div>
             <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Login</h2>
             <form hx-post="/auth/login" hx-target="#login-result" class="space-y-4">
                 <div>
@@ -127,19 +136,31 @@ func (r *Router) handleLoginPage(w http.ResponseWriter, req *http.Request) {
 
 // handleLoginSubmit handles login form submission
 func (r *Router) handleLoginSubmit(w http.ResponseWriter, req *http.Request) {
-	// Handle login logic here
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`
+    _ = req.ParseForm()
+    email := req.FormValue("email")
+    password := req.FormValue("password")
+
+    w.Header().Set("Content-Type", "text/html")
+
+    if email == "" || password == "" {
+        w.WriteHeader(http.StatusBadRequest)
+        w.Write([]byte(`<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">Email and password are required.</div>`))
+        return
+    }
+
+    if err := r.authManager.LoginWithCredentials(map[string]string{"email": email, "password": password}); err != nil {
+        w.WriteHeader(http.StatusUnauthorized)
+        w.Write([]byte(`<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">Invalid credentials.</div>`))
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte(`
 <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
     Login successful! Redirecting...
 </div>
-<script>
-    setTimeout(() => {
-        window.location.href = '/dashboard';
-    }, 1000);
-</script>
-	`))
+<script>setTimeout(()=>{ window.location.href='/dashboard'; }, 800);</script>
+    `))
 }
 
 // handleRegisterPage renders the register page
@@ -159,6 +180,7 @@ func (r *Router) handleRegisterPage(w http.ResponseWriter, req *http.Request) {
 <body class="bg-gray-100">
     <div class="min-h-screen flex items-center justify-center">
         <div class="max-w-md w-full bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-center mb-4"><span class="text-3xl mr-2">🐬</span><span class="text-emerald-600 font-bold">DOLPHIN</span></div>
             <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Register</h2>
             <form hx-post="/auth/register" hx-target="#register-result" class="space-y-4">
                 <div>
@@ -192,23 +214,41 @@ func (r *Router) handleRegisterPage(w http.ResponseWriter, req *http.Request) {
 
 // handleRegisterSubmit handles registration form submission
 func (r *Router) handleRegisterSubmit(w http.ResponseWriter, req *http.Request) {
-	// Handle registration logic here
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`
+    _ = req.ParseForm()
+    first := req.FormValue("firstName")
+    last := req.FormValue("lastName")
+    email := req.FormValue("email")
+    password := req.FormValue("password")
+
+    w.Header().Set("Content-Type", "text/html")
+
+    if first == "" || last == "" || email == "" || password == "" {
+        w.WriteHeader(http.StatusBadRequest)
+        w.Write([]byte(`<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">All fields are required.</div>`))
+        return
+    }
+
+    // Minimal user create (plaintext password placeholder)
+    db := r.app.DB().GetDB()
+    u := auth.User{Email: email, Password: password, FirstName: first, LastName: last}
+    if err := db.Create(&u).Error; err != nil {
+        w.WriteHeader(http.StatusConflict)
+        w.Write([]byte(`<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">` + err.Error() + `</div>`))
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte(`
 <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
     Registration successful! Redirecting to login...
 </div>
-<script>
-    setTimeout(() => {
-        window.location.href = '/auth/login';
-    }, 1000);
-</script>
-	`))
+<script>setTimeout(()=>{ window.location.href='/auth/login'; }, 800);</script>
+    `))
 }
 
 // handleLogout handles logout
 func (r *Router) handleLogout(w http.ResponseWriter, req *http.Request) {
+    r.authManager.Logout()
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`

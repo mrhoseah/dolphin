@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/cors"
 
 	"github.com/mrhoseah/dolphin/internal/app"
+	"github.com/mrhoseah/dolphin/internal/auth"
 	"github.com/mrhoseah/dolphin/internal/maintenance"
 	loggingMiddleware "github.com/mrhoseah/dolphin/internal/middleware/logging"
 	recoveryMiddleware "github.com/mrhoseah/dolphin/internal/middleware/recovery"
@@ -20,6 +21,7 @@ type Router struct {
 	app                *app.App
 	router             *chi.Mux
 	maintenanceManager *maintenance.Manager
+	authManager        *auth.AuthManager
 }
 
 // New creates a new router instance
@@ -29,6 +31,10 @@ func New(app *app.App) *Router {
 		router:             chi.NewRouter(),
 		maintenanceManager: maintenance.NewManager("storage/framework/maintenance.json"),
 	}
+
+	// Initialize web auth manager (session-based)
+	sessionStore := auth.NewMemorySessionStore()
+	r.authManager = auth.SetupAuth(r.app.DB().GetDB(), sessionStore)
 
 	r.setupMiddleware()
 	r.setupRoutes()
