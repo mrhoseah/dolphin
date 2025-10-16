@@ -1003,6 +1003,7 @@ func newProject(cmd *cobra.Command, args []string) {
 		name + "/app/models",
 		name + "/app/repositories",
 		name + "/app/providers",
+		name + "/bootstrap",
 		name + "/config",
 		name + "/internal",
 		name + "/migrations",
@@ -1022,17 +1023,27 @@ func newProject(cmd *cobra.Command, args []string) {
 		log.Fatalf("Failed to write go.mod: %v", err)
 	}
 
-	// basic main.go (simple placeholder)
+	// basic main.go importing bootstrap
 	mainGo := fmt.Sprintf(`package main
 
-import "log"
+import (
+    "log"
+    "%s/bootstrap"
+)
 
 func main() {
+    bootstrap.Init()
     log.Println("Welcome to %s! Start building with Dolphin CLI.")
 }
-`, name)
+`, name, name)
 	if err := os.WriteFile(name+"/main.go", []byte(mainGo), 0644); err != nil {
 		log.Fatalf("Failed to write main.go: %v", err)
+	}
+
+	// bootstrap package
+	bootstrapGo := []byte("package bootstrap\n\n// Init bootstraps application services, routes, and providers.\nfunc Init() {\n\t// TODO: initialize config, logger, DB, routes, providers\n}\n")
+	if err := os.WriteFile(name+"/bootstrap/bootstrap.go", bootstrapGo, 0644); err != nil {
+		log.Fatalf("Failed to write bootstrap/bootstrap.go: %v", err)
 	}
 
 	// config file
