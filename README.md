@@ -49,6 +49,13 @@ go mod tidy
 dolphin serve
 ```
 
+Note:
+- The repository is public. The above command works without any extra Git/GOPRIVATE configuration.
+- Pin to a specific version if needed:
+  ```bash
+  go install github.com/mrhoseah/dolphin/cmd/cli@v0.1.0
+  ```
+
 #### Option 2: Clone Repository
 ```bash
 # Clone the repository
