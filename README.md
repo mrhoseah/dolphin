@@ -40,6 +40,7 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, ins
 - **⚖️ Load Shedding**: Adaptive overload protection with system stability
 - **🔄 Live Reload**: Hot code reload for development productivity
 - **📦 Asset Pipeline**: Bundling, versioning, and optimization for front-end assets
+- **🎨 Templating Engine**: Advanced templating with helpers, layouts, and components
 
 ## 🚀 Quick Start
 
@@ -1019,6 +1020,326 @@ defer func() {
         log.Printf("Error stopping live reload manager: %v", err)
     }
 }()
+```
+
+### 📦 Asset Pipeline
+
+Dolphin provides a comprehensive asset pipeline with bundling, versioning, and optimization for front-end assets.
+
+#### Features
+
+- **📦 Asset Bundling**: Combine multiple assets into optimized bundles
+- **🏷️ Versioning**: Automatic versioning based on content hash
+- **⚡ Optimization**: Minification and compression for production
+- **👀 File Watching**: Automatic rebuild on file changes
+- **💾 Caching**: Intelligent caching for better performance
+- **🌐 CDN Integration**: Support for CDN deployment
+- **📊 Statistics**: Detailed metrics and monitoring
+
+#### CLI Commands
+
+```bash
+# Asset pipeline management
+dolphin asset build
+dolphin asset watch
+dolphin asset clean
+dolphin asset list
+dolphin asset stats
+dolphin asset optimize
+dolphin asset version
+```
+
+#### Integration
+
+```go
+import "github.com/mrhoseah/dolphin/internal/assets"
+
+// Create asset manager
+config := assets.DefaultConfig()
+manager, err := assets.NewAssetManager(config, logger)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Process assets
+if err := manager.ProcessAssets(); err != nil {
+    log.Fatal(err)
+}
+
+// Stop manager
+defer manager.Stop()
+```
+
+#### Configuration
+
+```yaml
+# config/assets.yaml
+assets:
+  source_dir: "resources/assets"
+  output_dir: "public/assets"
+  public_dir: "public"
+  enable_bundling: true
+  bundle_types: ["app", "vendor", "common"]
+  minify_assets: true
+  combine_assets: true
+  enable_versioning: true
+  version_strategy: "hash"
+  version_length: 8
+  enable_optimization: true
+  optimize_images: true
+  optimize_css: true
+  optimize_js: true
+  enable_cache: true
+  cache_dir: "storage/cache/assets"
+  cache_expiry: "24h"
+  enable_watch: true
+  watch_extensions: [".css", ".js", ".scss", ".sass", ".less", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".woff", ".woff2", ".ttf", ".eot"]
+  cdn_url: ""
+  cdn_enabled: false
+  enable_logging: true
+  verbose_logging: false
+```
+
+#### Asset Types
+
+1. **🎨 CSS**: Stylesheets (.css, .scss, .sass, .less)
+2. **📜 JavaScript**: Scripts (.js, .ts, .jsx, .tsx)
+3. **🖼️ Images**: Images (.png, .jpg, .jpeg, .gif, .svg, .webp)
+4. **🔤 Fonts**: Fonts (.woff, .woff2, .ttf, .eot, .otf)
+5. **📄 Other**: Other assets
+
+#### Bundle Types
+
+1. **📱 App**: Application-specific assets
+2. **📦 Vendor**: Third-party library assets
+3. **🔗 Common**: Shared/common assets
+4. **📄 Page**: Page-specific assets
+
+#### Versioning Strategies
+
+1. **🔐 Hash**: Content-based hash (default)
+2. **⏰ Timestamp**: Based on modification time
+3. **📝 Manual**: Custom version numbers
+
+#### Asset Processing
+
+```go
+// Process all assets
+if err := manager.ProcessAssets(); err != nil {
+    log.Fatal(err)
+}
+
+// Get all assets
+allAssets := manager.GetAllAssets()
+for path, asset := range allAssets {
+    fmt.Printf("Asset: %s, Type: %s, Version: %s\n", 
+        path, asset.Type.String(), asset.Version)
+}
+
+// Get all bundles
+allBundles := manager.GetAllBundles()
+for name, bundle := range allBundles {
+    fmt.Printf("Bundle: %s, Assets: %d, Size: %d\n", 
+        name, len(bundle.Assets), bundle.Size)
+}
+```
+
+#### File Watching
+
+```go
+// Enable file watching
+config.EnableWatch = true
+config.WatchExtensions = []string{".css", ".js", ".scss", ".sass", ".less"}
+
+// Create manager with watching
+manager, err := assets.NewAssetManager(config, logger)
+if err != nil {
+    log.Fatal(err)
+}
+
+// File changes will automatically trigger rebuilds
+```
+
+#### Asset Optimization
+
+```go
+// Create optimizer
+optimizer := assets.NewOptimizer(config, logger)
+
+// Optimize individual asset
+if err := optimizer.OptimizeAsset(asset); err != nil {
+    log.Printf("Failed to optimize asset: %v", err)
+}
+
+// Optimize bundle
+if err := optimizer.OptimizeBundle(bundle); err != nil {
+    log.Printf("Failed to optimize bundle: %v", err)
+}
+```
+
+#### Statistics and Monitoring
+
+```go
+// Get asset statistics
+stats := manager.GetStats()
+fmt.Printf("File Change Rate: %.2f/min\n", stats.GetFileChangeRate())
+fmt.Printf("Processing Rate: %.2f/min\n", stats.GetProcessingRate())
+
+// Get most used types
+mostUsedTypes := stats.GetMostUsedTypes(5)
+for _, typeUsage := range mostUsedTypes {
+    fmt.Printf("%s: %d files\n", typeUsage.Type.String(), typeUsage.Count)
+}
+
+// Get most used bundles
+mostUsedBundles := stats.GetMostUsedBundles(5)
+for _, bundleUsage := range mostUsedBundles {
+    fmt.Printf("%s: %d files\n", bundleUsage.Bundle, bundleUsage.Count)
+}
+```
+
+#### CDN Integration
+
+```go
+// Enable CDN
+config.CDNEnabled = true
+config.CDNUrl = "https://cdn.example.com"
+
+// Assets will have CDN URLs
+for _, asset := range allAssets {
+    if asset.CDNUrl != "" {
+        fmt.Printf("CDN URL: %s\n", asset.CDNUrl)
+    }
+}
+```
+
+#### Caching
+
+```go
+// Enable caching
+config.EnableCache = true
+config.CacheDir = "storage/cache/assets"
+config.CacheExpiry = 24 * time.Hour
+
+// Cache is automatically managed
+// Get cache statistics
+cacheStats := manager.GetStats()
+fmt.Printf("Cache Hit Rate: %.2f%%\n", cacheStats["cache_hit_rate"])
+```
+
+#### Template Integration
+
+```html
+<!-- Use versioned assets in templates -->
+<link rel="stylesheet" href="/assets/css/app.{{ .AssetVersion "app.css" }}.css">
+<script src="/assets/js/vendor.{{ .AssetVersion "vendor.js" }}.js"></script>
+
+<!-- Or use asset helper functions -->
+{{ asset "css/app.css" }}
+{{ asset "js/vendor.js" }}
+{{ asset "images/logo.png" }}
+```
+
+#### Development Workflow
+
+```bash
+# Start development with asset watching
+dolphin asset watch
+
+# Build assets for production
+dolphin asset build
+
+# Optimize assets
+dolphin asset optimize
+
+# Clean built assets
+dolphin asset clean
+
+# List all assets
+dolphin asset list
+
+# View statistics
+dolphin asset stats
+
+# View asset versions
+dolphin asset version
+```
+
+#### Production Deployment
+
+```go
+// Production configuration
+prodConfig := &assets.Config{
+    SourceDir:         "resources/assets",
+    OutputDir:         "public/assets",
+    PublicDir:         "public",
+    EnableBundling:    true,
+    MinifyAssets:      true,
+    CombineAssets:     true,
+    EnableVersioning:  true,
+    VersionStrategy:   "hash",
+    EnableOptimization: true,
+    OptimizeImages:    true,
+    OptimizeCSS:       true,
+    OptimizeJS:        true,
+    EnableCache:       true,
+    CDNEnabled:        true,
+    CDNUrl:            "https://cdn.example.com",
+    EnableLogging:     false,
+}
+
+// Process assets for production
+manager, err := assets.NewAssetManager(prodConfig, logger)
+if err != nil {
+    log.Fatal(err)
+}
+
+if err := manager.ProcessAssets(); err != nil {
+    log.Fatal(err)
+}
+```
+
+#### Advanced Configuration
+
+```go
+// Custom bundle configuration
+config := assets.DefaultConfig()
+config.BundleTypes = []string{"app", "vendor", "common", "admin", "mobile"}
+
+// Custom watch extensions
+config.WatchExtensions = []string{
+    ".css", ".scss", ".sass", ".less",
+    ".js", ".ts", ".jsx", ".tsx",
+    ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp",
+    ".woff", ".woff2", ".ttf", ".eot", ".otf",
+}
+
+// Custom optimization settings
+config.OptimizeCSS = true
+config.OptimizeJS = true
+config.OptimizeImages = true
+config.MinifyAssets = true
+```
+
+#### Error Handling
+
+```go
+// Handle errors gracefully
+manager, err := assets.NewAssetManager(config, logger)
+if err != nil {
+    log.Fatalf("Failed to create asset manager: %v", err)
+}
+
+// Process with error handling
+if err := manager.ProcessAssets(); err != nil {
+    log.Printf("Failed to process assets: %v", err)
+    // Handle error appropriately
+}
+
+// Stop with error handling
+if err := manager.Stop(); err != nil {
+    log.Printf("Error stopping asset manager: %v", err)
+}
 ```
 
 ### 📄 Static Pages

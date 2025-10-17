@@ -20,22 +20,22 @@ type FileEvent struct {
 
 // AssetWatcher watches for file changes
 type AssetWatcher struct {
-	watchDir     string
-	extensions   []string
-	logger       *zap.Logger
-	
+	watchDir   string
+	extensions []string
+	logger     *zap.Logger
+
 	// File watcher
-	watcher      *fsnotify.Watcher
-	
+	watcher *fsnotify.Watcher
+
 	// Event channel
-	events       chan FileEvent
-	
+	events chan FileEvent
+
 	// Control
-	stopChan     chan struct{}
-	doneChan     chan struct{}
-	
+	stopChan chan struct{}
+	doneChan chan struct{}
+
 	// Mutex for thread safety
-	mu           sync.RWMutex
+	mu sync.RWMutex
 }
 
 // NewAssetWatcher creates a new asset watcher
@@ -44,7 +44,7 @@ func NewAssetWatcher(watchDir string, extensions []string, logger *zap.Logger) (
 	if err != nil {
 		return nil, err
 	}
-	
+
 	aw := &AssetWatcher{
 		watchDir:   watchDir,
 		extensions: extensions,
@@ -54,10 +54,10 @@ func NewAssetWatcher(watchDir string, extensions []string, logger *zap.Logger) (
 		stopChan:   make(chan struct{}),
 		doneChan:   make(chan struct{}),
 	}
-	
+
 	// Start watching
 	go aw.watch()
-	
+
 	return aw, nil
 }
 
@@ -65,7 +65,7 @@ func NewAssetWatcher(watchDir string, extensions []string, logger *zap.Logger) (
 func (aw *AssetWatcher) watch() {
 	defer close(aw.doneChan)
 	defer close(aw.events)
-	
+
 	// Add watch directory
 	if err := aw.watcher.Add(aw.watchDir); err != nil {
 		if aw.logger != nil {
@@ -75,10 +75,10 @@ func (aw *AssetWatcher) watch() {
 		}
 		return
 	}
-	
+
 	// Add subdirectories
 	aw.addSubdirectories(aw.watchDir)
-	
+
 	for {
 		select {
 		case <-aw.stopChan:
@@ -105,7 +105,7 @@ func (aw *AssetWatcher) addSubdirectories(dir string) {
 		if err != nil {
 			return err
 		}
-		
+
 		if info.IsDir() && path != dir {
 			if err := aw.watcher.Add(path); err != nil {
 				if aw.logger != nil {
@@ -115,7 +115,7 @@ func (aw *AssetWatcher) addSubdirectories(dir string) {
 				}
 			}
 		}
-		
+
 		return nil
 	})
 }
@@ -126,14 +126,14 @@ func (aw *AssetWatcher) handleEvent(event fsnotify.Event) {
 	if !aw.isWatchedFile(event.Name) {
 		return
 	}
-	
+
 	// Create file event
 	fileEvent := FileEvent{
 		Path: event.Name,
 		Op:   event.Op,
 		Time: time.Now(),
 	}
-	
+
 	// Send event to channel
 	select {
 	case aw.events <- fileEvent:
@@ -149,13 +149,13 @@ func (aw *AssetWatcher) handleEvent(event fsnotify.Event) {
 // isWatchedFile checks if a file should be watched
 func (aw *AssetWatcher) isWatchedFile(path string) bool {
 	ext := strings.ToLower(filepath.Ext(path))
-	
+
 	for _, watchExt := range aw.extensions {
 		if ext == watchExt {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -168,7 +168,7 @@ func (aw *AssetWatcher) Events() <-chan FileEvent {
 func (aw *AssetWatcher) Stop() {
 	close(aw.stopChan)
 	<-aw.doneChan
-	
+
 	if aw.watcher != nil {
 		aw.watcher.Close()
 	}
