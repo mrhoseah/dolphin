@@ -1,6 +1,7 @@
 package router
 
 import (
+	"html/template"
 	"net/http"
 	"os"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/mrhoseah/dolphin/internal/auth"
 	dolphinMiddleware "github.com/mrhoseah/dolphin/internal/middleware"
+	"github.com/mrhoseah/dolphin/internal/version"
 )
 
 // render joins base layout with header/footer partials and the page body.
@@ -53,14 +55,24 @@ func render(w http.ResponseWriter, pagePath string) error {
 			return err
 		}
 	}
-	out := string(base)
-	out = strings.ReplaceAll(out, "{{header}}", string(header))
-	out = strings.ReplaceAll(out, "{{yield}}", string(body))
-	out = strings.ReplaceAll(out, "{{footer}}", string(footer))
+
+	// Create template data with version information
+	data := map[string]interface{}{
+		"Version": version.GetVersion(),
+		"Header":  string(header),
+		"Body":    body,
+		"Footer":  string(footer),
+	}
+
+	// Parse and execute template
+	tmpl, err := template.New("layout").Parse(string(base))
+	if err != nil {
+		return err
+	}
+
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(out))
-	return nil
+	return tmpl.Execute(w, data)
 }
 
 // setupWebRoutes configures web routes with HTMX support
