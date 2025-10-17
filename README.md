@@ -2149,6 +2149,310 @@ client := http.NewClient(&http.ClientConfig{
 })
 ```
 
+### 🔮 GraphQL Endpoint
+
+Dolphin provides a plug-and-play GraphQL endpoint with schema-first development, making it easy to build modern APIs.
+
+#### Features
+
+- **🔌 Pluggable**: Enable/disable GraphQL at runtime
+- **📋 Schema-first**: Define your API using GraphQL SDL
+- **🎮 Playground**: Interactive GraphiQL playground for testing
+- **🔍 Introspection**: Automatic schema discovery and documentation
+- **✅ Validation**: Query validation and comprehensive error handling
+- **📊 Metrics**: Request metrics and performance monitoring
+- **🔍 Tracing**: Request tracing for debugging and optimization
+- **🛡️ Security**: Query depth and complexity limits
+- **🔄 Code Generation**: Generate Go types and resolvers from schema
+- **⚡ Performance**: Optimized query execution and caching
+
+#### CLI Commands
+
+```bash
+# GraphQL management
+dolphin graphql enable
+dolphin graphql disable
+dolphin graphql toggle
+dolphin graphql status
+dolphin graphql config
+
+# Testing and validation
+dolphin graphql test
+dolphin graphql validate 'query { users { id name } }'
+dolphin graphql playground
+
+# Code generation
+dolphin graphql generate ./graphql
+dolphin graphql schema
+dolphin graphql reset
+```
+
+#### Basic Usage
+
+```go
+import "github.com/mrhoseah/dolphin/internal/graphql"
+
+// Create GraphQL configuration
+config := &graphql.SchemaConfig{
+    Enabled:             true,
+    EnableIntrospection: true,
+    EnablePlayground:    true,
+    PlaygroundPath:      "/graphql/playground",
+    QueryPath:           "/graphql",
+    MaxQueryDepth:       15,
+    QueryTimeout:        30 * time.Second,
+}
+
+// Create schema manager
+schemaManager := graphql.NewSchemaManager(config, logger)
+
+// Build schema
+if err := schemaManager.BuildSchema(); err != nil {
+    log.Fatal(err)
+}
+
+// Create handler
+handler := graphql.NewHandler(schemaManager, logger)
+
+// Register routes
+mux.Handle("/graphql", handler)
+mux.Handle("/graphql/playground", http.HandlerFunc(handler.PlaygroundHandler))
+```
+
+#### Schema Definition
+
+```graphql
+type User {
+  id: Int!
+  name: String!
+  email: String!
+  createdAt: DateTime!
+}
+
+type Query {
+  user(id: Int!): User
+  users: [User!]!
+}
+
+type Mutation {
+  createUser(name: String!, email: String!): User!
+}
+```
+
+#### Query Examples
+
+```graphql
+# Query all users
+query {
+  users {
+    id
+    name
+    email
+    createdAt
+  }
+}
+
+# Query single user
+query {
+  user(id: 1) {
+    id
+    name
+    email
+  }
+}
+
+# Create user
+mutation {
+  createUser(name: "John Doe", email: "john@example.com") {
+    id
+    name
+    email
+    createdAt
+  }
+}
+```
+
+#### Pluggable Architecture
+
+```go
+// Enable GraphQL
+schemaManager.Enable()
+
+// Disable GraphQL
+schemaManager.Disable()
+
+// Toggle state
+schemaManager.Toggle()
+
+// Check if enabled
+if schemaManager.IsEnabled() {
+    // GraphQL is active
+}
+
+// Auto-enable on schema build
+config.AutoEnable = true
+```
+
+#### Advanced Configuration
+
+```go
+config := &graphql.SchemaConfig{
+    Enabled:             true,
+    EnableIntrospection: true,
+    EnablePlayground:    true,
+    PlaygroundPath:      "/graphql/playground",
+    IntrospectionPath:   "/graphql/introspection",
+    QueryPath:           "/graphql",
+    MutationPath:        "/graphql",
+    SubscriptionPath:    "/graphql/ws",
+    MaxQueryDepth:       15,
+    MaxQueryComplexity:  1000,
+    QueryTimeout:        30 * time.Second,
+    EnableTracing:       true,
+    EnableMetrics:       true,
+    AutoEnable:          false,
+}
+```
+
+#### Error Handling
+
+```go
+result := schemaManager.Execute(ctx, query, variables)
+if len(result.Errors) > 0 {
+    for _, err := range result.Errors {
+        log.Printf("GraphQL error: %s", err.Message)
+    }
+    return
+}
+
+// Process successful result
+data := result.Data
+```
+
+#### Query Validation
+
+```go
+// Validate query before execution
+err := schemaManager.ValidateQuery(query)
+if err != nil {
+    log.Printf("Invalid query: %v", err)
+    return
+}
+
+// Execute validated query
+result := schemaManager.Execute(ctx, query, variables)
+```
+
+#### Metrics and Monitoring
+
+```go
+// Get schema metrics
+metrics := schemaManager.GetMetrics()
+log.Printf("Types count: %v", metrics["types_count"])
+log.Printf("Tracing enabled: %v", metrics["tracing_enabled"])
+
+// Health check
+health := handler.HealthHandler
+// Returns JSON with status, enabled state, and configuration
+```
+
+#### Code Generation
+
+```bash
+# Generate Go types and resolvers
+dolphin graphql generate ./graphql
+
+# Generated files:
+# - ./graphql/types.go
+# - ./graphql/resolvers.go
+# - ./graphql/schema.graphql
+```
+
+#### Development Workflow
+
+```bash
+# 1. Enable GraphQL
+dolphin graphql enable
+
+# 2. Check status
+dolphin graphql status
+
+# 3. Open playground
+dolphin graphql playground
+
+# 4. Test queries
+dolphin graphql test
+
+# 5. Validate specific query
+dolphin graphql validate 'query { users { id name } }'
+
+# 6. Generate code
+dolphin graphql generate ./graphql
+
+# 7. View schema
+dolphin graphql schema
+```
+
+#### Production Deployment
+
+```go
+// Production configuration
+prodConfig := &graphql.SchemaConfig{
+    Enabled:             true,
+    EnableIntrospection: false, // Disable in production
+    EnablePlayground:    false, // Disable in production
+    QueryPath:           "/graphql",
+    MaxQueryDepth:       10,    // Stricter limits
+    MaxQueryComplexity:  500,   // Stricter limits
+    QueryTimeout:        15 * time.Second,
+    EnableTracing:       false, // Disable in production
+    EnableMetrics:       true,  // Keep metrics
+}
+
+// Create production schema manager
+schemaManager := graphql.NewSchemaManager(prodConfig, logger)
+```
+
+#### Integration with Other Features
+
+```go
+// GraphQL with authentication
+mux.Handle("/graphql", authMiddleware(handler))
+
+// GraphQL with rate limiting
+mux.Handle("/graphql", rateLimitMiddleware(handler))
+
+// GraphQL with observability
+mux.Handle("/graphql", observabilityMiddleware(handler))
+
+// GraphQL with circuit breaker
+mux.Handle("/graphql", circuitBreakerMiddleware(handler))
+```
+
+#### Endpoints
+
+- **`POST /graphql`** - GraphQL query endpoint
+- **`GET /graphql/playground`** - Interactive GraphiQL playground
+- **`POST /graphql/introspection`** - Schema introspection
+- **`GET /graphql/health`** - Health check endpoint
+- **`GET /graphql/status`** - Status and metrics endpoint
+
+#### Security Features
+
+- **Query Depth Limiting**: Prevents deeply nested queries
+- **Query Complexity Analysis**: Prevents expensive queries
+- **Query Timeout**: Prevents long-running queries
+- **Input Validation**: Validates all input parameters
+- **Error Sanitization**: Prevents information leakage in errors
+
+#### Performance Features
+
+- **Query Caching**: Intelligent query result caching
+- **Query Optimization**: Automatic query optimization
+- **Metrics Collection**: Detailed performance metrics
+- **Tracing Support**: Request tracing for debugging
+- **Connection Pooling**: Efficient database connections
+
 ### 📄 Static Pages
 
 Manage static HTML pages with templating support.

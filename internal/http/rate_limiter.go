@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -11,11 +12,11 @@ type RateLimiter struct {
 	// Configuration
 	rps   int
 	burst int
-	
+
 	// Token bucket
 	tokens     int
 	lastUpdate time.Time
-	
+
 	// Mutex for thread safety
 	mu sync.Mutex
 }
@@ -28,7 +29,7 @@ func NewRateLimiter(rps, burst int) *RateLimiter {
 	if burst <= 0 {
 		burst = 10
 	}
-	
+
 	return &RateLimiter{
 		rps:        rps,
 		burst:      burst,
@@ -41,19 +42,19 @@ func NewRateLimiter(rps, burst int) *RateLimiter {
 func (rl *RateLimiter) Wait(ctx context.Context) error {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	// Update tokens based on elapsed time
 	rl.updateTokens()
-	
+
 	// If we have tokens available, consume one
 	if rl.tokens > 0 {
 		rl.tokens--
 		return nil
 	}
-	
+
 	// Calculate wait time
 	waitTime := time.Duration(1000/rl.rps) * time.Millisecond
-	
+
 	// Wait for token with context cancellation
 	select {
 	case <-ctx.Done():
@@ -73,7 +74,7 @@ func (rl *RateLimiter) Wait(ctx context.Context) error {
 func (rl *RateLimiter) updateTokens() {
 	now := time.Now()
 	elapsed := now.Sub(rl.lastUpdate)
-	
+
 	// Add tokens based on elapsed time
 	tokensToAdd := int(elapsed.Seconds() * float64(rl.rps))
 	if tokensToAdd > 0 {
@@ -89,7 +90,7 @@ func (rl *RateLimiter) updateTokens() {
 func (rl *RateLimiter) GetTokens() int {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.updateTokens()
 	return rl.tokens
 }
@@ -108,7 +109,7 @@ func (rl *RateLimiter) GetBurst() int {
 func (rl *RateLimiter) SetRPS(rps int) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.rps = rps
 }
 
@@ -116,7 +117,7 @@ func (rl *RateLimiter) SetRPS(rps int) {
 func (rl *RateLimiter) SetBurst(burst int) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.burst = burst
 	if rl.tokens > rl.burst {
 		rl.tokens = rl.burst
@@ -127,17 +128,17 @@ func (rl *RateLimiter) SetBurst(burst int) {
 func (rl *RateLimiter) GetStats() map[string]interface{} {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.updateTokens()
-	
+
 	return map[string]interface{}{
-		"rps":           rl.rps,
-		"burst":         rl.burst,
-		"tokens":        rl.tokens,
-		"last_update":   rl.lastUpdate,
-		"utilization":   float64(rl.burst-rl.tokens) / float64(rl.burst),
-		"is_limited":    rl.tokens == 0,
-		"is_available":  rl.tokens > 0,
+		"rps":          rl.rps,
+		"burst":        rl.burst,
+		"tokens":       rl.tokens,
+		"last_update":  rl.lastUpdate,
+		"utilization":  float64(rl.burst-rl.tokens) / float64(rl.burst),
+		"is_limited":   rl.tokens == 0,
+		"is_available": rl.tokens > 0,
 	}
 }
 
@@ -145,22 +146,22 @@ func (rl *RateLimiter) GetStats() map[string]interface{} {
 func (rl *RateLimiter) GetHealth() map[string]interface{} {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.updateTokens()
-	
+
 	health := map[string]interface{}{
-		"rps":           rl.rps,
-		"burst":         rl.burst,
-		"tokens":        rl.tokens,
-		"is_healthy":    rl.tokens > 0,
-		"is_limited":    rl.tokens == 0,
-		"utilization":   float64(rl.burst-rl.tokens) / float64(rl.burst),
+		"rps":         rl.rps,
+		"burst":       rl.burst,
+		"tokens":      rl.tokens,
+		"is_healthy":  rl.tokens > 0,
+		"is_limited":  rl.tokens == 0,
+		"utilization": float64(rl.burst-rl.tokens) / float64(rl.burst),
 	}
-	
+
 	// Add timing information
 	health["last_update"] = rl.lastUpdate
 	health["time_since_last_update"] = time.Since(rl.lastUpdate)
-	
+
 	return health
 }
 
@@ -168,22 +169,22 @@ func (rl *RateLimiter) GetHealth() map[string]interface{} {
 func (rl *RateLimiter) GetMetrics() map[string]interface{} {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.updateTokens()
-	
+
 	metrics := map[string]interface{}{
-		"rps":           rl.rps,
-		"burst":         rl.burst,
-		"tokens":        rl.tokens,
-		"utilization":   float64(rl.burst-rl.tokens) / float64(rl.burst),
-		"is_limited":    rl.tokens == 0,
-		"is_available":  rl.tokens > 0,
+		"rps":          rl.rps,
+		"burst":        rl.burst,
+		"tokens":       rl.tokens,
+		"utilization":  float64(rl.burst-rl.tokens) / float64(rl.burst),
+		"is_limited":   rl.tokens == 0,
+		"is_available": rl.tokens > 0,
 	}
-	
+
 	// Add timing information
 	metrics["last_update"] = rl.lastUpdate
 	metrics["time_since_last_update"] = time.Since(rl.lastUpdate)
-	
+
 	return metrics
 }
 
@@ -191,9 +192,9 @@ func (rl *RateLimiter) GetMetrics() map[string]interface{} {
 func (rl *RateLimiter) GetStatus() string {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.updateTokens()
-	
+
 	if rl.tokens > 0 {
 		return fmt.Sprintf("Rate limiter is available (%d/%d tokens)", rl.tokens, rl.burst)
 	}
@@ -204,10 +205,10 @@ func (rl *RateLimiter) GetStatus() string {
 func (rl *RateLimiter) GetSummary() string {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.updateTokens()
-	
-	return fmt.Sprintf("Rate Limiter: %d RPS, %d burst, %d tokens available", 
+
+	return fmt.Sprintf("Rate Limiter: %d RPS, %d burst, %d tokens available",
 		rl.rps, rl.burst, rl.tokens)
 }
 
@@ -215,7 +216,7 @@ func (rl *RateLimiter) GetSummary() string {
 func (rl *RateLimiter) Reset() {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.tokens = rl.burst
 	rl.lastUpdate = time.Now()
 }
@@ -224,7 +225,7 @@ func (rl *RateLimiter) Reset() {
 func (rl *RateLimiter) IsLimited() bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.updateTokens()
 	return rl.tokens == 0
 }
@@ -233,7 +234,7 @@ func (rl *RateLimiter) IsLimited() bool {
 func (rl *RateLimiter) IsAvailable() bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.updateTokens()
 	return rl.tokens > 0
 }
@@ -242,7 +243,7 @@ func (rl *RateLimiter) IsAvailable() bool {
 func (rl *RateLimiter) GetUtilization() float64 {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.updateTokens()
 	return float64(rl.burst-rl.tokens) / float64(rl.burst)
 }
@@ -251,13 +252,13 @@ func (rl *RateLimiter) GetUtilization() float64 {
 func (rl *RateLimiter) GetWaitTime() time.Duration {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.updateTokens()
-	
+
 	if rl.tokens > 0 {
 		return 0
 	}
-	
+
 	return time.Duration(1000/rl.rps) * time.Millisecond
 }
 
@@ -265,13 +266,13 @@ func (rl *RateLimiter) GetWaitTime() time.Duration {
 func (rl *RateLimiter) GetNextTokenTime() time.Time {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.updateTokens()
-	
+
 	if rl.tokens > 0 {
 		return time.Now()
 	}
-	
+
 	waitTime := time.Duration(1000/rl.rps) * time.Millisecond
 	return time.Now().Add(waitTime)
 }
@@ -288,10 +289,10 @@ func (rl *RateLimiter) GetConfig() map[string]interface{} {
 func (rl *RateLimiter) UpdateConfig(rps, burst int) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.rps = rps
 	rl.burst = burst
-	
+
 	// Adjust tokens if necessary
 	if rl.tokens > rl.burst {
 		rl.tokens = rl.burst
@@ -302,9 +303,9 @@ func (rl *RateLimiter) UpdateConfig(rps, burst int) {
 func (rl *RateLimiter) GetInfo() map[string]interface{} {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	rl.updateTokens()
-	
+
 	return map[string]interface{}{
 		"rps":                    rl.rps,
 		"burst":                  rl.burst,
