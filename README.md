@@ -41,6 +41,7 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, ins
 - **🔄 Live Reload**: Hot code reload for development productivity
 - **📦 Asset Pipeline**: Bundling, versioning, and optimization for front-end assets
 - **🎨 Templating Engine**: Advanced templating with helpers, layouts, and components
+- **🧪 Testing Framework**: Comprehensive testing utilities with coverage and watch mode
 
 ## 🚀 Quick Start
 
@@ -68,6 +69,41 @@ go mod tidy
 # Start the development server
 dolphin serve
 ```
+
+### Testing
+
+Dolphin includes comprehensive testing utilities and commands:
+
+```bash
+# Run all tests
+dolphin test
+
+# Run tests with coverage
+dolphin test --coverage
+
+# Run specific test suite
+dolphin test --suite=integration
+
+# Run tests in watch mode
+dolphin test --watch
+
+# Run tests with database
+dolphin test --with-db
+
+# Test specific package
+dolphin test ./app/controllers
+```
+
+**Testing Features:**
+- ✅ **Unit Tests**: Test individual functions and methods
+- ✅ **Integration Tests**: Test component interactions  
+- ✅ **HTTP Tests**: Test API endpoints and web routes
+- ✅ **Database Tests**: Test data persistence with in-memory SQLite
+- ✅ **Coverage Reports**: Generate HTML and text coverage reports
+- ✅ **Watch Mode**: Continuous testing on file changes
+- ✅ **Test Utilities**: Helpers for HTTP, database, and file testing
+
+📚 **[Complete Testing Guide](TESTING_GUIDE.md)** - Comprehensive testing documentation
 
 #### Option 2: Clone Repository
 ```bash

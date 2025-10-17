@@ -9,10 +9,12 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/go-chi/chi/v5"
 
 	"github.com/mrhoseah/dolphin/internal/app"
@@ -104,6 +106,20 @@ Examples:
 		Short: "GraphQL endpoint management",
 		Long:  "Manage GraphQL endpoint configuration and testing.",
 	}
+
+	// Test command
+	var testCmd = &cobra.Command{
+		Use:   "test [package]",
+		Short: "Run tests for the Dolphin application",
+		Long:  "Run unit tests, integration tests, and generate coverage reports for your Dolphin application.",
+		Run:   runTests,
+	}
+	testCmd.Flags().Bool("coverage", false, "Generate coverage report")
+	testCmd.Flags().Bool("watch", false, "Run tests in watch mode")
+	testCmd.Flags().String("suite", "", "Run specific test suite (unit, integration, e2e)")
+	testCmd.Flags().Bool("with-db", false, "Run tests with database")
+	testCmd.Flags().Int("parallel", 0, "Number of parallel test processes")
+	testCmd.Flags().String("timeout", "30s", "Test timeout duration")
 
 	// Update command
 	var updateCmd = &cobra.Command{
@@ -719,6 +735,7 @@ Examples:
 
 	// Add commands to root
 	rootCmd.AddCommand(serveCmd)
+	rootCmd.AddCommand(testCmd)
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newCmd)
@@ -4935,4 +4952,188 @@ func uninstallInstructions(cmd *cobra.Command, args []string) {
 	fmt.Println("  go install github.com/mrhoseah/dolphin/cmd/dolphin@latest")
 	fmt.Println("")
 	fmt.Println("💡 Need help? Visit: https://github.com/mrhoseah/dolphin")
+}
+
+// runTests executes tests for the Dolphin application
+func runTests(cmd *cobra.Command, args []string) {
+	fmt.Println("🧪 Dolphin Framework - Test Runner")
+	fmt.Println("==================================")
+	fmt.Println("")
+
+	// Get flags
+	coverage, _ := cmd.Flags().GetBool("coverage")
+	watch, _ := cmd.Flags().GetBool("watch")
+	suite, _ := cmd.Flags().GetString("suite")
+	withDB, _ := cmd.Flags().GetBool("with-db")
+	parallel, _ := cmd.Flags().GetInt("parallel")
+	timeout, _ := cmd.Flags().GetString("timeout")
+
+	// Determine test target
+	testTarget := "./..."
+	if len(args) > 0 {
+		testTarget = args[0]
+	}
+
+	fmt.Printf("🎯 Test Target: %s\n", testTarget)
+	fmt.Printf("⏱️  Timeout: %s\n", timeout)
+	if parallel > 0 {
+		fmt.Printf("🔄 Parallel: %d processes\n", parallel)
+	}
+	if suite != "" {
+		fmt.Printf("📋 Suite: %s\n", suite)
+	}
+	if withDB {
+		fmt.Println("🗄️  Database: Enabled")
+	}
+	if coverage {
+		fmt.Println("📊 Coverage: Enabled")
+	}
+	if watch {
+		fmt.Println("👀 Watch Mode: Enabled")
+	}
+	fmt.Println("")
+
+	// Build test command
+	testArgs := []string{"test"}
+
+	if coverage {
+		testArgs = append(testArgs, "-coverprofile=coverage.out")
+		testArgs = append(testArgs, "-covermode=atomic")
+	}
+
+	if parallel > 0 {
+		testArgs = append(testArgs, fmt.Sprintf("-parallel=%d", parallel))
+	}
+
+	testArgs = append(testArgs, fmt.Sprintf("-timeout=%s", timeout))
+
+	if suite != "" {
+		switch suite {
+		case "unit":
+			testArgs = append(testArgs, "-short")
+		case "integration":
+			testArgs = append(testArgs, "-tags=integration")
+		case "e2e":
+			testArgs = append(testArgs, "-tags=e2e")
+		}
+	}
+
+	testArgs = append(testArgs, testTarget)
+
+	// Set environment variables
+	env := os.Environ()
+	if withDB {
+		env = append(env, "DB_DSN=:memory:")
+		env = append(env, "DB_DRIVER=sqlite3")
+	}
+	env = append(env, "TESTING=true")
+
+	fmt.Println("🚀 Running tests...")
+	fmt.Printf("Command: go %s\n", strings.Join(testArgs, " "))
+	fmt.Println("")
+
+	// Execute test command
+	testCmd := exec.Command("go", testArgs...)
+	testCmd.Env = env
+	testCmd.Stdout = os.Stdout
+	testCmd.Stderr = os.Stderr
+
+	err := testCmd.Run()
+	if err != nil {
+		fmt.Printf("❌ Tests failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("")
+	fmt.Println("✅ All tests passed!")
+
+	// Generate coverage report if requested
+	if coverage {
+		fmt.Println("")
+		fmt.Println("📊 Generating coverage report...")
+
+		coverageCmd := exec.Command("go", "tool", "cover", "-html=coverage.out", "-o", "coverage.html")
+		err := coverageCmd.Run()
+		if err != nil {
+			fmt.Printf("⚠️  Warning: Could not generate HTML coverage report: %v\n", err)
+		} else {
+			fmt.Println("📄 Coverage report generated: coverage.html")
+		}
+
+		// Show coverage summary
+		coverageCmd = exec.Command("go", "tool", "cover", "-func=coverage.out")
+		output, err := coverageCmd.Output()
+		if err == nil {
+			fmt.Println("")
+			fmt.Println("📈 Coverage Summary:")
+			fmt.Println(string(output))
+		}
+	}
+
+	// Watch mode
+	if watch {
+		fmt.Println("")
+		fmt.Println("👀 Watch mode enabled - tests will re-run on file changes")
+		fmt.Println("Press Ctrl+C to stop watching")
+
+		// Simple file watcher implementation
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			fmt.Printf("❌ Could not create file watcher: %v\n", err)
+			return
+		}
+		defer watcher.Close()
+
+		// Watch current directory and subdirectories
+		err = filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() && !strings.Contains(path, ".git") && !strings.Contains(path, "vendor") {
+				return watcher.Add(path)
+			}
+			return nil
+		})
+		if err != nil {
+			fmt.Printf("❌ Could not watch directories: %v\n", err)
+			return
+		}
+
+		// Watch for changes
+		for {
+			select {
+			case event := <-watcher.Events:
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					if strings.HasSuffix(event.Name, ".go") {
+						fmt.Printf("🔄 File changed: %s - Re-running tests...\n", event.Name)
+
+						// Re-run tests
+						testCmd := exec.Command("go", testArgs...)
+						testCmd.Env = env
+						testCmd.Stdout = os.Stdout
+						testCmd.Stderr = os.Stderr
+
+						err := testCmd.Run()
+						if err != nil {
+							fmt.Printf("❌ Tests failed: %v\n", err)
+						} else {
+							fmt.Println("✅ Tests passed!")
+						}
+						fmt.Println("")
+					}
+				}
+			case err := <-watcher.Errors:
+				fmt.Printf("❌ Watcher error: %v\n", err)
+			}
+		}
+	}
+
+	fmt.Println("")
+	fmt.Println("💡 Testing Tips:")
+	fmt.Println("  • Use 'dolphin test --coverage' for coverage reports")
+	fmt.Println("  • Use 'dolphin test --suite=integration' for integration tests")
+	fmt.Println("  • Use 'dolphin test --watch' for continuous testing")
+	fmt.Println("  • Use 'dolphin test ./app/controllers' to test specific packages")
+	fmt.Println("")
+	fmt.Println("📚 Documentation: https://github.com/mrhoseah/dolphin/blob/main/TESTING_GUIDE.md")
 }

@@ -1,0 +1,62 @@
+# Dolphin Framework Test Configuration
+# This file configures testing behavior for your Dolphin application
+
+# Database configuration for tests
+database:
+  driver: "sqlite3"
+  dsn: ":memory:"
+  
+# Coverage settings
+coverage:
+  threshold: 80.0
+  exclude:
+    - "**/migrations/**"
+    - "**/testdata/**"
+    - "**/examples/**"
+    - "**/vendor/**"
+    
+# Test suites configuration
+suites:
+  unit:
+    timeout: "30s"
+    parallel: true
+    tags: ["unit"]
+    
+  integration:
+    timeout: "60s"
+    parallel: false
+    tags: ["integration"]
+    with_db: true
+    
+  e2e:
+    timeout: "300s"
+    parallel: false
+    tags: ["e2e"]
+    with_db: true
+    
+# Test data configuration
+testdata:
+  fixtures_dir: "tests/fixtures"
+  seed_data: true
+  
+# HTTP testing configuration
+http:
+  base_url: "http://localhost:8080"
+  timeout: "30s"
+  
+# File testing configuration
+files:
+  temp_dir: "tests/temp"
+  cleanup: true
+  
+# Watch mode configuration
+watch:
+  extensions: [".go", ".yaml", ".yml", ".json"]
+  exclude_dirs: [".git", "vendor", "node_modules"]
+  
+# Environment variables for tests
+env:
+  TESTING: "true"
+  LOG_LEVEL: "error"
+  DB_DRIVER: "sqlite3"
+  DB_DSN: ":memory:"

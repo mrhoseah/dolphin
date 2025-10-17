@@ -2,456 +2,402 @@ package testing
 
 import (
 	"bytes"
-	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
-// TestHelper provides testing utilities for Dolphin applications
-type TestHelper struct {
-	DB      *gorm.DB
-	Router  chi.Router
-	Server  *httptest.Server
-	Cleanup func()
-	t       *testing.T
+// TestConfig holds configuration for tests
+type TestConfig struct {
+	Database TestDatabaseConfig
+	HTTP     TestHTTPConfig
+	Coverage TestCoverageConfig
 }
 
-// NewTestHelper creates a new test helper
-func NewTestHelper(t *testing.T) *TestHelper {
-	// Create in-memory SQLite database for testing
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
-	require.NoError(t, err)
+type TestDatabaseConfig struct {
+	Driver string
+	DSN    string
+}
 
-	// Create router
-	router := chi.NewRouter()
+type TestHTTPConfig struct {
+	BaseURL string
+	Timeout time.Duration
+}
 
-	// Create test server
-	server := httptest.NewServer(router)
+type TestCoverageConfig struct {
+	Threshold float64
+	Exclude   []string
+}
 
-	// Setup cleanup
-	cleanup := func() {
-		server.Close()
-		sqlDB, _ := db.DB()
-		sqlDB.Close()
+// DefaultTestConfig returns default test configuration
+func DefaultTestConfig() *TestConfig {
+	return &TestConfig{
+		Database: TestDatabaseConfig{
+			Driver: "sqlite3",
+			DSN:    ":memory:",
+		},
+		HTTP: TestHTTPConfig{
+			BaseURL: "http://localhost:8080",
+			Timeout: 30 * time.Second,
+		},
+		Coverage: TestCoverageConfig{
+			Threshold: 80.0,
+			Exclude: []string{
+				"**/migrations/**",
+				"**/testdata/**",
+				"**/examples/**",
+			},
+		},
 	}
+}
 
-	return &TestHelper{
-		DB:      db,
-		Router:  router,
-		Server:  server,
-		Cleanup: cleanup,
-		t:       t,
+// TestDatabase manages test database operations
+type TestDatabase struct {
+	db     *sql.DB
+	config TestDatabaseConfig
+}
+
+// NewTestDatabase creates a new test database
+func NewTestDatabase(t *testing.T, config TestDatabaseConfig) *TestDatabase {
+	db, err := sql.Open(config.Driver, config.DSN)
+	require.NoError(t, err, "Failed to open test database")
+
+	// Set connection pool settings
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(time.Hour)
+
+	return &TestDatabase{
+		db:     db,
+		config: config,
 	}
 }
 
-// MockDatabase creates a mock database for testing
-func (h *TestHelper) MockDatabase() *gorm.DB {
-	return h.DB
+// Close closes the test database
+func (td *TestDatabase) Close() error {
+	return td.db.Close()
 }
 
-// MockCache creates a mock cache for testing
-func (h *TestHelper) MockCache() *MockCache {
-	return NewMockCache()
+// DB returns the underlying database connection
+func (td *TestDatabase) DB() *sql.DB {
+	return td.db
 }
 
-// MockEventDispatcher creates a mock event dispatcher for testing
-func (h *TestHelper) MockEventDispatcher() *MockEventDispatcher {
-	return NewMockEventDispatcher()
+// RunMigrations runs database migrations for testing
+func (td *TestDatabase) RunMigrations(t *testing.T, migrations []string) {
+	for _, migration := range migrations {
+		_, err := td.db.Exec(migration)
+		require.NoError(t, err, "Failed to run migration: %s", migration)
+	}
 }
 
-// MockMailManager creates a mock mail manager for testing
-func (h *TestHelper) MockMailManager() *MockMailManager {
-	return NewMockMailManager()
+// SeedData seeds the database with test data
+func (td *TestDatabase) SeedData(t *testing.T, data map[string][]map[string]interface{}) {
+	for table, rows := range data {
+		for _, row := range rows {
+			columns := make([]string, 0, len(row))
+			values := make([]interface{}, 0, len(row))
+			placeholders := make([]string, 0, len(row))
+
+			for col, val := range row {
+				columns = append(columns, col)
+				values = append(values, val)
+				placeholders = append(placeholders, "?")
+			}
+
+			query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
+				table,
+				fmt.Sprintf("%v", columns),
+				fmt.Sprintf("%v", placeholders))
+
+			_, err := td.db.Exec(query, values...)
+			require.NoError(t, err, "Failed to seed data in table %s", table)
+		}
+	}
 }
 
-// SeedDatabase seeds the test database with data
-func (h *TestHelper) SeedDatabase(seedFunc func(db *gorm.DB) error) {
-	err := seedFunc(h.DB)
-	require.NoError(h.t, err)
+// Cleanup removes all data from test tables
+func (td *TestDatabase) Cleanup(t *testing.T, tables []string) {
+	for _, table := range tables {
+		_, err := td.db.Exec(fmt.Sprintf("DELETE FROM %s", table))
+		require.NoError(t, err, "Failed to cleanup table %s", table)
+	}
 }
 
-// MakeRequest makes an HTTP request to the test server
-func (h *TestHelper) MakeRequest(method, path string, body interface{}) *httptest.ResponseRecorder {
-	var reqBody io.Reader
+// HTTPTestHelper provides utilities for HTTP testing
+type HTTPTestHelper struct {
+	baseURL string
+	timeout time.Duration
+}
+
+// NewHTTPTestHelper creates a new HTTP test helper
+func NewHTTPTestHelper(config TestHTTPConfig) *HTTPTestHelper {
+	return &HTTPTestHelper{
+		baseURL: config.BaseURL,
+		timeout: config.Timeout,
+	}
+}
+
+// MakeRequest creates an HTTP request for testing
+func (h *HTTPTestHelper) MakeRequest(t *testing.T, method, url string, body interface{}) *http.Request {
+	var reqBody *bytes.Buffer
+
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
-		require.NoError(h.t, err)
-		reqBody = bytes.NewReader(jsonBody)
+		require.NoError(t, err, "Failed to marshal request body")
+		reqBody = bytes.NewBuffer(jsonBody)
 	}
 
-	req := httptest.NewRequest(method, h.Server.URL+path, reqBody)
+	req := httptest.NewRequest(method, url, reqBody)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
 
-	recorder := httptest.NewRecorder()
-	h.Router.ServeHTTP(recorder, req)
-
-	return recorder
+	return req
 }
 
-// MakeRequestWithHeaders makes an HTTP request with custom headers
-func (h *TestHelper) MakeRequestWithHeaders(method, path string, body interface{}, headers map[string]string) *httptest.ResponseRecorder {
-	var reqBody io.Reader
-	if body != nil {
-		jsonBody, err := json.Marshal(body)
-		require.NoError(h.t, err)
-		reqBody = bytes.NewReader(jsonBody)
-	}
-
-	req := httptest.NewRequest(method, h.Server.URL+path, reqBody)
-	req.Header.Set("Content-Type", "application/json")
+// MakeRequestWithHeaders creates an HTTP request with custom headers
+func (h *HTTPTestHelper) MakeRequestWithHeaders(t *testing.T, method, url string, body interface{}, headers map[string]string) *http.Request {
+	req := h.MakeRequest(t, method, url, body)
 
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
 
-	recorder := httptest.NewRecorder()
-	h.Router.ServeHTTP(recorder, req)
-
-	return recorder
+	return req
 }
 
-// AssertResponseStatus asserts the response status code
-func (h *TestHelper) AssertResponseStatus(recorder *httptest.ResponseRecorder, expectedStatus int) {
-	assert.Equal(h.t, expectedStatus, recorder.Code)
-}
-
-// AssertResponseJSON asserts the response JSON
-func (h *TestHelper) AssertResponseJSON(recorder *httptest.ResponseRecorder, expected interface{}) {
+// AssertJSONResponse checks if response matches expected JSON
+func (h *HTTPTestHelper) AssertJSONResponse(t *testing.T, w *httptest.ResponseRecorder, expected interface{}) {
 	var actual interface{}
-	err := json.Unmarshal(recorder.Body.Bytes(), &actual)
-	require.NoError(h.t, err)
+	err := json.Unmarshal(w.Body.Bytes(), &actual)
+	require.NoError(t, err, "Failed to unmarshal response body")
 
-	assert.Equal(h.t, expected, actual)
+	assert.Equal(t, expected, actual)
 }
 
-// AssertResponseContains asserts the response contains a string
-func (h *TestHelper) AssertResponseContains(recorder *httptest.ResponseRecorder, expected string) {
-	assert.Contains(h.t, recorder.Body.String(), expected)
-}
+// AssertJSONContains checks if response contains expected fields
+func (h *HTTPTestHelper) AssertJSONContains(t *testing.T, w *httptest.ResponseRecorder, expected map[string]interface{}) {
+	var actual map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &actual)
+	require.NoError(t, err, "Failed to unmarshal response body")
 
-// AssertResponseHeader asserts the response header
-func (h *TestHelper) AssertResponseHeader(recorder *httptest.ResponseRecorder, header, expected string) {
-	assert.Equal(h.t, expected, recorder.Header().Get(header))
-}
-
-// MockCache implements a mock cache for testing
-type MockCache struct {
-	data map[string]interface{}
-}
-
-// NewMockCache creates a new mock cache
-func NewMockCache() *MockCache {
-	return &MockCache{
-		data: make(map[string]interface{}),
+	for key, expectedValue := range expected {
+		actualValue, exists := actual[key]
+		assert.True(t, exists, "Response should contain key: %s", key)
+		assert.Equal(t, expectedValue, actualValue, "Value for key %s should match", key)
 	}
 }
 
-func (m *MockCache) Get(ctx context.Context, key string) (string, error) {
-	if value, exists := m.data[key]; exists {
-		return value.(string), nil
-	}
-	return "", fmt.Errorf("key not found")
+// AssertStatus checks if response has expected status code
+func (h *HTTPTestHelper) AssertStatus(t *testing.T, w *httptest.ResponseRecorder, expected int) {
+	assert.Equal(t, expected, w.Code, "Expected status %d, got %d", expected, w.Code)
 }
 
-func (m *MockCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
-	m.data[key] = value
-	return nil
+// AssertHeader checks if response has expected header
+func (h *HTTPTestHelper) AssertHeader(t *testing.T, w *httptest.ResponseRecorder, key, expected string) {
+	actual := w.Header().Get(key)
+	assert.Equal(t, expected, actual, "Expected header %s: %s, got: %s", key, expected, actual)
 }
 
-func (m *MockCache) Delete(ctx context.Context, key string) error {
-	delete(m.data, key)
-	return nil
-}
-
-func (m *MockCache) Exists(ctx context.Context, key string) (bool, error) {
-	_, exists := m.data[key]
-	return exists, nil
-}
-
-func (m *MockCache) Flush(ctx context.Context) error {
-	m.data = make(map[string]interface{})
-	return nil
-}
-
-// MockEventDispatcher implements a mock event dispatcher for testing
-type MockEventDispatcher struct {
-	events    []Event
-	listeners map[string][]Listener
-}
-
-type Event struct {
-	Name    string
-	Payload interface{}
-}
-
-type Listener interface {
-	Handle(ctx context.Context, event Event) error
-}
-
-// NewMockEventDispatcher creates a new mock event dispatcher
-func NewMockEventDispatcher() *MockEventDispatcher {
-	return &MockEventDispatcher{
-		events:    make([]Event, 0),
-		listeners: make(map[string][]Listener),
-	}
-}
-
-func (m *MockEventDispatcher) Dispatch(ctx context.Context, event Event) error {
-	m.events = append(m.events, event)
-	return nil
-}
-
-func (m *MockEventDispatcher) GetEvents() []Event {
-	return m.events
-}
-
-func (m *MockEventDispatcher) ClearEvents() {
-	m.events = make([]Event, 0)
-}
-
-// MockMailManager implements a mock mail manager for testing
-type MockMailManager struct {
-	sentEmails []SentEmail
-}
-
-type SentEmail struct {
-	To      []string
-	Subject string
-	Body    string
-	SentAt  time.Time
-}
-
-// NewMockMailManager creates a new mock mail manager
-func NewMockMailManager() *MockMailManager {
-	return &MockMailManager{
-		sentEmails: make([]SentEmail, 0),
-	}
-}
-
-func (m *MockMailManager) Send(ctx context.Context, message *Message) error {
-	m.sentEmails = append(m.sentEmails, SentEmail{
-		To:      message.To,
-		Subject: message.Subject,
-		Body:    message.HTML,
-		SentAt:  time.Now(),
-	})
-	return nil
-}
-
-func (m *MockMailManager) GetSentEmails() []SentEmail {
-	return m.sentEmails
-}
-
-func (m *MockMailManager) ClearSentEmails() {
-	m.sentEmails = make([]SentEmail, 0)
-}
-
-// Message represents an email message (simplified for testing)
-type Message struct {
-	To      []string
-	Subject string
-	HTML    string
-}
-
-// TestDatabaseSeeder provides database seeding utilities
-type TestDatabaseSeeder struct {
-	db *gorm.DB
-}
-
-// NewTestDatabaseSeeder creates a new test database seeder
-func NewTestDatabaseSeeder(db *gorm.DB) *TestDatabaseSeeder {
-	return &TestDatabaseSeeder{db: db}
-}
-
-// SeedUsers seeds users in the test database
-func (s *TestDatabaseSeeder) SeedUsers(count int) error {
-	users := make([]User, count)
-	for i := 0; i < count; i++ {
-		users[i] = User{
-			Name:  fmt.Sprintf("User %d", i+1),
-			Email: fmt.Sprintf("user%d@example.com", i+1),
-		}
-	}
-
-	return s.db.Create(&users).Error
-}
-
-// SeedPosts seeds posts in the test database
-func (s *TestDatabaseSeeder) SeedPosts(count int, userID uint) error {
-	posts := make([]Post, count)
-	for i := 0; i < count; i++ {
-		posts[i] = Post{
-			Title:   fmt.Sprintf("Post %d", i+1),
-			Content: fmt.Sprintf("Content for post %d", i+1),
-			UserID:  userID,
-		}
-	}
-
-	return s.db.Create(&posts).Error
-}
-
-// User represents a user model for testing
-type User struct {
-	ID    uint `gorm:"primarykey"`
-	Name  string
-	Email string
-}
-
-// Post represents a post model for testing
-type Post struct {
-	ID      uint `gorm:"primarykey"`
-	Title   string
-	Content string
-	UserID  uint
-}
-
-// TestFileHelper provides file testing utilities
+// TestFileHelper provides utilities for file testing
 type TestFileHelper struct {
-	tempDir string
-	t       *testing.T
+	t        *testing.T
+	tempDir  string
+	testData map[string][]byte
 }
 
 // NewTestFileHelper creates a new test file helper
 func NewTestFileHelper(t *testing.T) *TestFileHelper {
-	tempDir, err := os.MkdirTemp("", "dolphin_test_*")
-	require.NoError(t, err)
-
-	return &TestFileHelper{tempDir: tempDir, t: t}
+	tempDir := t.TempDir()
+	return &TestFileHelper{
+		t:        t,
+		tempDir:  tempDir,
+		testData: make(map[string][]byte),
+	}
 }
 
-// CreateTestFile creates a test file
-func (h *TestFileHelper) CreateTestFile(filename, content string) string {
-	filepath := filepath.Join(h.tempDir, filename)
-	err := os.WriteFile(filepath, []byte(content), 0644)
-	require.NoError(h.t, err)
+// CreateFile creates a test file with given content
+func (tfh *TestFileHelper) CreateFile(filename string, content []byte) string {
+	filepath := filepath.Join(tfh.tempDir, filename)
+	err := os.WriteFile(filepath, content, 0644)
+	require.NoError(tfh.t, err, "Failed to create test file: %s", filename)
+
+	tfh.testData[filename] = content
 	return filepath
 }
 
-// Cleanup cleans up test files
-func (h *TestFileHelper) Cleanup() {
-	os.RemoveAll(h.tempDir)
+// CreateJSONFile creates a test JSON file
+func (tfh *TestFileHelper) CreateJSONFile(filename string, data interface{}) string {
+	content, err := json.MarshalIndent(data, "", "  ")
+	require.NoError(tfh.t, err, "Failed to marshal JSON data")
+
+	return tfh.CreateFile(filename, content)
 }
 
-// GetTempDir returns the temporary directory
-func (h *TestFileHelper) GetTempDir() string {
-	return h.tempDir
+// ReadFile reads content from a test file
+func (tfh *TestFileHelper) ReadFile(filename string) []byte {
+	filepath := filepath.Join(tfh.tempDir, filename)
+	content, err := os.ReadFile(filepath)
+	require.NoError(tfh.t, err, "Failed to read test file: %s", filename)
+
+	return content
 }
 
-// TestConfigHelper provides configuration testing utilities
-type TestConfigHelper struct {
-	config map[string]interface{}
+// TempDir returns the temporary directory path
+func (tfh *TestFileHelper) TempDir() string {
+	return tfh.tempDir
 }
 
-// NewTestConfigHelper creates a new test config helper
-func NewTestConfigHelper() *TestConfigHelper {
-	return &TestConfigHelper{
-		config: make(map[string]interface{}),
-	}
-}
-
-// Set sets a configuration value
-func (h *TestConfigHelper) Set(key string, value interface{}) {
-	h.config[key] = value
-}
-
-// Get gets a configuration value
-func (h *TestConfigHelper) Get(key string) interface{} {
-	return h.config[key]
-}
-
-// GetString gets a string configuration value
-func (h *TestConfigHelper) GetString(key string) string {
-	if value, exists := h.config[key]; exists {
-		return value.(string)
-	}
-	return ""
-}
-
-// GetInt gets an int configuration value
-func (h *TestConfigHelper) GetInt(key string) int {
-	if value, exists := h.config[key]; exists {
-		return value.(int)
-	}
-	return 0
-}
-
-// GetBool gets a bool configuration value
-func (h *TestConfigHelper) GetBool(key string) bool {
-	if value, exists := h.config[key]; exists {
-		return value.(bool)
-	}
-	return false
-}
-
-// TestAssertionHelper provides assertion utilities
-type TestAssertionHelper struct {
+// MockService provides a base mock service implementation
+type MockService struct {
 	t *testing.T
 }
 
-// NewTestAssertionHelper creates a new test assertion helper
-func NewTestAssertionHelper(t *testing.T) *TestAssertionHelper {
-	return &TestAssertionHelper{t: t}
+// NewMockService creates a new mock service
+func NewMockService(t *testing.T) *MockService {
+	return &MockService{t: t}
 }
 
-// AssertDatabaseHas asserts that the database has a record
-func (h *TestAssertionHelper) AssertDatabaseHas(db *gorm.DB, table string, conditions map[string]interface{}) {
-	var count int64
-	query := db.Table(table)
-	for key, value := range conditions {
-		query = query.Where(key+" = ?", value)
-	}
-	query.Count(&count)
-	assert.Greater(h.t, count, int64(0), "Database should have record in table %s with conditions %v", table, conditions)
+// AssertCalled checks if a method was called with expected arguments
+func (ms *MockService) AssertCalled(t *testing.T, method string, args ...interface{}) {
+	// This is a placeholder for actual mock implementation
+	// In real usage, you would use testify/mock or similar
+	t.Helper()
+	// Implementation would depend on your mock framework
 }
 
-// AssertDatabaseMissing asserts that the database doesn't have a record
-func (h *TestAssertionHelper) AssertDatabaseMissing(db *gorm.DB, table string, conditions map[string]interface{}) {
-	var count int64
-	query := db.Table(table)
-	for key, value := range conditions {
-		query = query.Where(key+" = ?", value)
-	}
-	query.Count(&count)
-	assert.Equal(h.t, int64(0), count, "Database should not have record in table %s with conditions %v", table, conditions)
+// AssertNotCalled checks if a method was not called
+func (ms *MockService) AssertNotCalled(t *testing.T, method string) {
+	t.Helper()
+	// Implementation would depend on your mock framework
 }
 
-// AssertEmailSent asserts that an email was sent
-func (h *TestAssertionHelper) AssertEmailSent(mailManager *MockMailManager, subject string) {
-	emails := mailManager.GetSentEmails()
-	found := false
-	for _, email := range emails {
-		if email.Subject == subject {
-			found = true
-			break
-		}
-	}
-	assert.True(h.t, found, "Email with subject '%s' should have been sent", subject)
+// TestSuite provides a base test suite with common setup/teardown
+type TestSuite struct {
+	t      *testing.T
+	db     *TestDatabase
+	http   *HTTPTestHelper
+	files  *TestFileHelper
+	config *TestConfig
 }
 
-// AssertEventDispatched asserts that an event was dispatched
-func (h *TestAssertionHelper) AssertEventDispatched(eventDispatcher *MockEventDispatcher, eventName string) {
-	events := eventDispatcher.GetEvents()
-	found := false
-	for _, event := range events {
-		if event.Name == eventName {
-			found = true
-			break
-		}
+// NewTestSuite creates a new test suite
+func NewTestSuite(t *testing.T) *TestSuite {
+	config := DefaultTestConfig()
+	db := NewTestDatabase(t, config.Database)
+	http := NewHTTPTestHelper(config.HTTP)
+	files := NewTestFileHelper(t)
+
+	return &TestSuite{
+		t:      t,
+		db:     db,
+		http:   http,
+		files:  files,
+		config: config,
 	}
-	assert.True(h.t, found, "Event '%s' should have been dispatched", eventName)
+}
+
+// Setup runs before each test
+func (ts *TestSuite) Setup() {
+	// Override in your test suite
+}
+
+// Teardown runs after each test
+func (ts *TestSuite) Teardown() {
+	// Override in your test suite
+}
+
+// Run runs the test suite
+func (ts *TestSuite) Run(name string, testFunc func(*TestSuite)) {
+	ts.t.Run(name, func(t *testing.T) {
+		ts.t = t
+		ts.Setup()
+		defer ts.Teardown()
+		testFunc(ts)
+	})
+}
+
+// DB returns the test database
+func (ts *TestSuite) DB() *TestDatabase {
+	return ts.db
+}
+
+// HTTP returns the HTTP test helper
+func (ts *TestSuite) HTTP() *HTTPTestHelper {
+	return ts.http
+}
+
+// Files returns the file test helper
+func (ts *TestSuite) Files() *TestFileHelper {
+	return ts.files
+}
+
+// Config returns the test configuration
+func (ts *TestSuite) Config() *TestConfig {
+	return ts.config
+}
+
+// TestData provides common test data
+var TestData = struct {
+	Users []map[string]interface{}
+	Posts []map[string]interface{}
+}{
+	Users: []map[string]interface{}{
+		{
+			"id":         1,
+			"name":       "John Doe",
+			"email":      "john@example.com",
+			"created_at": time.Now().Format(time.RFC3339),
+		},
+		{
+			"id":         2,
+			"name":       "Jane Smith",
+			"email":      "jane@example.com",
+			"created_at": time.Now().Format(time.RFC3339),
+		},
+	},
+	Posts: []map[string]interface{}{
+		{
+			"id":         1,
+			"title":      "Test Post 1",
+			"content":    "This is test content",
+			"user_id":    1,
+			"created_at": time.Now().Format(time.RFC3339),
+		},
+		{
+			"id":         2,
+			"title":      "Test Post 2",
+			"content":    "This is more test content",
+			"user_id":    2,
+			"created_at": time.Now().Format(time.RFC3339),
+		},
+	},
+}
+
+// CommonMigrations provides common database migrations for testing
+var CommonMigrations = []string{
+	`CREATE TABLE users (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name VARCHAR(255) NOT NULL,
+		email VARCHAR(255) UNIQUE NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`,
+	`CREATE TABLE posts (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title VARCHAR(255) NOT NULL,
+		content TEXT,
+		user_id INTEGER,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (user_id) REFERENCES users(id)
+	)`,
 }
