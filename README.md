@@ -4,14 +4,14 @@
 
 > **You don't have to swim an ocean of hundreds of frameworks and boilerplates. Let Dolphin make your work easier!**
 
-Dolphin Framework is a modern, enterprise-grade web framework written in Go, inspired by the elegant developer experience of Laravel. It combines Go's performance and concurrency capabilities with a productive, batteries-included developer workflow.
+Dolphin Framework is a modern, enterprise-grade web framework written in Go, taking inspiration from productive web frameworks like Laravel. It combines Go's performance and concurrency capabilities with a batteries-included developer workflow.
 
-**Why Dolphin?** Because building web applications shouldn't feel like navigating through endless documentation, configuring complex build systems, or wrestling with boilerplate code. Dolphin brings a polished developer experience to Go—taking inspiration from Laravel—so rapid development feels natural and delightful.
+**Why Dolphin?** Because building web applications shouldn't feel like navigating through endless documentation, configuring complex build systems, or wrestling with boilerplate code. Dolphin brings a polished developer experience to Go—inspired by productive frameworks—so rapid development feels natural and delightful.
 
 ## ✨ Key Features
 
 - **🚀 Rapid Development**: Built-in scaffolding and code generation
-- **🗄️ Database Migrations**: Integrated with [Raptor](https://github.com/mrhoseah/raptor) for Laravel-style migrations
+- **🗄️ Database Migrations**: Integrated with [Raptor](https://github.com/mrhoseah/raptor) for database migrations
 - **🔄 Active Record ORM**: GORM-based ORM with repository pattern
 - **🛡️ Middleware System**: Comprehensive middleware for auth, CORS, logging, and more
 - **📱 Frontend Integration**: Built-in support for Vue.js, React.js, and Tailwind CSS
@@ -181,9 +181,9 @@ dolphin maintenance down --message "Deploying..."
 dolphin maintenance up
 ```
 
-## 🔧 CLI Commands (Dolphin CLI - Like Laravel Artisan)
+## 🔧 CLI Commands (Dolphin CLI)
 
-Dolphin provides a powerful CLI tool similar to Laravel's Artisan. Install it globally for the best experience:
+Dolphin provides a powerful CLI tool for development tasks. Install it globally for the best experience:
 
 ```bash
 # Install CLI globally
@@ -2630,9 +2630,9 @@ dolphin static:list
 dolphin static:serve
 ```
 
-### 🎯 Laravel Artisan Comparison
+### 🎯 CLI Comparison
 
-| Laravel Artisan | Dolphin CLI | Description |
+| Framework CLI | Dolphin CLI | Description |
 |----------------|-------------|-------------|
 | `php artisan serve` | `dolphin serve` | Start development server |
 | `php artisan migrate` | `dolphin migrate` | Run database migrations |
@@ -3505,7 +3505,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🙏 Acknowledgments
 
-- Inspired by Laravel's elegant architecture
+- Taking inspiration from productive web frameworks
 - Built with Go's performance and concurrency
 - Integrates with [Raptor](https://github.com/mrhoseah/raptor) for migrations
 - Uses modern Go libraries and best practices
@@ -3523,7 +3523,7 @@ For support and questions:
 
 **Stop swimming through endless frameworks and boilerplates. Let Dolphin make your work easier!**
 
-Dolphin Framework brings the best of Laravel's developer experience to Go, with enterprise-grade features and modern tooling. From rapid prototyping to production deployment, Dolphin has everything you need.
+Dolphin Framework brings productive web development to Go, with enterprise-grade features and modern tooling. From rapid prototyping to production deployment, Dolphin has everything you need.
 
 ### **Get Started Today:**
 

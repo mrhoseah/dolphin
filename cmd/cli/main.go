@@ -18,7 +18,7 @@ func main() {
 		Short: "🐬 Dolphin Framework CLI - Enterprise-grade Go web framework",
 		Long: `🐬 Dolphin Framework CLI
 
-Dolphin is a rapid development web framework written in Go, inspired by Laravel, CodeIgniter, and CakePHP.
+Dolphin is a rapid development web framework written in Go, inspired by productive web frameworks.
 This CLI tool provides all the commands you need to build, manage, and deploy your applications.
 
 Examples:
@@ -190,7 +190,7 @@ func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "dolphin",
 		Short: "🐬 Dolphin Framework - Enterprise-grade Go web framework",
-		Long:  "Dolphin is a rapid development web framework written in Go, inspired by Laravel, CodeIgniter, and CakePHP.",
+		Long:  "Dolphin is a rapid development web framework written in Go, inspired by productive web frameworks.",
 	}
 
 	// Serve command

@@ -48,7 +48,7 @@ func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "dolphin",
 		Short: "Dolphin Framework - Enterprise-grade Go web framework",
-		Long:  "Dolphin is a rapid development web framework written in Go, inspired by Laravel, CodeIgniter, and CakePHP.",
+		Long:  "Dolphin is a rapid development web framework written in Go, inspired by productive web frameworks.",
 	}
 
 	// Serve command
