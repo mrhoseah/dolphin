@@ -32,6 +32,11 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, ins
 - **🐛 Debug Dashboard**: Built-in debugging tools with profiling and monitoring
 - **🎨 Modern UI**: Beautiful default templates with responsive design
 - **⚡ Auto-Migration**: Automatic database table creation for auth
+- **📊 Observability**: Unified metrics, logging, and distributed tracing
+- **🔒 Security**: Enterprise-grade security with policies and CSRF protection
+- **⚡ Performance**: Rate limiting, health checks, and monitoring
+- **🔄 Graceful Shutdown**: Production-ready shutdown with connection draining
+- **⚡ Circuit Breakers**: Microservices protection with fault tolerance
 
 ## 🚀 Quick Start
 
@@ -306,6 +311,309 @@ Endpoints under `/debug`:
 - `/trace` – Trace snapshot (if enabled)
 - `/inspect` – Inspection summary (if enabled)
 - `/inspect/{type}` – Inspect specific type (if enabled)
+
+### 📊 Observability
+
+Dolphin provides enterprise-grade observability with unified metrics, logging, and distributed tracing.
+
+#### Features
+
+- **📈 Metrics**: Prometheus-compatible metrics with custom counters, gauges, and histograms
+- **📝 Logging**: Structured logging with context-aware fields and multiple outputs
+- **🔍 Tracing**: Distributed tracing with OpenTelemetry and Jaeger/Zipkin support
+- **🏥 Health Checks**: Comprehensive health monitoring with readiness and liveness probes
+
+#### CLI Commands
+
+```bash
+# Metrics management
+dolphin observability metrics status
+dolphin observability metrics serve
+
+# Logging management
+dolphin observability logging test
+dolphin observability logging level debug
+
+# Tracing management
+dolphin observability tracing status
+dolphin observability tracing test
+
+# Health checks
+dolphin observability health check
+dolphin observability health serve
+```
+
+#### Integration
+
+```go
+import "github.com/mrhoseah/dolphin/internal/observability"
+
+// Create observability manager
+config := observability.DefaultObservabilityConfig()
+om, _ := observability.NewObservabilityManager(config, logger)
+
+// Start observability services
+om.Start()
+defer om.Stop(context.Background())
+
+// Apply observability middlewares
+middlewares := om.GetHTTPMiddlewares()
+for _, middleware := range middlewares {
+    r.Use(middleware)
+}
+
+// Record custom metrics
+om.LogBusinessEvent("user_registration", "success", map[string]interface{}{
+    "user_id": "12345",
+    "email": "user@example.com",
+})
+
+// Start spans for tracing
+ctx, span := om.StartSpan(context.Background(), "user_operation")
+defer om.FinishSpan(ctx)
+```
+
+#### Monitoring Endpoints
+
+- **Metrics**: `http://localhost:9090/metrics` (Prometheus format)
+- **Health**: `http://localhost:8081/health`
+- **Jaeger UI**: `http://localhost:16686` (if Jaeger is running)
+- **Zipkin UI**: `http://localhost:9411` (if Zipkin is running)
+
+### 🔄 Graceful Shutdown
+
+Dolphin provides production-ready graceful shutdown with connection draining for zero-downtime deployments.
+
+#### Features
+
+- **🔄 Connection Draining**: Gracefully close existing connections before shutdown
+- **⏱️ Timeout Management**: Configurable timeouts for different shutdown phases
+- **📊 Connection Tracking**: Monitor active and idle connections in real-time
+- **🏥 Health Checks**: Integrated health monitoring during shutdown
+- **🔧 Signal Handling**: Automatic shutdown on SIGTERM/SIGINT signals
+- **📝 Service Management**: Shutdown multiple services in proper order
+
+#### CLI Commands
+
+```bash
+# Graceful shutdown management
+dolphin graceful status
+dolphin graceful test
+dolphin graceful config
+dolphin graceful drain
+```
+
+#### Integration
+
+```go
+import "github.com/mrhoseah/dolphin/internal/graceful"
+
+// Create graceful server
+config := graceful.DefaultShutdownConfig()
+server := graceful.NewGracefulServer(httpServer, config, logger)
+
+// Start server with graceful shutdown
+go server.ListenAndServe()
+
+// Shutdown will be triggered automatically on SIGTERM/SIGINT
+// Or manually:
+ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+defer cancel()
+server.Shutdown(ctx)
+```
+
+#### Configuration
+
+```yaml
+# config/graceful.yaml
+graceful:
+  shutdown_timeout: 30s
+  drain_timeout: 5s
+  max_drain_wait: 30s
+  read_timeout: 10s
+  write_timeout: 10s
+  idle_timeout: 60s
+  enable_signal_handling: true
+  enable_health_check: true
+  health_check_path: "/health"
+```
+
+#### Shutdown Process
+
+1. **Stop Accepting**: Stop accepting new connections
+2. **Drain Connections**: Wait for existing connections to complete (5s timeout)
+3. **Shutdown Server**: Gracefully shutdown HTTP server (30s timeout)
+4. **Shutdown Services**: Shutdown registered services in order
+5. **Complete**: Finish shutdown process
+
+#### Connection Tracking
+
+```go
+// Monitor connection statistics
+stats := server.GetConnectionStats()
+fmt.Printf("Active: %d, Idle: %d, Total: %d\n", 
+    stats["active_connections"], 
+    stats["idle_connections"], 
+    stats["total_connections"])
+```
+
+#### Custom Services
+
+```go
+// Implement Shutdownable interface
+type DatabaseService struct {
+    name string
+}
+
+func (ds *DatabaseService) Shutdown(ctx context.Context) error {
+    // Custom shutdown logic
+    return ds.closeConnections()
+}
+
+func (ds *DatabaseService) Name() string {
+    return ds.name
+}
+
+// Register service
+shutdownManager.RegisterService(databaseService)
+```
+
+### ⚡ Circuit Breakers
+
+Dolphin provides enterprise-grade circuit breakers for microservices protection and fault tolerance.
+
+#### Features
+
+- **🔄 Three States**: Closed (normal), Open (blocking), Half-Open (testing)
+- **⏱️ Timeout Management**: Configurable timeouts for different phases
+- **📊 Metrics Integration**: Prometheus metrics for monitoring and alerting
+- **🌐 HTTP Client**: Built-in HTTP client with circuit breaker protection
+- **🔧 Custom Error Handling**: Define what constitutes success/failure
+- **📝 Centralized Management**: Manage multiple circuit breakers from one place
+
+#### CLI Commands
+
+```bash
+# Circuit breaker management
+dolphin circuit status
+dolphin circuit create <name>
+dolphin circuit test <name>
+dolphin circuit reset <name>
+dolphin circuit force-open <name>
+dolphin circuit force-close <name>
+dolphin circuit list
+dolphin circuit metrics
+```
+
+#### Integration
+
+```go
+import "github.com/mrhoseah/dolphin/internal/circuitbreaker"
+
+// Create circuit breaker
+config := circuitbreaker.DefaultConfig()
+circuit := circuitbreaker.NewCircuitBreaker("user-service", config, logger)
+
+// Execute with protection
+result, err := circuit.Execute(ctx, func() (interface{}, error) {
+    return userService.GetUser(id)
+})
+```
+
+#### Configuration
+
+```yaml
+# config/circuitbreaker.yaml
+circuitbreaker:
+  failure_threshold: 5
+  success_threshold: 3
+  open_timeout: 30s
+  half_open_timeout: 10s
+  request_timeout: 5s
+  max_retries: 3
+  retry_delay: 1s
+  backoff_multiplier: 2.0
+  max_backoff_delay: 30s
+  enable_metrics: true
+  enable_logging: true
+```
+
+#### Circuit States
+
+1. **CLOSED**: Normal operation, requests pass through
+2. **OPEN**: Circuit is open, requests are blocked
+3. **HALF_OPEN**: Testing if service is back online
+
+#### HTTP Client Integration
+
+```go
+// Create HTTP client with circuit breaker
+httpClient := circuitbreaker.NewHTTPClient("api-client", config, httpConfig, logger)
+
+// Make protected HTTP requests
+resp, err := httpClient.Get(ctx, "https://api.example.com/users")
+if err != nil {
+    // Handle circuit breaker or HTTP error
+}
+
+// Async requests
+resultChan := httpClient.DoAsync(ctx, "GET", url, nil, headers)
+```
+
+#### Manager Integration
+
+```go
+// Create circuit breaker manager
+manager := circuitbreaker.NewManager(config, logger)
+
+// Create multiple circuits
+userCircuit, _ := manager.CreateCircuit("user-service", config)
+orderCircuit, _ := manager.CreateCircuit("order-service", config)
+
+// Execute with manager
+result, err := manager.Execute(ctx, "user-service", func() (interface{}, error) {
+    return userService.GetUser(id)
+})
+```
+
+#### Metrics and Monitoring
+
+```go
+// Get circuit statistics
+stats := circuit.GetStats()
+fmt.Printf("State: %s, Failure Rate: %.2f%%\n", 
+    stats.State, stats.FailureRate)
+
+// Get aggregated metrics
+managerStats := manager.GetAggregatedStats()
+fmt.Printf("Total Circuits: %d, Open: %d\n", 
+    managerStats.CircuitCount, managerStats.OpenCircuits)
+```
+
+#### Custom Error Handling
+
+```go
+config := circuitbreaker.DefaultConfig()
+config.IsFailure = func(err error) bool {
+    // Only treat specific errors as failures
+    return err != nil && strings.Contains(err.Error(), "service unavailable")
+}
+config.IsSuccess = func(err error) bool {
+    // Only treat nil errors as success
+    return err == nil
+}
+```
+
+#### Prometheus Metrics
+
+- `circuit_breaker_requests_total` - Total requests
+- `circuit_breaker_requests_success_total` - Successful requests
+- `circuit_breaker_requests_failure_total` - Failed requests
+- `circuit_breaker_requests_rejected_total` - Rejected requests
+- `circuit_breaker_state_changes_total` - State changes
+- `circuit_breaker_state` - Current state
+- `circuit_breaker_failure_rate` - Failure rate percentage
+- `circuit_breaker_success_rate` - Success rate percentage
 
 ### 📄 Static Pages
 
