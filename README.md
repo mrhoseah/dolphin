@@ -39,6 +39,7 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, ins
 - **⚡ Circuit Breakers**: Microservices protection with fault tolerance
 - **⚖️ Load Shedding**: Adaptive overload protection with system stability
 - **🔄 Live Reload**: Hot code reload for development productivity
+- **📦 Asset Pipeline**: Bundling, versioning, and optimization for front-end assets
 
 ## 🚀 Quick Start
 
