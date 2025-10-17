@@ -59,6 +59,15 @@ fi
 if command -v dolphin >/dev/null 2>&1; then
   info "Installation complete: $(command -v dolphin)"
   info "Run: dolphin --help"
+  echo
+  info "🐬 Dolphin Framework installed successfully!"
+  info "Quick start:"
+  info "  dolphin new my-app --auth    # Create new project with auth"
+  info "  dolphin serve                # Start development server"
+  info "  dolphin --help               # See all commands"
+  echo
+  info "To uninstall dolphin, run:"
+  info "  curl -fsSL https://raw.githubusercontent.com/mrhoseah/dolphin/main/scripts/uninstall.sh | bash"
 else
   warn "Installation finished, but dolphin not on PATH. Add this to your shell profile:"
   echo "export PATH=\"$GOBIN:\$PATH\""
