@@ -113,6 +113,14 @@ Examples:
 		Run:   updateSelf,
 	}
 	updateCmd.Flags().StringP("version", "V", "main", "Version to install (e.g., v0.1.0 or 'main')")
+
+	// Uninstall command
+	var uninstallCmd = &cobra.Command{
+		Use:   "uninstall",
+		Short: "Show uninstall instructions for Dolphin CLI",
+		Long:  "Display instructions for completely removing Dolphin CLI from your system.",
+		Run:   uninstallInstructions,
+	}
 	// New project command
 	var newCmd = &cobra.Command{
 		Use:   "new [name]",
@@ -712,6 +720,7 @@ Examples:
 	// Add commands to root
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(updateCmd)
+	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newCmd)
 
 	// Migration commands
@@ -4881,4 +4890,49 @@ func graphqlReset(cmd *cobra.Command, args []string) {
 	fmt.Println("💡 Usage:")
 	fmt.Println("  • Use 'dolphin graphql status' to check status")
 	fmt.Println("  • Use 'dolphin graphql test' to run tests")
+}
+
+// uninstallInstructions displays instructions for uninstalling Dolphin CLI
+func uninstallInstructions(cmd *cobra.Command, args []string) {
+	fmt.Println("🐬 Dolphin Framework - Uninstall Instructions")
+	fmt.Println("=============================================")
+	fmt.Println("")
+	fmt.Println("To completely remove Dolphin CLI from your system, you have several options:")
+	fmt.Println("")
+	fmt.Println("🔧 Option 1: Automated Uninstaller (Recommended)")
+	fmt.Println("  curl -fsSL https://raw.githubusercontent.com/mrhoseah/dolphin/main/scripts/uninstall.sh | bash")
+	fmt.Println("")
+	fmt.Println("🔧 Option 2: Manual Removal")
+	fmt.Println("  # Remove binaries")
+	fmt.Println("  sudo rm -f /usr/local/bin/dolphin")
+	fmt.Println("  rm -f ~/bin/dolphin")
+	fmt.Println("  rm -f $(go env GOPATH)/bin/dolphin")
+	fmt.Println("")
+	fmt.Println("  # Clean Go cache")
+	fmt.Println("  go clean -modcache -cache")
+	fmt.Println("")
+	fmt.Println("  # Remove config files (optional)")
+	fmt.Println("  rm -rf ~/.dolphin")
+	fmt.Println("  rm -rf ~/.config/dolphin")
+	fmt.Println("")
+	fmt.Println("🔧 Option 3: Using Go")
+	fmt.Println("  # This will remove the binary from your Go bin directory")
+	fmt.Println("  go clean -cache")
+	fmt.Println("")
+	fmt.Println("📋 What gets removed:")
+	fmt.Println("  ✅ Dolphin CLI binary")
+	fmt.Println("  ✅ Configuration files")
+	fmt.Println("  ✅ Go module cache")
+	fmt.Println("  ✅ Man pages (if installed)")
+	fmt.Println("  ✅ Completion scripts (if installed)")
+	fmt.Println("")
+	fmt.Println("⚠️  Note: This will NOT remove:")
+	fmt.Println("  • Projects created with 'dolphin new'")
+	fmt.Println("  • Custom configuration files")
+	fmt.Println("  • Database files")
+	fmt.Println("")
+	fmt.Println("🔄 To reinstall after uninstalling:")
+	fmt.Println("  go install github.com/mrhoseah/dolphin/cmd/dolphin@latest")
+	fmt.Println("")
+	fmt.Println("💡 Need help? Visit: https://github.com/mrhoseah/dolphin")
 }
