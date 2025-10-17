@@ -15,10 +15,15 @@ import (
 
 // SchemaManager manages GraphQL schemas and provides schema-first development
 type SchemaManager struct {
-	schema    *graphql.Schema
-	resolvers map[string]Resolver
-	logger    *zap.Logger
-	config    *SchemaConfig
+	schema                *graphql.Schema
+	resolvers             map[string]Resolver
+	logger                *zap.Logger
+	config                *SchemaConfig
+	nodeRegistry          *NodeRegistry
+	directiveRegistry     *DirectiveRegistry
+	subscriptionManager   *SubscriptionManager
+	queryValidator        *QueryValidator
+	persistedQueryManager *PersistedQueryManager
 }
 
 // SchemaConfig holds configuration for the GraphQL schema
@@ -74,10 +79,24 @@ func NewSchemaManager(config *SchemaConfig, logger *zap.Logger) *SchemaManager {
 		config = DefaultSchemaConfig()
 	}
 
+	// Initialize advanced features
+	nodeRegistry := NewNodeRegistry(logger)
+	directiveRegistry := NewDirectiveRegistry(logger)
+	directiveRegistry.InitializeDefaultDirectives()
+
+	subscriptionManager := NewSubscriptionManager(logger)
+	queryValidator := NewQueryValidator(config.MaxQueryDepth, config.MaxQueryComplexity, logger)
+	persistedQueryManager := NewPersistedQueryManager(logger)
+
 	return &SchemaManager{
-		resolvers: make(map[string]Resolver),
-		logger:    logger,
-		config:    config,
+		resolvers:             make(map[string]Resolver),
+		logger:                logger,
+		config:                config,
+		nodeRegistry:          nodeRegistry,
+		directiveRegistry:     directiveRegistry,
+		subscriptionManager:   subscriptionManager,
+		queryValidator:        queryValidator,
+		persistedQueryManager: persistedQueryManager,
 	}
 }
 
@@ -140,12 +159,21 @@ func (sm *SchemaManager) Toggle() {
 
 // BuildSchema builds the final GraphQL schema
 func (sm *SchemaManager) BuildSchema() error {
-	// Create a basic schema with common types
+	// Create Node interface
+	nodeInterface := CreateNodeInterface()
+
+	// Create a User type that implements Node interface
 	userType := graphql.NewObject(graphql.ObjectConfig{
 		Name: "User",
 		Fields: graphql.Fields{
 			"id": &graphql.Field{
-				Type: graphql.Int,
+				Type: graphql.NewNonNull(graphql.ID),
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					if user, ok := p.Source.(Node); ok {
+						return user.GetID(), nil
+					}
+					return nil, fmt.Errorf("source does not implement Node interface")
+				},
 			},
 			"name": &graphql.Field{
 				Type: graphql.String,
@@ -157,51 +185,78 @@ func (sm *SchemaManager) BuildSchema() error {
 				Type: graphql.DateTime,
 			},
 		},
+		Interfaces: []*graphql.Interface{nodeInterface},
 	})
 
-	// Create query type
+	// Register User node type
+	sm.nodeRegistry.RegisterNodeType("User", func(ctx context.Context, id string) (Node, error) {
+		// This would normally fetch from database
+		return &UserNode{
+			ID:        EncodeGlobalID("User", id),
+			Name:      "John Doe",
+			Email:     "john@example.com",
+			CreatedAt: time.Now(),
+		}, nil
+	})
+
+	// Create query type with advanced features
 	queryType := graphql.NewObject(graphql.ObjectConfig{
 		Name: "Query",
 		Fields: graphql.Fields{
-			"user": &graphql.Field{
-				Type: userType,
-				Args: graphql.FieldConfigArgument{
-					"id": &graphql.ArgumentConfig{
-						Type: graphql.Int,
-					},
-				},
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+			// Node query for Global Object Identification
+			"node": CreateNodeQuery(sm.nodeRegistry),
+
+			// User query with directive support
+			"user": sm.directiveRegistry.CreateDirectiveField(
+				"user",
+				userType,
+				[]string{"auth", "cache"},
+				func(p graphql.ResolveParams) (interface{}, error) {
 					id, ok := p.Args["id"].(int)
 					if !ok {
 						return nil, fmt.Errorf("id is required")
 					}
-					return map[string]interface{}{
-						"id":        id,
-						"name":      "John Doe",
-						"email":     "john@example.com",
-						"createdAt": time.Now(),
+					return &UserNode{
+						ID:        EncodeGlobalID("User", fmt.Sprintf("%d", id)),
+						Name:      "John Doe",
+						Email:     "john@example.com",
+						CreatedAt: time.Now(),
 					}, nil
 				},
-			},
-			"users": &graphql.Field{
-				Type: graphql.NewList(userType),
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					return []map[string]interface{}{
-						{
-							"id":        1,
-							"name":      "John Doe",
-							"email":     "john@example.com",
-							"createdAt": time.Now(),
+			),
+
+			// Users connection for pagination
+			"users": CreateConnectionField(
+				"users",
+				userType,
+				func(ctx context.Context, args ConnectionArgs) (*Connection, error) {
+					// Mock data
+					users := []interface{}{
+						&UserNode{
+							ID:        EncodeGlobalID("User", "1"),
+							Name:      "John Doe",
+							Email:     "john@example.com",
+							CreatedAt: time.Now(),
 						},
-						{
-							"id":        2,
-							"name":      "Jane Smith",
-							"email":     "jane@example.com",
-							"createdAt": time.Now(),
+						&UserNode{
+							ID:        EncodeGlobalID("User", "2"),
+							Name:      "Jane Smith",
+							Email:     "jane@example.com",
+							CreatedAt: time.Now(),
 						},
+					}
+
+					// Apply pagination
+					helper := NewPaginationHelper(sm.logger)
+					paginatedUsers, pageInfo := helper.ApplyPagination(users, args)
+					edges := helper.CreateEdges(paginatedUsers)
+
+					return &Connection{
+						Edges:    edges,
+						PageInfo: pageInfo,
 					}, nil
 				},
-			},
+			),
 		},
 	})
 
@@ -233,10 +288,15 @@ func (sm *SchemaManager) BuildSchema() error {
 		},
 	})
 
-	// Create schema
+	// Create subscription type
+	subscriptionType := CreateSubscriptionType(sm.subscriptionManager)
+
+	// Create schema with all types
 	schema, err := graphql.NewSchema(graphql.SchemaConfig{
-		Query:    queryType,
-		Mutation: mutationType,
+		Query:        queryType,
+		Mutation:     mutationType,
+		Subscription: subscriptionType,
+		Types:        []graphql.Type{nodeInterface},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create GraphQL schema: %w", err)
@@ -272,6 +332,26 @@ func (sm *SchemaManager) Execute(ctx context.Context, query string, variables ma
 		}
 	}
 
+	// Validate query depth and complexity
+	if sm.queryValidator != nil {
+		analysis, err := sm.queryValidator.ValidateQuery(query)
+		if err != nil {
+			return &graphql.Result{
+				Errors: []gqlerrors.FormattedError{
+					{Message: fmt.Sprintf("Query validation failed: %v", err)},
+				},
+			}
+		}
+
+		if !analysis.Valid {
+			return &graphql.Result{
+				Errors: []gqlerrors.FormattedError{
+					{Message: fmt.Sprintf("Query validation failed: %v", analysis.Errors)},
+				},
+			}
+		}
+	}
+
 	// Add timeout context
 	if sm.config.QueryTimeout > 0 {
 		var cancel context.CancelFunc
@@ -292,6 +372,49 @@ func (sm *SchemaManager) Execute(ctx context.Context, query string, variables ma
 // GetSchema returns the current schema
 func (sm *SchemaManager) GetSchema() *graphql.Schema {
 	return sm.schema
+}
+
+// GetNodeRegistry returns the node registry
+func (sm *SchemaManager) GetNodeRegistry() *NodeRegistry {
+	return sm.nodeRegistry
+}
+
+// GetDirectiveRegistry returns the directive registry
+func (sm *SchemaManager) GetDirectiveRegistry() *DirectiveRegistry {
+	return sm.directiveRegistry
+}
+
+// GetSubscriptionManager returns the subscription manager
+func (sm *SchemaManager) GetSubscriptionManager() *SubscriptionManager {
+	return sm.subscriptionManager
+}
+
+// GetQueryValidator returns the query validator
+func (sm *SchemaManager) GetQueryValidator() *QueryValidator {
+	return sm.queryValidator
+}
+
+// GetPersistedQueryManager returns the persisted query manager
+func (sm *SchemaManager) GetPersistedQueryManager() *PersistedQueryManager {
+	return sm.persistedQueryManager
+}
+
+// UserNode represents a user node that implements the Node interface
+type UserNode struct {
+	ID        string
+	Name      string
+	Email     string
+	CreatedAt time.Time
+}
+
+// GetID returns the global ID
+func (u *UserNode) GetID() string {
+	return u.ID
+}
+
+// GetType returns the node type
+func (u *UserNode) GetType() string {
+	return "User"
 }
 
 // GetConfig returns the schema configuration

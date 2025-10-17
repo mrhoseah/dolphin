@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/graphql-go/graphql/gqlerrors"
 	"go.uber.org/zap"
 )
@@ -55,7 +56,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only allow POST requests for GraphQL
+	// Handle WebSocket connections for subscriptions
+	if r.Method == "GET" && strings.Contains(r.Header.Get("Upgrade"), "websocket") {
+		h.handleWebSocket(w, r)
+		return
+	}
+
+	// Only allow POST requests for GraphQL queries/mutations
 	if r.Method != "POST" {
 		h.handleMethodNotAllowed(w, r)
 		return
@@ -72,6 +79,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(req.Query) == "" {
 		h.handleBadRequest(w, r, "Query is required")
 		return
+	}
+
+	// Check for persisted query
+	if persistedQueryManager := h.schemaManager.GetPersistedQueryManager(); persistedQueryManager != nil {
+		if req.Query == "" && req.OperationName != "" {
+			// Try to load persisted query
+			if query, err := persistedQueryManager.LoadQuery(req.OperationName); err == nil {
+				req.Query = query.Query
+			}
+		}
 	}
 
 	// Execute GraphQL query
@@ -103,60 +120,62 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// handleWebSocket handles WebSocket connections for subscriptions
+func (h *Handler) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	subscriptionManager := h.schemaManager.GetSubscriptionManager()
+	if subscriptionManager == nil {
+		http.Error(w, "Subscriptions not supported", http.StatusNotImplemented)
+		return
+	}
+
+	// Upgrade to WebSocket
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true // In production, implement proper origin checking
+		},
+	}
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		h.logger.Error("Failed to upgrade to WebSocket", zap.Error(err))
+		return
+	}
+
+	// Add client to subscription manager
+	subscriptionManager.AddClient(conn)
+}
+
 // handleDisabled handles requests when GraphQL is disabled
 func (h *Handler) handleDisabled(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusServiceUnavailable)
-
-	response := map[string]interface{}{
-		"error":     "GraphQL endpoint is disabled",
-		"message":   "GraphQL functionality is currently disabled. Please contact the administrator.",
-		"status":    "disabled",
-		"code":      503,
-		"timestamp": time.Now().Unix(),
-	}
-
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(map[string]string{
+		"error": "GraphQL endpoint is disabled",
+	})
 }
 
 // handleMethodNotAllowed handles unsupported HTTP methods
 func (h *Handler) handleMethodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusMethodNotAllowed)
-
-	response := map[string]interface{}{
-		"error":     "Method Not Allowed",
-		"message":   fmt.Sprintf("Method %s is not allowed for GraphQL endpoint", r.Method),
-		"status":    "method_not_allowed",
-		"code":      405,
-		"timestamp": time.Now().Unix(),
-	}
-
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(map[string]string{
+		"error": "Method not allowed",
+	})
 }
 
 // handleBadRequest handles bad requests
 func (h *Handler) handleBadRequest(w http.ResponseWriter, r *http.Request, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusBadRequest)
-
-	response := map[string]interface{}{
-		"error":     "Bad Request",
-		"message":   message,
-		"status":    "bad_request",
-		"code":      400,
-		"timestamp": time.Now().Unix(),
-	}
-
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(map[string]string{
+		"error": message,
+	})
 }
 
 // setCORSHeaders sets CORS headers
 func (h *Handler) setCORSHeaders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-	w.Header().Set("Access-Control-Max-Age", "86400")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 }
 
 // PlaygroundHandler handles GraphQL playground requests

@@ -2151,9 +2151,9 @@ client := http.NewClient(&http.ClientConfig{
 
 ### 🔮 GraphQL Endpoint
 
-Dolphin provides a plug-and-play GraphQL endpoint with schema-first development, making it easy to build modern APIs.
+Dolphin provides a comprehensive, enterprise-grade GraphQL endpoint with advanced features that can be enabled or disabled as needed.
 
-#### Features
+#### Core Features
 
 - **🔌 Pluggable**: Enable/disable GraphQL at runtime
 - **📋 Schema-first**: Define your API using GraphQL SDL
@@ -2165,6 +2165,17 @@ Dolphin provides a plug-and-play GraphQL endpoint with schema-first development,
 - **🛡️ Security**: Query depth and complexity limits
 - **🔄 Code Generation**: Generate Go types and resolvers from schema
 - **⚡ Performance**: Optimized query execution and caching
+
+#### Advanced Enterprise Features
+
+- **🌐 Global Object Identification**: Relay-compatible Node interface with global IDs
+- **📄 Relay-style Connections**: Standardized pagination with edges and cursors
+- **🎯 Custom Directives**: Authorization, caching, transformation, and validation directives
+- **🔄 Real-time Subscriptions**: WebSocket-based subscriptions for live updates
+- **🔍 Query Analysis**: Advanced depth/complexity analysis and security
+- **💾 Persisted Queries**: Query ID system for performance and security
+- **📊 Enterprise Observability**: Comprehensive metrics, tracing, and monitoring
+- **⚙️ Advanced Configuration**: Flexible schema building and middleware support
 
 #### CLI Commands
 
@@ -2187,7 +2198,79 @@ dolphin graphql schema
 dolphin graphql reset
 ```
 
-#### Basic Usage
+#### Advanced Usage Examples
+
+**1. Global Object Identification (Node Interface)**
+
+```graphql
+# Query any object by global ID
+query {
+  node(id: "VXNlcjoxMjM=") {
+    ... on User {
+      id
+      name
+      email
+    }
+  }
+}
+```
+
+**2. Relay-style Connections (Pagination)**
+
+```graphql
+query {
+  users(first: 10, after: "cursor") {
+    edges {
+      node {
+        id
+        name
+        email
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+    }
+  }
+}
+```
+
+**3. Custom Directives**
+
+```graphql
+type User {
+  id: ID!
+  name: String! @transform(type: "uppercase")
+  email: String! @validate(rules: {pattern: "^[\\w\\.-]+@[\\w\\.-]+\\.[a-zA-Z]{2,}$"})
+  sensitiveData: String! @auth(role: "ADMIN") @cache(maxAge: 300)
+}
+```
+
+**4. Real-time Subscriptions**
+
+```graphql
+subscription {
+  userUpdated {
+    id
+    name
+    email
+  }
+}
+```
+
+**5. Persisted Queries**
+
+```json
+{
+  "id": "abc123",
+  "variables": {"userId": 123}
+}
+```
+
+#### Go Implementation
 
 ```go
 import "github.com/mrhoseah/dolphin/internal/graphql"
