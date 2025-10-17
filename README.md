@@ -28,6 +28,10 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, ins
 - **🔌 Service Providers**: Modular architecture with dependency injection
 - **🎨 HTMX Support**: Modern web interactions without heavy JavaScript
 - **🔧 Maintenance Mode**: Graceful application maintenance with bypass options
+- **📄 Static Pages**: Serve static HTML pages with templating support
+- **🐛 Debug Dashboard**: Built-in debugging tools with profiling and monitoring
+- **🎨 Modern UI**: Beautiful default templates with responsive design
+- **⚡ Auto-Migration**: Automatic database table creation for auth
 
 ## 🚀 Quick Start
 
@@ -55,13 +59,6 @@ go mod tidy
 # Start the development server
 dolphin serve
 ```
-
-Note:
-- The repository is public. The above command works without any extra Git/GOPRIVATE configuration.
-- Pin to a specific version if needed:
-  ```bash
-  go install github.com/mrhoseah/dolphin/cmd/cli@v0.1.0
-  ```
 
 #### Option 2: Clone Repository
 ```bash
@@ -157,6 +154,13 @@ dolphin new my-awesome-app
 # Start development server
 dolphin serve
 dolphin serve --port 3000 --host 0.0.0.0
+
+# Create new project
+dolphin new my-app
+dolphin new my-app --auth  # Include auth scaffolding
+
+# Update CLI to latest version
+dolphin update
 
 # List all available commands
 dolphin list
@@ -275,13 +279,13 @@ Run the built-in debug dashboard and tools.
 
 ```bash
 # Start debug dashboard on a separate port
-./dolphin debug serve --port 8082 --profiler-port 8083
+dolphin debug serve --port 8082 --profiler-port 8083
 
 # Check status
-./dolphin debug status --host http://localhost --port 8082
+dolphin debug status --host http://localhost --port 8082
 
 # Trigger GC via API
-./dolphin debug gc --host http://localhost --port 8082
+dolphin debug gc --host http://localhost --port 8082
 ```
 
 When `app.debug=true`, the main server mounts the dashboard at `/debug` and applies request profiling middleware.
@@ -302,6 +306,25 @@ Endpoints under `/debug`:
 - `/trace` – Trace snapshot (if enabled)
 - `/inspect` – Inspection summary (if enabled)
 - `/inspect/{type}` – Inspect specific type (if enabled)
+
+### 📄 Static Pages
+
+Manage static HTML pages with templating support.
+
+```bash
+# Create a static page
+dolphin make:page about
+dolphin make:page contact --template custom
+
+# Create a static template
+dolphin make:template hero-section
+
+# List all static pages
+dolphin static:list
+
+# Serve static files
+dolphin static:serve
+```
 
 ### 🎯 Laravel Artisan Comparison
 
@@ -372,12 +395,15 @@ dolphin/
 │   ├── cache/            # Caching system
 │   ├── config/           # Configuration management
 │   ├── database/         # Database and migrations
+│   ├── debug/            # Debug dashboard and profiling
 │   ├── events/           # Event system
+│   ├── maintenance/      # Maintenance mode system
 │   ├── middleware/       # Middleware components
 │   ├── orm/              # ORM and repositories
 │   ├── providers/        # Service providers
 │   ├── router/           # HTTP routing (API & Web)
 │   ├── session/          # Session management
+│   ├── static/           # Static page service
 │   ├── storage/          # File storage system
 │   ├── validation/       # Validation system
 │   └── logger/           # Logging system
@@ -387,12 +413,18 @@ dolphin/
 │   ├── models/           # Data models
 │   ├── repositories/     # Data repositories
 │   └── providers/        # Custom service providers
-├── resources/            # Frontend resources
-│   └── views/            # HTMX views
+├── ui/                   # Frontend templates
+│   ├── views/            # HTMX views and layouts
+│   │   ├── layouts/      # Base layouts
+│   │   ├── partials/     # Reusable components
+│   │   ├── pages/        # Page templates
+│   │   └── auth/         # Authentication views
+│   └── static/           # Static page templates
 ├── migrations/           # Database migrations
 ├── postman/              # Generated Postman collections
 ├── config/               # Configuration files
-└── public/               # Static assets
+├── public/               # Static assets
+└── bootstrap/            # Application bootstrap
 ```
 
 ## 📚 Usage Examples
@@ -409,7 +441,7 @@ This generates:
 - **Model**: `app/models/product.go` with GORM annotations
 - **Controller**: `app/http/controllers/product.go` with CRUD methods
 - **Repository**: `app/repositories/product.go` with data access layer
-- **HTMX Views**: `resources/views/product/` with index, show, create, edit, form
+- **HTMX Views**: `ui/views/pages/product/` with index, show, create, edit, form
 - **Migration**: `migrations/*_product.go` for database schema
 
 ### 🎯 **API Resource Generation**
@@ -425,6 +457,46 @@ This generates:
 - **API Controller**: `app/http/controllers/api/user.go` with REST endpoints
 - **Repository**: `app/repositories/user.go`
 - **Migration**: `migrations/*_user.go`
+
+### 🎨 **Modern UI & Authentication**
+
+Dolphin comes with beautiful, responsive templates out of the box:
+
+#### **Authentication Flow**
+```bash
+# Create project with auth scaffolding
+dolphin new my-app --auth
+cd my-app
+dolphin serve
+
+# Visit authentication pages
+open http://localhost:8080/auth/login
+open http://localhost:8080/auth/register
+```
+
+#### **Features Included**
+- **Responsive Design**: Mobile-first, modern UI
+- **HTMX Integration**: Dynamic interactions without JavaScript
+- **Layout System**: Flexible templating with partials
+- **Auto-Migration**: Database tables created automatically
+- **Session Management**: Secure authentication flow
+- **Protected Routes**: Dashboard with user authentication
+
+#### **Template Structure**
+```
+ui/views/
+├── layouts/
+│   └── base.html          # Main layout with navigation
+├── partials/
+│   ├── header.html        # Navigation header
+│   └── footer.html        # Page footer
+├── pages/
+│   ├── home.html          # Landing page
+│   └── dashboard.html     # Protected dashboard
+└── auth/
+    ├── login.html         # Login form
+    └── register.html      # Registration form
+```
 
 ### 📮 **Postman Collection Generation**
 
@@ -995,7 +1067,30 @@ curl -X GET http://localhost:8080/api/v1/users \
 
 ### Frontend Integration
 
-Dolphin includes built-in support for modern frontend frameworks:
+Dolphin includes built-in support for modern frontend frameworks and templating:
+
+#### HTMX Integration
+```html
+<!-- Modern web interactions without heavy JavaScript -->
+<button hx-post="/api/users" hx-target="#user-list">
+    Add User
+</button>
+
+<div id="user-list" hx-get="/api/users" hx-trigger="load">
+    Loading...
+</div>
+```
+
+#### Template System
+```go
+// Dynamic layout detection
+{{layout: admin}}  <!-- Uses admin layout -->
+<!-- layout: main -->  <!-- Uses main layout -->
+
+// Partials support
+{{partial: header}}
+{{partial: footer}}
+```
 
 #### Vue.js Integration
 ```go
@@ -1130,10 +1225,12 @@ Dolphin Framework brings the best of Laravel's developer experience to Go, with 
 
 ```bash
 # Install Dolphin CLI
-go install github.com/mrhoseah/dolphin/cmd/cli@latest
+go install github.com/mrhoseah/dolphin/cmd/dolphin@latest
 
 # Create your first project
 dolphin new my-awesome-app
+dolphin new my-awesome-app --auth  # With authentication
+
 cd my-awesome-app
 
 # Generate a complete module
@@ -1141,6 +1238,9 @@ dolphin make:module Product
 
 # Start developing
 dolphin serve
+
+# Visit your app
+open http://localhost:8080
 ```
 
 **Dolphin Framework** - Where Go meets Laravel's elegance! 🐬✨

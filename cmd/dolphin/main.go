@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/mrhoseah/dolphin/internal/app"
+	"github.com/mrhoseah/dolphin/internal/auth"
 	"github.com/mrhoseah/dolphin/internal/config"
 	"github.com/mrhoseah/dolphin/internal/database"
 	"github.com/mrhoseah/dolphin/internal/debug"
@@ -546,6 +547,9 @@ func serve(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
+
+	// Auto-migrate auth user model so register works out-of-the-box
+	_ = db.GetDB().AutoMigrate(&auth.User{})
 
 	// Initialize application
 	app := app.New(cfg, logger, db)
