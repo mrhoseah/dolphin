@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,29 +52,29 @@ type Config struct {
 	PagesDir      string `yaml:"pages_dir" json:"pages_dir"`
 	ComponentsDir string `yaml:"components_dir" json:"components_dir"`
 	EmailsDir     string `yaml:"emails_dir" json:"emails_dir"`
-	
+
 	// Template settings
-	Extension     string `yaml:"extension" json:"extension"`
-	AutoReload    bool   `yaml:"auto_reload" json:"auto_reload"`
-	CacheTemplates bool  `yaml:"cache_templates" json:"cache_templates"`
-	
+	Extension      string `yaml:"extension" json:"extension"`
+	AutoReload     bool   `yaml:"auto_reload" json:"auto_reload"`
+	CacheTemplates bool   `yaml:"cache_templates" json:"cache_templates"`
+
 	// Layout settings
 	DefaultLayout string `yaml:"default_layout" json:"default_layout"`
 	LayoutVar     string `yaml:"layout_var" json:"layout_var"`
-	
+
 	// Helper settings
 	EnableHelpers bool `yaml:"enable_helpers" json:"enable_helpers"`
-	
+
 	// Security settings
-	EscapeHTML    bool `yaml:"escape_html" json:"escape_html"`
+	EscapeHTML     bool     `yaml:"escape_html" json:"escape_html"`
 	TrustedOrigins []string `yaml:"trusted_origins" json:"trusted_origins"`
-	
+
 	// Performance settings
-	MaxCacheSize  int           `yaml:"max_cache_size" json:"max_cache_size"`
-	CacheExpiry   time.Duration `yaml:"cache_expiry" json:"cache_expiry"`
-	
+	MaxCacheSize int           `yaml:"max_cache_size" json:"max_cache_size"`
+	CacheExpiry  time.Duration `yaml:"cache_expiry" json:"cache_expiry"`
+
 	// Logging
-	EnableLogging bool `yaml:"enable_logging" json:"enable_logging"`
+	EnableLogging  bool `yaml:"enable_logging" json:"enable_logging"`
 	VerboseLogging bool `yaml:"verbose_logging" json:"verbose_logging"`
 }
 
@@ -104,14 +103,17 @@ func DefaultConfig() *Config {
 
 // Template represents a compiled template
 type Template struct {
-	Name        string        `json:"name"`
-	Type        TemplateType  `json:"type"`
-	Path        string        `json:"path"`
-	Content     string        `json:"content"`
-	Compiled    *template.Template `json:"-"`
-	LastModified time.Time    `json:"last_modified"`
-	Size        int64         `json:"size"`
-	Hash        string        `json:"hash"`
+	Name         string             `json:"name"`
+	Type         TemplateType       `json:"type"`
+	Path         string             `json:"path"`
+	Content      string             `json:"content"`
+	Compiled     *template.Template `json:"-"`
+	LastModified time.Time          `json:"last_modified"`
+	Size         int64              `json:"size"`
+	Hash         string             `json:"hash"`
+	Blocks       map[string]string  `json:"blocks,omitempty"`
+	Extends      string             `json:"extends,omitempty"`
+	Includes     []string           `json:"includes,omitempty"`
 }
 
 // TemplateData represents data passed to templates
@@ -124,24 +126,24 @@ type HelperFunc func(args ...interface{}) (interface{}, error)
 type Engine struct {
 	config *Config
 	logger *zap.Logger
-	
+
 	// Template storage
-	templates map[string]*Template
-	layouts   map[string]*Template
-	partials  map[string]*Template
-	pages     map[string]*Template
+	templates  map[string]*Template
+	layouts    map[string]*Template
+	partials   map[string]*Template
+	pages      map[string]*Template
 	components map[string]*Template
-	emails    map[string]*Template
-	
+	emails     map[string]*Template
+
 	// Helper functions
 	helpers map[string]HelperFunc
-	
+
 	// Cache
 	cache map[string]*Template
-	
+
 	// File watcher
 	watcher *TemplateWatcher
-	
+
 	// Mutex for thread safety
 	mu sync.RWMutex
 }
@@ -151,7 +153,7 @@ func NewEngine(config *Config, logger *zap.Logger) (*Engine, error) {
 	if config == nil {
 		config = DefaultConfig()
 	}
-	
+
 	// Create directories if they don't exist
 	dirs := []string{
 		config.LayoutsDir,
@@ -160,13 +162,13 @@ func NewEngine(config *Config, logger *zap.Logger) (*Engine, error) {
 		config.ComponentsDir,
 		config.EmailsDir,
 	}
-	
+
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return nil, fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
-	
+
 	engine := &Engine{
 		config:     config,
 		logger:     logger,
@@ -179,15 +181,15 @@ func NewEngine(config *Config, logger *zap.Logger) (*Engine, error) {
 		helpers:    make(map[string]HelperFunc),
 		cache:      make(map[string]*Template),
 	}
-	
+
 	// Register default helpers
 	engine.registerDefaultHelpers()
-	
+
 	// Load templates
 	if err := engine.LoadTemplates(); err != nil {
 		return nil, fmt.Errorf("failed to load templates: %w", err)
 	}
-	
+
 	// Start file watcher if auto-reload is enabled
 	if config.AutoReload {
 		watcher, err := NewTemplateWatcher(engine, logger)
@@ -197,7 +199,7 @@ func NewEngine(config *Config, logger *zap.Logger) (*Engine, error) {
 		engine.watcher = watcher
 		go watcher.Watch()
 	}
-	
+
 	return engine, nil
 }
 
@@ -205,7 +207,7 @@ func NewEngine(config *Config, logger *zap.Logger) (*Engine, error) {
 func (e *Engine) LoadTemplates() error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	
+
 	// Clear existing templates
 	e.templates = make(map[string]*Template)
 	e.layouts = make(map[string]*Template)
@@ -213,7 +215,7 @@ func (e *Engine) LoadTemplates() error {
 	e.pages = make(map[string]*Template)
 	e.components = make(map[string]*Template)
 	e.emails = make(map[string]*Template)
-	
+
 	// Load templates from each directory
 	directories := map[string]TemplateType{
 		e.config.LayoutsDir:    TypeLayout,
@@ -222,13 +224,13 @@ func (e *Engine) LoadTemplates() error {
 		e.config.ComponentsDir: TypeComponent,
 		e.config.EmailsDir:     TypeEmail,
 	}
-	
+
 	for dir, templateType := range directories {
 		if err := e.loadTemplatesFromDir(dir, templateType); err != nil {
 			return fmt.Errorf("failed to load templates from %s: %w", dir, err)
 		}
 	}
-	
+
 	if e.config.EnableLogging && e.logger != nil {
 		e.logger.Info("Templates loaded successfully",
 			zap.Int("total", len(e.templates)),
@@ -238,7 +240,7 @@ func (e *Engine) LoadTemplates() error {
 			zap.Int("components", len(e.components)),
 			zap.Int("emails", len(e.emails)))
 	}
-	
+
 	return nil
 }
 
@@ -248,17 +250,17 @@ func (e *Engine) loadTemplatesFromDir(dir string, templateType TemplateType) err
 		if err != nil {
 			return err
 		}
-		
+
 		// Skip directories
 		if info.IsDir() {
 			return nil
 		}
-		
+
 		// Check file extension
 		if !strings.HasSuffix(path, e.config.Extension) {
 			return nil
 		}
-		
+
 		// Load template
 		template, err := e.loadTemplate(path, templateType)
 		if err != nil {
@@ -269,10 +271,10 @@ func (e *Engine) loadTemplatesFromDir(dir string, templateType TemplateType) err
 			}
 			return nil // Continue loading other templates
 		}
-		
+
 		// Store template
 		e.templates[template.Name] = template
-		
+
 		// Store in type-specific map
 		switch templateType {
 		case TypeLayout:
@@ -286,7 +288,7 @@ func (e *Engine) loadTemplatesFromDir(dir string, templateType TemplateType) err
 		case TypeEmail:
 			e.emails[template.Name] = template
 		}
-		
+
 		return nil
 	})
 }
@@ -298,16 +300,16 @@ func (e *Engine) loadTemplate(path string, templateType TemplateType) (*Template
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Get file info
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Generate template name from path
 	name := e.generateTemplateName(path, templateType)
-	
+
 	// Create template
 	tmpl := &Template{
 		Name:         name,
@@ -318,12 +320,12 @@ func (e *Engine) loadTemplate(path string, templateType TemplateType) (*Template
 		Size:         info.Size(),
 		Hash:         e.generateHash(string(content)),
 	}
-	
+
 	// Compile template
 	if err := e.compileTemplate(tmpl); err != nil {
 		return nil, fmt.Errorf("failed to compile template %s: %w", name, err)
 	}
-	
+
 	return tmpl, nil
 }
 
@@ -343,16 +345,16 @@ func (e *Engine) generateTemplateName(path string, templateType TemplateType) st
 	case TypeEmail:
 		baseDir = e.config.EmailsDir
 	}
-	
+
 	relPath, err := filepath.Rel(baseDir, path)
 	if err != nil {
 		relPath = path
 	}
-	
+
 	// Remove extension and convert to template name
 	name := strings.TrimSuffix(relPath, e.config.Extension)
 	name = strings.ReplaceAll(name, string(filepath.Separator), ".")
-	
+
 	return name
 }
 
@@ -370,20 +372,20 @@ func (e *Engine) generateHash(content string) string {
 func (e *Engine) compileTemplate(tmpl *Template) error {
 	// Create template with helpers
 	funcMap := template.FuncMap{}
-	
+
 	// Add helper functions
 	if e.config.EnableHelpers {
 		for name, helper := range e.helpers {
 			funcMap[name] = helper
 		}
 	}
-	
+
 	// Compile template
 	compiled, err := template.New(tmpl.Name).Funcs(funcMap).Parse(tmpl.Content)
 	if err != nil {
 		return err
 	}
-	
+
 	tmpl.Compiled = compiled
 	return nil
 }
@@ -393,11 +395,11 @@ func (e *Engine) Render(name string, data TemplateData) (string, error) {
 	e.mu.RLock()
 	tmpl, exists := e.templates[name]
 	e.mu.RUnlock()
-	
+
 	if !exists {
 		return "", fmt.Errorf("template %s not found", name)
 	}
-	
+
 	// Check if template needs recompilation
 	if e.config.AutoReload && e.needsRecompilation(tmpl) {
 		if err := e.reloadTemplate(tmpl); err != nil {
@@ -408,13 +410,13 @@ func (e *Engine) Render(name string, data TemplateData) (string, error) {
 			}
 		}
 	}
-	
+
 	// Render template
 	var buf bytes.Buffer
 	if err := tmpl.Compiled.Execute(&buf, data); err != nil {
 		return "", fmt.Errorf("failed to render template %s: %w", name, err)
 	}
-	
+
 	return buf.String(), nil
 }
 
@@ -424,28 +426,28 @@ func (e *Engine) RenderWithLayout(pageName, layoutName string, data TemplateData
 	e.mu.RLock()
 	page, exists := e.pages[pageName]
 	e.mu.RUnlock()
-	
+
 	if !exists {
 		return "", fmt.Errorf("page template %s not found", pageName)
 	}
-	
+
 	// Use default layout if not specified
 	if layoutName == "" {
 		layoutName = e.config.DefaultLayout
 	}
-	
+
 	// Get layout template
 	e.mu.RLock()
 	layout, exists := e.layouts[layoutName]
 	e.mu.RUnlock()
-	
+
 	if !exists {
 		return "", fmt.Errorf("layout template %s not found", layoutName)
 	}
-	
+
 	// Add page content to data
 	data[e.config.LayoutVar] = page.Content
-	
+
 	// Render layout with page content
 	return e.Render(layout.Name, data)
 }
@@ -455,11 +457,11 @@ func (e *Engine) RenderPartial(name string, data TemplateData) (string, error) {
 	e.mu.RLock()
 	partial, exists := e.partials[name]
 	e.mu.RUnlock()
-	
+
 	if !exists {
 		return "", fmt.Errorf("partial template %s not found", name)
 	}
-	
+
 	return e.Render(partial.Name, data)
 }
 
@@ -468,11 +470,11 @@ func (e *Engine) RenderComponent(name string, data TemplateData) (string, error)
 	e.mu.RLock()
 	component, exists := e.components[name]
 	e.mu.RUnlock()
-	
+
 	if !exists {
 		return "", fmt.Errorf("component template %s not found", name)
 	}
-	
+
 	return e.Render(component.Name, data)
 }
 
@@ -481,11 +483,11 @@ func (e *Engine) RenderEmail(name string, data TemplateData) (string, error) {
 	e.mu.RLock()
 	email, exists := e.emails[name]
 	e.mu.RUnlock()
-	
+
 	if !exists {
 		return "", fmt.Errorf("email template %s not found", name)
 	}
-	
+
 	return e.Render(email.Name, data)
 }
 
@@ -496,7 +498,7 @@ func (e *Engine) needsRecompilation(tmpl *Template) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	return info.ModTime().After(tmpl.LastModified)
 }
 
@@ -507,12 +509,12 @@ func (e *Engine) reloadTemplate(tmpl *Template) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Update template
 	tmpl.Content = string(content)
 	tmpl.LastModified = time.Now()
 	tmpl.Hash = e.generateHash(string(content))
-	
+
 	// Recompile template
 	return e.compileTemplate(tmpl)
 }
@@ -521,7 +523,7 @@ func (e *Engine) reloadTemplate(tmpl *Template) error {
 func (e *Engine) RegisterHelper(name string, helper HelperFunc) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	
+
 	e.helpers[name] = helper
 }
 
@@ -529,7 +531,7 @@ func (e *Engine) RegisterHelper(name string, helper HelperFunc) {
 func (e *Engine) GetTemplate(name string) (*Template, bool) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	
+
 	tmpl, exists := e.templates[name]
 	return tmpl, exists
 }
@@ -538,7 +540,7 @@ func (e *Engine) GetTemplate(name string) (*Template, bool) {
 func (e *Engine) GetTemplatesByType(templateType TemplateType) map[string]*Template {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	
+
 	switch templateType {
 	case TypeLayout:
 		result := make(map[string]*Template)
@@ -579,7 +581,7 @@ func (e *Engine) GetTemplatesByType(templateType TemplateType) map[string]*Templ
 func (e *Engine) GetAllTemplates() map[string]*Template {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	
+
 	templates := make(map[string]*Template)
 	for name, tmpl := range e.templates {
 		templates[name] = tmpl
@@ -598,7 +600,7 @@ func (e *Engine) Stop() error {
 // ConfigFromEnv creates config from environment variables
 func ConfigFromEnv() *Config {
 	config := DefaultConfig()
-	
+
 	// Override with environment variables if present
 	// This would typically read from environment variables
 	// For now, return the default config

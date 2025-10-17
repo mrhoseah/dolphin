@@ -21,7 +21,7 @@ type CorrelationIDGenerator struct {
 	counter int64
 
 	// Mutex for thread safety
-	mu sync.Mutex
+	mu sync.RWMutex
 }
 
 // NewCorrelationIDGenerator creates a new correlation ID generator

@@ -183,7 +183,7 @@ func (lm *LayoutManager) blockHelper(layout *Layout) func(string) string {
 func (lm *LayoutManager) includeHelper(layout *Layout) func(string, ...interface{}) (string, error) {
 	return func(partialName string, data ...interface{}) (string, error) {
 		// Get partial template
-		partial, exists := lm.engine.partials[partialName]
+		_, exists := lm.engine.partials[partialName]
 		if !exists {
 			return "", fmt.Errorf("partial %s not found", partialName)
 		}
@@ -212,7 +212,7 @@ func (lm *LayoutManager) extendsHelper(layout *Layout) func(string, map[string]i
 
 		// Merge blocks from current layout into parent
 		mergedBlocks := make(map[string]string)
-		for name, content := range parent.Blocks {
+		for name, content := range layout.Blocks {
 			mergedBlocks[name] = content
 		}
 		for name, content := range layout.Blocks {

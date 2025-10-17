@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/graphql-go/graphql"
-	"github.com/graphql-go/graphql/language/ast"
+	"github.com/graphql-go/graphql/gqlerrors"
+	"github.com/graphql-go/graphql/language/parser"
+	"github.com/graphql-go/graphql/language/source"
 	"go.uber.org/zap"
 )
 
@@ -92,19 +94,19 @@ func (sm *SchemaManager) AddResolver(name string, resolver Resolver) {
 }
 
 // AddQuery adds a query field
-func (sm *SchemaManager) AddQuery(name string, fieldConfig graphql.FieldConfig) {
+func (sm *SchemaManager) AddQuery(name string, fieldConfig graphql.Field) {
 	// This would be implemented to add query fields
 	sm.logger.Info("Adding GraphQL query", zap.String("name", name))
 }
 
 // AddMutation adds a mutation field
-func (sm *SchemaManager) AddMutation(name string, fieldConfig graphql.FieldConfig) {
+func (sm *SchemaManager) AddMutation(name string, fieldConfig graphql.Field) {
 	// This would be implemented to add mutation fields
 	sm.logger.Info("Adding GraphQL mutation", zap.String("name", name))
 }
 
 // AddSubscription adds a subscription field
-func (sm *SchemaManager) AddSubscription(name string, fieldConfig graphql.FieldConfig) {
+func (sm *SchemaManager) AddSubscription(name string, fieldConfig graphql.Field) {
 	// This would be implemented to add subscription fields
 	sm.logger.Info("Adding GraphQL subscription", zap.String("name", name))
 }
@@ -256,7 +258,7 @@ func (sm *SchemaManager) Execute(ctx context.Context, query string, variables ma
 	// Check if GraphQL is enabled
 	if !sm.config.Enabled {
 		return &graphql.Result{
-			Errors: []graphql.FormattedError{
+			Errors: []gqlerrors.FormattedError{
 				{Message: "GraphQL endpoint is disabled"},
 			},
 		}
@@ -264,7 +266,7 @@ func (sm *SchemaManager) Execute(ctx context.Context, query string, variables ma
 
 	if sm.schema == nil {
 		return &graphql.Result{
-			Errors: []graphql.FormattedError{
+			Errors: []gqlerrors.FormattedError{
 				{Message: "Schema not built"},
 			},
 		}
@@ -318,7 +320,9 @@ func (sm *SchemaManager) ValidateQuery(query string) error {
 	}
 
 	// Parse query
-	ast, err := graphql.ParseQuery(&ast.Source{Body: query})
+	ast, err := parser.Parse(parser.ParseParams{
+		Source: &source.Source{Body: []byte(query)},
+	})
 	if err != nil {
 		return fmt.Errorf("failed to parse query: %w", err)
 	}

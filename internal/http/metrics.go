@@ -280,7 +280,7 @@ func (m *Metrics) GetMethodStats() map[string]interface{} {
 	methodDistribution := make(map[string]float64)
 	for method, count := range m.methods {
 		if m.totalRequests > 0 {
-			methodDistribution[method.String()] = float64(count) / float64(m.totalRequests) * 100
+			methodDistribution[string(method)] = float64(count) / float64(m.totalRequests) * 100
 		}
 	}
 

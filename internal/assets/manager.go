@@ -369,7 +369,7 @@ func (am *AssetManager) getAssetType(path string) AssetType {
 // calculateHash calculates the MD5 hash of a file
 func (am *AssetManager) calculateHash(path string) (string, error) {
 	file, err := os.Open(path)
-	if err != nil
+	if err != nil {
 		return "", err
 	}
 	defer file.Close()

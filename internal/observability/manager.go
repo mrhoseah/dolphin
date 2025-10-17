@@ -86,10 +86,7 @@ func NewObservabilityManager(config *ObservabilityConfig, logger *zap.Logger) (*
 
 	// Initialize metrics
 	if config.Metrics != nil && config.Metrics.Enabled {
-		metrics, err := NewMetricsCollector(config.Metrics, logger)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create metrics collector: %w", err)
-		}
+		metrics := NewMetricsCollector(config.Metrics, logger)
 		om.metrics = metrics
 	}
 

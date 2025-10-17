@@ -28,7 +28,7 @@ func main() {
 	config.EnableLogging = true
 
 	// Create load shedder
-	shedder := loadshedding.NewLoadShedder("main-shedder", config, logger)
+	shedder := loadshedding.NewLoadShedder(config, logger)
 
 	// Example 2: Test Load Shedding
 	fmt.Println("\n=== Example 2: Test Load Shedding ===")

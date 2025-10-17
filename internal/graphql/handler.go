@@ -1,13 +1,13 @@
 package graphql
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/graphql-go/graphql/gqlerrors"
 	"go.uber.org/zap"
 )
 
@@ -34,8 +34,8 @@ type GraphQLRequest struct {
 
 // GraphQLResponse represents a GraphQL response
 type GraphQLResponse struct {
-	Data   interface{}            `json:"data,omitempty"`
-	Errors []graphql.FormattedError `json:"errors,omitempty"`
+	Data   interface{}                `json:"data,omitempty"`
+	Errors []gqlerrors.FormattedError `json:"errors,omitempty"`
 }
 
 // ServeHTTP handles HTTP requests
@@ -107,15 +107,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleDisabled(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusServiceUnavailable)
-	
+
 	response := map[string]interface{}{
-		"error": "GraphQL endpoint is disabled",
-		"message": "GraphQL functionality is currently disabled. Please contact the administrator.",
-		"status": "disabled",
-		"code": 503,
+		"error":     "GraphQL endpoint is disabled",
+		"message":   "GraphQL functionality is currently disabled. Please contact the administrator.",
+		"status":    "disabled",
+		"code":      503,
 		"timestamp": time.Now().Unix(),
 	}
-	
+
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -123,15 +123,15 @@ func (h *Handler) handleDisabled(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleMethodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusMethodNotAllowed)
-	
+
 	response := map[string]interface{}{
-		"error": "Method Not Allowed",
-		"message": fmt.Sprintf("Method %s is not allowed for GraphQL endpoint", r.Method),
-		"status": "method_not_allowed",
-		"code": 405,
+		"error":     "Method Not Allowed",
+		"message":   fmt.Sprintf("Method %s is not allowed for GraphQL endpoint", r.Method),
+		"status":    "method_not_allowed",
+		"code":      405,
 		"timestamp": time.Now().Unix(),
 	}
-	
+
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -139,15 +139,15 @@ func (h *Handler) handleMethodNotAllowed(w http.ResponseWriter, r *http.Request)
 func (h *Handler) handleBadRequest(w http.ResponseWriter, r *http.Request, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusBadRequest)
-	
+
 	response := map[string]interface{}{
-		"error": "Bad Request",
-		"message": message,
-		"status": "bad_request",
-		"code": 400,
+		"error":     "Bad Request",
+		"message":   message,
+		"status":    "bad_request",
+		"code":      400,
 		"timestamp": time.Now().Unix(),
 	}
-	
+
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -223,27 +223,27 @@ func (h *Handler) IntrospectionHandler(w http.ResponseWriter, r *http.Request) {
 // HealthHandler handles GraphQL health check requests
 func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	status := "disabled"
 	code := 503
 	message := "GraphQL endpoint is disabled"
-	
+
 	if h.schemaManager.IsEnabled() {
 		status = "enabled"
 		code = 200
 		message = "GraphQL endpoint is enabled"
 	}
-	
+
 	response := map[string]interface{}{
-		"status": status,
-		"message": message,
-		"code": code,
-		"enabled": h.schemaManager.IsEnabled(),
-		"playground_enabled": h.schemaManager.GetConfig().EnablePlayground,
+		"status":                status,
+		"message":               message,
+		"code":                  code,
+		"enabled":               h.schemaManager.IsEnabled(),
+		"playground_enabled":    h.schemaManager.GetConfig().EnablePlayground,
 		"introspection_enabled": h.schemaManager.GetConfig().EnableIntrospection,
-		"timestamp": time.Now().Unix(),
+		"timestamp":             time.Now().Unix(),
 	}
-	
+
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(response)
 }
@@ -251,10 +251,10 @@ func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
 // StatusHandler handles GraphQL status requests
 func (h *Handler) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	metrics := h.schemaManager.GetMetrics()
 	metrics["enabled"] = h.schemaManager.IsEnabled()
 	metrics["timestamp"] = time.Now().Unix()
-	
+
 	json.NewEncoder(w).Encode(metrics)
 }

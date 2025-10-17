@@ -174,10 +174,26 @@ func (tm *TracerManager) StartSpanWithAttributes(ctx context.Context, name strin
 	copy(spanOpts, opts)
 
 	// Add attributes
+	attributes := make([]attribute.KeyValue, 0, len(attrs))
 	for key, value := range attrs {
-		spanOpts = append(spanOpts, trace.WithAttributes(attribute.Any(key, value)))
+		switch v := value.(type) {
+		case string:
+			attributes = append(attributes, attribute.String(key, v))
+		case int:
+			attributes = append(attributes, attribute.Int(key, v))
+		case int64:
+			attributes = append(attributes, attribute.Int64(key, v))
+		case float64:
+			attributes = append(attributes, attribute.Float64(key, v))
+		case bool:
+			attributes = append(attributes, attribute.Bool(key, v))
+		default:
+			attributes = append(attributes, attribute.String(key, fmt.Sprintf("%v", v)))
+		}
 	}
-
+	if len(attributes) > 0 {
+		spanOpts = append(spanOpts, trace.WithAttributes(attributes...))
+	}
 	return tm.tracer.Start(ctx, name, spanOpts...)
 }
 
@@ -187,7 +203,20 @@ func (tm *TracerManager) AddSpanEvent(ctx context.Context, name string, attrs ma
 	if span.IsRecording() {
 		attributes := make([]attribute.KeyValue, 0, len(attrs))
 		for key, value := range attrs {
-			attributes = append(attributes, attribute.Any(key, value))
+			switch v := value.(type) {
+			case string:
+				attributes = append(attributes, attribute.String(key, v))
+			case int:
+				attributes = append(attributes, attribute.Int(key, v))
+			case int64:
+				attributes = append(attributes, attribute.Int64(key, v))
+			case float64:
+				attributes = append(attributes, attribute.Float64(key, v))
+			case bool:
+				attributes = append(attributes, attribute.Bool(key, v))
+			default:
+				attributes = append(attributes, attribute.String(key, fmt.Sprintf("%v", v)))
+			}
 		}
 		span.AddEvent(name, trace.WithAttributes(attributes...))
 	}
@@ -198,7 +227,20 @@ func (tm *TracerManager) SetSpanAttributes(ctx context.Context, attrs map[string
 	span := trace.SpanFromContext(ctx)
 	if span.IsRecording() {
 		for key, value := range attrs {
-			span.SetAttributes(attribute.Any(key, value))
+			switch v := value.(type) {
+			case string:
+				span.SetAttributes(attribute.String(key, v))
+			case int:
+				span.SetAttributes(attribute.Int(key, v))
+			case int64:
+				span.SetAttributes(attribute.Int64(key, v))
+			case float64:
+				span.SetAttributes(attribute.Float64(key, v))
+			case bool:
+				span.SetAttributes(attribute.Bool(key, v))
+			default:
+				span.SetAttributes(attribute.String(key, fmt.Sprintf("%v", v)))
+			}
 		}
 	}
 }
@@ -290,7 +332,11 @@ func TracingMiddleware(tracer *TracerManager) func(http.Handler) http.Handler {
 			// Add final attributes
 			span.SetAttributes(
 				semconv.HTTPStatusCodeKey.Int(wrapped.statusCode),
-				semconv.HTTPResponseSizeKey.Int64(wrapped.size),
+				attribute.Int64("http.response_size", int64(wrapped.size)),
+				attribute.String("http.method", r.Method),
+				attribute.String("http.url", r.URL.String()),
+				attribute.String("http.user_agent", r.UserAgent()),
+				attribute.String("http.remote_addr", r.RemoteAddr),
 			)
 
 			// Finish span
