@@ -37,6 +37,7 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, ins
 - **⚡ Performance**: Rate limiting, health checks, and monitoring
 - **🔄 Graceful Shutdown**: Production-ready shutdown with connection draining
 - **⚡ Circuit Breakers**: Microservices protection with fault tolerance
+- **⚖️ Load Shedding**: Adaptive overload protection with system stability
 
 ## 🚀 Quick Start
 
@@ -614,6 +615,155 @@ config.IsSuccess = func(err error) bool {
 - `circuit_breaker_state` - Current state
 - `circuit_breaker_failure_rate` - Failure rate percentage
 - `circuit_breaker_success_rate` - Success rate percentage
+
+### ⚖️ Load Shedding
+
+Dolphin provides adaptive load shedding for overload protection and system stability.
+
+#### Features
+
+- **🔄 Adaptive Adjustment**: Automatically adjusts shedding based on system load
+- **📊 Multiple Strategies**: CPU, Memory, Goroutines, Request Rate, Response Time, Combined
+- **⚖️ Five Levels**: None, Light, Moderate, Heavy, Critical shedding
+- **🌐 HTTP Middleware**: Built-in middleware for automatic request shedding
+- **📈 Real-time Metrics**: Prometheus metrics for monitoring and alerting
+- **🔧 Configurable**: Customizable thresholds and shedding rates
+
+#### CLI Commands
+
+```bash
+# Load shedding management
+dolphin loadshed status
+dolphin loadshed create <name>
+dolphin loadshed test <name>
+dolphin loadshed reset <name>
+dolphin loadshed force <name> <level>
+dolphin loadshed list
+dolphin loadshed metrics
+```
+
+#### Integration
+
+```go
+import "github.com/mrhoseah/dolphin/internal/loadshedding"
+
+// Create load shedder
+config := loadshedding.DefaultConfig()
+shedder := loadshedding.NewLoadShedder("main-shedder", config, logger)
+
+// Use in HTTP middleware
+middleware := loadshedding.NewMiddleware(shedder, config, logger)
+r.Use(middleware.Handler)
+```
+
+#### Configuration
+
+```yaml
+# config/loadshedding.yaml
+loadshedding:
+  strategy: "combined"
+  light_threshold: 0.6
+  moderate_threshold: 0.75
+  heavy_threshold: 0.85
+  critical_threshold: 0.95
+  light_shed_rate: 0.1
+  moderate_shed_rate: 0.3
+  heavy_shed_rate: 0.6
+  critical_shed_rate: 0.9
+  check_interval: "1s"
+  adaptive_interval: "5s"
+  hysteresis: 0.05
+  min_shed_rate: 0.0
+  max_shed_rate: 0.95
+  enable_adaptive: true
+  enable_logging: true
+```
+
+#### Shedding Strategies
+
+1. **CPU**: Based on CPU usage percentage
+2. **Memory**: Based on memory usage percentage
+3. **Goroutines**: Based on number of goroutines
+4. **Request Rate**: Based on requests per second
+5. **Response Time**: Based on average response time
+6. **Combined**: Weighted combination of all metrics
+
+#### Shedding Levels
+
+1. **🟢 None (0%)**: Normal operation, no shedding
+2. **🟡 Light (10%)**: Light shedding for minor overload
+3. **🟠 Moderate (30%)**: Moderate shedding for significant overload
+4. **🔴 Heavy (60%)**: Heavy shedding for severe overload
+5. **⚫ Critical (90%)**: Critical shedding for extreme overload
+
+#### HTTP Middleware Integration
+
+```go
+// Create middleware
+middleware := loadshedding.NewMiddleware(shedder, config, logger)
+
+// Apply to routes
+r.Use(middleware.Handler)
+
+// Custom error response
+middlewareConfig := &loadshedding.MiddlewareConfig{
+    ErrorResponse:    []byte(`{"error":"Service temporarily unavailable"}`),
+    ErrorStatusCode:  http.StatusServiceUnavailable,
+    ErrorContentType: "application/json",
+}
+```
+
+#### Manager Integration
+
+```go
+// Create load shedding manager
+manager := loadshedding.NewLoadSheddingManager(logger)
+
+// Create multiple shedders
+apiShedder, _ := manager.CreateShedder("api-shedder", config)
+dbShedder, _ := manager.CreateShedder("db-shedder", config)
+
+// Create middlewares
+apiMiddleware, _ := manager.CreateMiddleware("api-middleware", "api-shedder", config)
+dbMiddleware, _ := manager.CreateMiddleware("db-middleware", "db-shedder", config)
+```
+
+#### Metrics and Monitoring
+
+```go
+// Get shedder statistics
+stats := shedder.GetStats()
+fmt.Printf("Level: %s, Shed Rate: %.1f%%\n", 
+    stats.CurrentLevel, stats.CurrentShedRate*100)
+
+// Get manager statistics
+managerStats := manager.GetManagerStats()
+fmt.Printf("Shedders: %d, Middlewares: %d\n", 
+    managerStats.ShedderCount, managerStats.MiddlewareCount)
+```
+
+#### Force Operations
+
+```go
+// Force specific shedding level
+shedder.ForceLevel(loadshedding.LevelHeavy)
+
+// Reset to normal operation
+shedder.Reset()
+```
+
+#### Prometheus Metrics
+
+- `load_shedder_requests_total` - Total requests
+- `load_shedder_requests_shed_total` - Shed requests
+- `load_shedder_requests_processed_total` - Processed requests
+- `load_shedder_level` - Current shedding level
+- `load_shedder_rate` - Current shedding rate
+- `load_shedder_cpu_usage` - CPU usage percentage
+- `load_shedder_memory_usage` - Memory usage percentage
+- `load_shedder_goroutines` - Number of goroutines
+- `load_shedder_request_rate` - Request rate (req/s)
+- `load_shedder_response_time_seconds` - Average response time
 
 ### 📄 Static Pages
 
