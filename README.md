@@ -1342,6 +1342,813 @@ if err := manager.Stop(); err != nil {
 }
 ```
 
+### 🎨 Templating Engine
+
+Dolphin provides a powerful templating engine with helpers, layouts, and components for building dynamic web applications.
+
+#### Features
+
+- **🎨 Template Types**: Layouts, partials, pages, components, and emails
+- **🛠️ Helper Functions**: 45+ built-in helpers for strings, numbers, dates, arrays, objects, HTML, URLs, security, conditionals, loops, and utilities
+- **🏗️ Layout System**: Template inheritance with blocks and extends
+- **🧩 Component System**: Reusable UI components with props, slots, and events
+- **👀 Auto-reload**: Automatic template recompilation on file changes
+- **💾 Caching**: Intelligent template caching for better performance
+- **🔒 Security**: HTML escaping and CSRF protection
+- **📊 Statistics**: Detailed metrics and monitoring
+
+#### CLI Commands
+
+```bash
+# Template engine management
+dolphin template list
+dolphin template compile
+dolphin template watch
+dolphin template helpers
+dolphin template test
+dolphin template stats
+```
+
+#### Integration
+
+```go
+import "github.com/mrhoseah/dolphin/internal/template"
+
+// Create template engine
+config := template.DefaultConfig()
+engine, err := template.NewEngine(config, logger)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Render template
+data := template.TemplateData{
+    "title": "Welcome to Dolphin",
+    "user": map[string]interface{}{
+        "name": "John Doe",
+        "email": "john@example.com",
+    },
+}
+
+html, err := engine.Render("pages.home", data)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Stop engine
+defer engine.Stop()
+```
+
+#### Configuration
+
+```yaml
+# config/template.yaml
+template:
+  layouts_dir: "ui/views/layouts"
+  partials_dir: "ui/views/partials"
+  pages_dir: "ui/views/pages"
+  components_dir: "ui/views/components"
+  emails_dir: "ui/views/emails"
+  extension: ".html"
+  auto_reload: true
+  cache_templates: true
+  default_layout: "base"
+  layout_var: "layout"
+  enable_helpers: true
+  escape_html: true
+  trusted_origins: []
+  max_cache_size: 1000
+  cache_expiry: "24h"
+  enable_logging: true
+  verbose_logging: false
+```
+
+#### Template Types
+
+1. **🏗️ Layouts**: Base templates with blocks and inheritance
+2. **🧩 Partials**: Reusable template fragments
+3. **📄 Pages**: Full page templates
+4. **🧩 Components**: Reusable UI components
+5. **📧 Emails**: Email templates
+
+#### Helper Functions
+
+##### String Helpers
+```go
+// String manipulation
+{{upper "hello world"}}           // HELLO WORLD
+{{lower "HELLO WORLD"}}           // hello world
+{{title "hello world"}}           // Hello World
+{{capitalize "hello"}}            // Hello
+{{trim "  hello  "}}              // hello
+{{replace "hello world" "world" "universe"}} // hello universe
+{{truncate "Long text" 10}}       // Long text...
+{{slug "Hello World!"}}           // hello-world
+{{pluralize "cat"}}               // cats
+{{singularize "cats"}}            // cat
+```
+
+##### Number Helpers
+```go
+// Mathematical operations
+{{add 5 3}}                       // 8
+{{subtract 10 4}}                 // 6
+{{multiply 6 7}}                  // 42
+{{divide 20 4}}                   // 5
+{{modulo 17 5}}                   // 2
+{{round 3.14159 2}}               // 3.14
+{{ceil 3.2}}                      // 4
+{{floor 3.8}}                     // 3
+{{abs -5}}                        // 5
+{{min 5 3 8 1}}                   // 1
+{{max 5 3 8 1}}                   // 8
+```
+
+##### Date/Time Helpers
+```go
+// Date and time formatting
+{{now}}                           // Current time
+{{formatDate .date "2006-01-02"}} // 2024-01-15
+{{formatTime .date "15:04:05"}}   // 14:30:25
+{{timeAgo .date}}                 // 2 hours ago
+{{timeUntil .date}}               // in 3 hours
+{{isToday .date}}                 // true/false
+{{isYesterday .date}}             // true/false
+{{isTomorrow .date}}              // true/false
+```
+
+##### Array/Slice Helpers
+```go
+// Array manipulation
+{{join .items ", "}}              // Apple, Banana, Cherry
+{{split "a,b,c" ","}}             // [a b c]
+{{first .items}}                  // Apple
+{{last .items}}                   // Cherry
+{{length .items}}                 // 3
+{{contains .items "Banana"}}      // true
+{{index .items "Cherry"}}         // 2
+{{slice .items 1 3}}              // [Banana Cherry]
+{{reverse .items}}                // [Cherry Banana Apple]
+{{sort .items}}                   // [Apple Banana Cherry]
+{{unique .items}}                 // Remove duplicates
+```
+
+##### Object/Map Helpers
+```go
+// Object manipulation
+{{keys .user}}                    // [name email age]
+{{values .user}}                  // [John john@example.com 30]
+{{hasKey .user "name"}}           // true
+{{get .user "age"}}               // 30
+{{set .user "city" "New York"}}   // Set city
+{{merge .user1 .user2}}           // Merge objects
+```
+
+##### HTML Helpers
+```go
+// HTML processing
+{{escape "<script>alert('xss')</script>"}} // &lt;script&gt;alert('xss')&lt;/script&gt;
+{{unescape "&lt;script&gt;"}}     // <script>
+{{stripTags "<p>Hello <b>World</b></p>"}} // Hello World
+{{linkify "Visit https://example.com"}} // Visit <a href="https://example.com">https://example.com</a>
+{{nl2br "Line 1\nLine 2"}}       // Line 1<br>Line 2
+{{br2nl "Line 1<br>Line 2"}}     // Line 1\nLine 2
+```
+
+##### URL Helpers
+```go
+// URL building
+{{url "/about"}}                  // /about
+{{asset "css/style.css"}}         // /assets/css/style.css
+{{route "user.profile"}}          // /user/profile
+{{query "/search" "q=hello"}}     // /search?q=hello
+{{fragment "/page" "section1"}}   // /page#section1
+```
+
+##### Security Helpers
+```go
+// Security functions
+{{csrf}}                          // CSRF token
+{{hash "password123"}}            // MD5 hash
+{{random 10}}                     // Random string
+{{uuid}}                          // UUID v4
+```
+
+##### Conditional Helpers
+```go
+// Conditional logic
+{{if .user "Welcome" "Guest"}}    // Welcome or Guest
+{{unless .user "Please login"}}   // Please login if no user
+{{eq .count 5}}                   // true if count equals 5
+{{ne .count 0}}                   // true if count not 0
+{{gt .price 10}}                  // true if price > 10
+{{gte .age 18}}                   // true if age >= 18
+{{lt .score 100}}                 // true if score < 100
+{{lte .items 5}}                  // true if items <= 5
+{{and .user .admin}}              // true if both true
+{{or .user .guest}}               // true if either true
+{{not .empty}}                    // true if not empty
+```
+
+##### Loop Helpers
+```go
+// Loop operations
+{{range .items}}                  // Iterate over items
+{{times 5}}                       // [0 1 2 3 4]
+{{each .users}}                   // Iterate over users
+```
+
+##### Utility Helpers
+```go
+// Utility functions
+{{default .name "Anonymous"}}     // Default value
+{{coalesce .name .email "Guest"}} // First non-empty value
+{{empty .list}}                   // true if empty
+{{present .value}}                // true if present
+{{blank .text}}                   // true if blank
+{{nil .value}}                    // true if nil
+```
+
+#### Layout System
+
+```html
+<!-- layouts/base.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{.title}}</title>
+    {{block "head" .}}{{end}}
+</head>
+<body>
+    <header>{{block "header" .}}{{end}}</header>
+    <main>{{.layout}}</main>
+    <footer>{{block "footer" .}}{{end}}</footer>
+</body>
+</html>
+
+<!-- pages/home.html -->
+{{extends "base"}}
+{{block "header" .}}
+    <h1>{{.title}}</h1>
+{{end}}
+{{block "footer" .}}
+    <p>&copy; 2024 Dolphin Framework</p>
+{{end}}
+```
+
+#### Component System
+
+```html
+<!-- components/button.html -->
+<button class="btn {{.class}}" {{event "click" .onClick}}>
+    {{.text}}
+</button>
+
+<!-- Usage -->
+{{component "button" .buttonData}}
+```
+
+#### Template Rendering
+
+```go
+// Render with layout
+html, err := engine.RenderWithLayout("pages.home", "base", data)
+
+// Render partial
+partial, err := engine.RenderPartial("header", data)
+
+// Render component
+component, err := engine.RenderComponent("button", data)
+
+// Render email
+email, err := engine.RenderEmail("welcome", data)
+```
+
+#### Custom Helpers
+
+```go
+// Register custom helper
+engine.RegisterHelper("greeting", func(args ...interface{}) (interface{}, error) {
+    if len(args) == 0 {
+        return "Hello", nil
+    }
+    name := fmt.Sprintf("%v", args[0])
+    return fmt.Sprintf("Hello, %s!", name), nil
+})
+
+// Use in template
+{{greeting "John"}} // Hello, John!
+```
+
+#### File Watching
+
+```go
+// Enable auto-reload
+config.AutoReload = true
+
+// Templates will automatically recompile on file changes
+```
+
+#### Template Statistics
+
+```go
+// Get template statistics
+allTemplates := engine.GetAllTemplates()
+layouts := engine.GetTemplatesByType(template.TypeLayout)
+partials := engine.GetTemplatesByType(template.TypePartial)
+pages := engine.GetTemplatesByType(template.TypePage)
+components := engine.GetTemplatesByType(template.TypeComponent)
+emails := engine.GetTemplatesByType(template.TypeEmail)
+```
+
+#### Development Workflow
+
+```bash
+# Start development with template watching
+dolphin template watch
+
+# Compile all templates
+dolphin template compile
+
+# List all templates
+dolphin template list
+
+# View available helpers
+dolphin template helpers
+
+# Test template rendering
+dolphin template test
+
+# View statistics
+dolphin template stats
+```
+
+#### Production Deployment
+
+```go
+// Production configuration
+prodConfig := &template.Config{
+    LayoutsDir:     "ui/views/layouts",
+    PartialsDir:    "ui/views/partials",
+    PagesDir:       "ui/views/pages",
+    ComponentsDir:  "ui/views/components",
+    EmailsDir:      "ui/views/emails",
+    Extension:      ".html",
+    AutoReload:     false,
+    CacheTemplates: true,
+    EnableHelpers:  true,
+    EscapeHTML:     true,
+    EnableLogging:  false,
+}
+
+// Create engine for production
+engine, err := template.NewEngine(prodConfig, logger)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+#### Advanced Configuration
+
+```go
+// Custom helper registration
+engine.RegisterHelper("custom", func(args ...interface{}) (interface{}, error) {
+    // Custom logic
+    return "custom result", nil
+})
+
+// Template type filtering
+layouts := engine.GetTemplatesByType(template.TypeLayout)
+for name, layout := range layouts {
+    fmt.Printf("Layout: %s (%d bytes)\n", name, layout.Size)
+}
+```
+
+#### Error Handling
+
+```go
+// Handle errors gracefully
+engine, err := template.NewEngine(config, logger)
+if err != nil {
+    log.Fatalf("Failed to create template engine: %v", err)
+}
+
+// Render with error handling
+html, err := engine.Render("template.name", data)
+if err != nil {
+    log.Printf("Failed to render template: %v", err)
+    // Handle error appropriately
+}
+```
+
+### 🌐 HTTP Client Abstraction
+
+Dolphin provides a robust HTTP client abstraction with retries, circuit breakers, rate limiting, and correlation IDs for reliable service-to-service communication.
+
+#### Features
+
+- **🔄 Retry Logic**: Configurable retry with exponential backoff
+- **⚡ Circuit Breaker**: Automatic failure detection and recovery
+- **🚦 Rate Limiting**: Built-in rate limiting for outgoing requests
+- **🔗 Correlation IDs**: Automatic request tracing across services
+- **📊 Metrics**: Comprehensive request metrics and monitoring
+- **🔧 Flexible Options**: Headers, query params, timeouts, authentication
+- **🛡️ Error Handling**: Detailed error types and context
+- **📈 Health Monitoring**: Client health checks and statistics
+
+#### CLI Commands
+
+```bash
+# HTTP client management
+dolphin http test
+dolphin http stats
+dolphin http config
+dolphin http health
+dolphin http reset
+```
+
+#### Basic Usage
+
+```go
+import "github.com/mrhoseah/dolphin/internal/http"
+
+// Create HTTP client
+client := http.NewClient(&http.ClientConfig{
+    BaseURL: "https://api.example.com",
+    Timeout: 30 * time.Second,
+    Retries: 3,
+    CircuitBreaker: &http.CircuitBreakerConfig{
+        FailureThreshold: 5,
+        SuccessThreshold: 3,
+        OpenTimeout:      60 * time.Second,
+    },
+    RateLimiter: &http.RateLimiterConfig{
+        RPS:   100,
+        Burst: 10,
+    },
+})
+
+// Basic GET request
+resp, err := client.Get("/users", http.WithHeaders(map[string]string{
+    "Authorization": "Bearer token123",
+}))
+
+// POST with JSON body
+data := map[string]interface{}{
+    "name":  "John Doe",
+    "email": "john@example.com",
+}
+
+resp, err := client.Post("/users", http.WithJSON(data))
+
+// Request with query parameters
+resp, err := client.Get("/search", http.WithQuery(map[string]string{
+    "q":     "golang",
+    "limit": "10",
+}))
+```
+
+#### Advanced Configuration
+
+```go
+// Custom client configuration
+config := &http.ClientConfig{
+    BaseURL: "https://api.example.com",
+    Timeout: 30 * time.Second,
+    UserAgent: "MyApp/1.0",
+    
+    // Retry configuration
+    Retries: 3,
+    RetryDelay: 1 * time.Second,
+    RetryBackoff: 2.0,
+    MaxRetryDelay: 30 * time.Second,
+    RetryOnStatus: []int{500, 502, 503, 504, 429},
+    
+    // Circuit breaker
+    CircuitBreaker: &http.CircuitBreakerConfig{
+        FailureThreshold: 5,
+        SuccessThreshold: 3,
+        OpenTimeout:      60 * time.Second,
+        HalfOpenTimeout:  30 * time.Second,
+    },
+    
+    // Rate limiting
+    RateLimiter: &http.RateLimiterConfig{
+        RPS:   100,
+        Burst: 10,
+    },
+    
+    // Authentication
+    Auth: &http.AuthConfig{
+        Type:  "bearer",
+        Token: "your-token-here",
+    },
+    
+    // Default headers
+    DefaultHeaders: map[string]string{
+        "Content-Type": "application/json",
+        "Accept":       "application/json",
+    },
+    
+    // TLS configuration
+    TLS: &http.TLSConfig{
+        InsecureSkipVerify: false,
+        CertFile:           "",
+        KeyFile:            "",
+        CAFile:             "",
+    },
+    
+    // Metrics and logging
+    EnableMetrics: true,
+    EnableLogging: true,
+    LogRequestBody:  false,
+    LogResponseBody: false,
+}
+
+client := http.NewClient(config)
+```
+
+#### Request Options
+
+```go
+// Headers
+resp, err := client.Get("/users", http.WithHeaders(map[string]string{
+    "Authorization": "Bearer token123",
+    "X-Custom-Header": "value",
+}))
+
+// Query parameters
+resp, err := client.Get("/search", http.WithQuery(map[string]string{
+    "q":     "golang",
+    "limit": "10",
+    "page":  "1",
+}))
+
+// JSON body
+data := map[string]interface{}{
+    "name":  "John Doe",
+    "email": "john@example.com",
+}
+resp, err := client.Post("/users", http.WithJSON(data))
+
+// Form data
+formData := map[string]string{
+    "username": "johndoe",
+    "password": "secret123",
+}
+resp, err := client.Post("/login", http.WithForm(formData))
+
+// Raw body
+body := strings.NewReader("raw data")
+resp, err := client.Post("/data", http.WithBody(body, "text/plain"))
+
+// Timeout
+resp, err := client.Get("/slow-endpoint", http.WithTimeout(5*time.Second))
+
+// Context
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
+resp, err := client.Get("/endpoint", http.WithContext(ctx))
+```
+
+#### Authentication
+
+```go
+// Bearer token
+client := http.NewClient(&http.ClientConfig{
+    Auth: &http.AuthConfig{
+        Type:  "bearer",
+        Token: "your-token-here",
+    },
+})
+
+// Basic auth
+client := http.NewClient(&http.ClientConfig{
+    Auth: &http.AuthConfig{
+        Type:     "basic",
+        Username: "username",
+        Password: "password",
+    },
+})
+
+// API key
+client := http.NewClient(&http.ClientConfig{
+    Auth: &http.AuthConfig{
+        Type:       "apikey",
+        APIKey:     "your-api-key",
+        APIKeyHeader: "X-API-Key",
+    },
+})
+
+// Custom auth per request
+resp, err := client.Get("/protected", http.WithAuth(&http.AuthConfig{
+    Type:  "bearer",
+    Token: "custom-token",
+}))
+```
+
+#### Error Handling
+
+```go
+resp, err := client.Get("/users")
+if err != nil {
+    switch e := err.(type) {
+    case *http.RequestError:
+        log.Printf("Request failed: %v", e.Message)
+        log.Printf("Status: %d", e.StatusCode)
+        log.Printf("Response: %s", e.ResponseBody)
+    case *http.RetryError:
+        log.Printf("Retry failed after %d attempts: %v", e.Attempts, e.LastError)
+    case *http.CircuitBreakerError:
+        log.Printf("Circuit breaker is open: %v", e.Message)
+    case *http.RateLimitError:
+        log.Printf("Rate limit exceeded: %v", e.Message)
+        log.Printf("Retry after: %v", e.RetryAfter)
+    case *http.TimeoutError:
+        log.Printf("Request timeout: %v", e.Message)
+    default:
+        log.Printf("Unknown error: %v", err)
+    }
+    return
+}
+
+// Process successful response
+defer resp.Body.Close()
+body, err := io.ReadAll(resp.Body)
+if err != nil {
+    log.Printf("Failed to read response body: %v", err)
+    return
+}
+
+log.Printf("Response: %s", string(body))
+```
+
+#### Metrics and Monitoring
+
+```go
+// Get client statistics
+stats := client.GetStats()
+log.Printf("Total requests: %d", stats.TotalRequests)
+log.Printf("Successful requests: %d", stats.SuccessfulRequests)
+log.Printf("Failed requests: %d", stats.FailedRequests)
+log.Printf("Success rate: %.2f%%", stats.SuccessRate)
+log.Printf("Average response time: %v", stats.AverageResponseTime)
+
+// Get circuit breaker status
+cbStats := client.GetCircuitBreakerStats()
+log.Printf("Circuit breaker state: %s", cbStats.State)
+log.Printf("Failure count: %d", cbStats.FailureCount)
+log.Printf("Success count: %d", cbStats.SuccessCount)
+
+// Get rate limiter status
+rlStats := client.GetRateLimiterStats()
+log.Printf("Current RPS: %d", rlStats.CurrentRPS)
+log.Printf("Tokens available: %d", rlStats.TokensAvailable)
+log.Printf("Utilization: %.2f%%", rlStats.Utilization)
+```
+
+#### Health Checks
+
+```go
+// Check client health
+health := client.GetHealth()
+if health.Status == "healthy" {
+    log.Printf("Client is healthy: %s", health.Message)
+} else {
+    log.Printf("Client is unhealthy: %s", health.Message)
+    log.Printf("Health score: %.2f%%", health.HealthScore)
+}
+
+// Reset statistics
+client.ResetStats()
+```
+
+#### Correlation IDs
+
+```go
+// Automatic correlation ID generation
+resp, err := client.Get("/users")
+// X-Correlation-ID header is automatically added
+
+// Custom correlation ID
+resp, err := client.Get("/users", http.WithCorrelationID("custom-id-123"))
+
+// Extract correlation ID from response
+correlationID := resp.Header.Get("X-Correlation-ID")
+log.Printf("Request correlation ID: %s", correlationID)
+```
+
+#### Circuit Breaker Integration
+
+```go
+// Circuit breaker automatically protects against cascading failures
+for i := 0; i < 100; i++ {
+    resp, err := client.Get("/unreliable-service")
+    if err != nil {
+        if _, ok := err.(*http.CircuitBreakerError); ok {
+            log.Printf("Circuit breaker is open, request rejected")
+            break
+        }
+        log.Printf("Request failed: %v", err)
+    } else {
+        log.Printf("Request succeeded: %d", resp.StatusCode)
+    }
+}
+```
+
+#### Rate Limiting
+
+```go
+// Rate limiting prevents overwhelming downstream services
+for i := 0; i < 200; i++ {
+    resp, err := client.Get("/api/endpoint")
+    if err != nil {
+        if _, ok := err.(*http.RateLimitError); ok {
+            log.Printf("Rate limit exceeded, backing off")
+            time.Sleep(1 * time.Second)
+            continue
+        }
+        log.Printf("Request failed: %v", err)
+    } else {
+        log.Printf("Request succeeded: %d", resp.StatusCode)
+    }
+}
+```
+
+#### Development Workflow
+
+```bash
+# Test HTTP client
+dolphin http test
+
+# View statistics
+dolphin http stats
+
+# Check configuration
+dolphin http config
+
+# Health check
+dolphin http health
+
+# Reset metrics
+dolphin http reset
+```
+
+#### Production Deployment
+
+```go
+// Production configuration
+prodConfig := &http.ClientConfig{
+    BaseURL: "https://api.production.com",
+    Timeout: 30 * time.Second,
+    Retries: 3,
+    CircuitBreaker: &http.CircuitBreakerConfig{
+        FailureThreshold: 5,
+        SuccessThreshold: 3,
+        OpenTimeout:      60 * time.Second,
+    },
+    RateLimiter: &http.RateLimiterConfig{
+        RPS:   100,
+        Burst: 10,
+    },
+    EnableMetrics: true,
+    EnableLogging: false, // Disable in production
+}
+
+client := http.NewClient(prodConfig)
+```
+
+#### Advanced Usage
+
+```go
+// Custom retry logic
+client := http.NewClient(&http.ClientConfig{
+    Retries: 5,
+    RetryDelay: 2 * time.Second,
+    RetryBackoff: 1.5,
+    MaxRetryDelay: 60 * time.Second,
+    RetryOnStatus: []int{500, 502, 503, 504, 429, 408},
+})
+
+// Custom circuit breaker
+client := http.NewClient(&http.ClientConfig{
+    CircuitBreaker: &http.CircuitBreakerConfig{
+        FailureThreshold: 10,
+        SuccessThreshold: 5,
+        OpenTimeout:      120 * time.Second,
+        HalfOpenTimeout:  60 * time.Second,
+    },
+})
+
+// Custom rate limiter
+client := http.NewClient(&http.ClientConfig{
+    RateLimiter: &http.RateLimiterConfig{
+        RPS:   50,
+        Burst: 5,
+    },
+})
+```
+
 ### 📄 Static Pages
 
 Manage static HTML pages with templating support.
