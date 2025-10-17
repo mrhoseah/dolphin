@@ -3547,4 +3547,4 @@ dolphin serve
 open http://localhost:8080
 ```
 
-**Dolphin Framework** - Where Go meets Laravel's elegance! 🐬✨
+**Dolphin Framework** - Where Go meets elegance! 🐬✨
