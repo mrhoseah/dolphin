@@ -7,13 +7,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/mrhoseah/dolphin/internal/time"
+	dolphinTime "github.com/mrhoseah/dolphin/internal/time"
 )
 
 func main() {
 	fmt.Println("🕒 Dolphin Framework - Time Moment Example")
 	fmt.Println("==========================================")
-	
+
 	// Demonstrate various time functions
 	now := time.Now()
 	fmt.Printf("Current time: %s\n", now.Format("2006-01-02 15:04:05"))
@@ -21,21 +21,21 @@ func main() {
 
 	// Create some example times
 	times := []time.Time{
-		now.Add(-2 * time.Minute),   // 2 minutes ago
-		now.Add(-1 * time.Hour),     // 1 hour ago
-		now.Add(-24 * time.Hour),    // 1 day ago
-		now.Add(-7 * 24 * time.Hour), // 1 week ago
-		now.Add(-30 * 24 * time.Hour), // 1 month ago
+		now.Add(-2 * time.Minute),      // 2 minutes ago
+		now.Add(-1 * time.Hour),        // 1 hour ago
+		now.Add(-24 * time.Hour),       // 1 day ago
+		now.Add(-7 * 24 * time.Hour),   // 1 week ago
+		now.Add(-30 * 24 * time.Hour),  // 1 month ago
 		now.Add(-365 * 24 * time.Hour), // 1 year ago
-		now.Add(2 * time.Minute),    // 2 minutes from now
-		now.Add(1 * time.Hour),      // 1 hour from now
+		now.Add(2 * time.Minute),       // 2 minutes from now
+		now.Add(1 * time.Hour),         // 1 hour from now
 	}
 
 	fmt.Println("📅 Time Formatting Examples:")
 	fmt.Println("============================")
-	
+
 	for i, t := range times {
-		moment := time.NewMoment(t)
+		moment := dolphinTime.NewMoment(t)
 		fmt.Printf("%d. %s\n", i+1, t.Format("2006-01-02 15:04:05"))
 		fmt.Printf("   From Now: %s\n", moment.FromNow())
 		fmt.Printf("   Calendar: %s\n", moment.Calendar())
@@ -47,19 +47,19 @@ func main() {
 	// Demonstrate time comparisons
 	fmt.Println("🔍 Time Comparison Examples:")
 	fmt.Println("============================")
-	
+
 	pastTime := now.Add(-2 * time.Hour)
 	futureTime := now.Add(2 * time.Hour)
-	
-	pastMoment := time.NewMoment(pastTime)
-	futureMoment := time.NewMoment(futureTime)
-	nowMoment := time.Now()
-	
+
+	pastMoment := dolphinTime.NewMoment(pastTime)
+	futureMoment := dolphinTime.NewMoment(futureTime)
+	nowMoment := dolphinTime.Now()
+
 	fmt.Printf("Past time: %s\n", pastTime.Format("2006-01-02 15:04:05"))
 	fmt.Printf("Future time: %s\n", futureTime.Format("2006-01-02 15:04:05"))
 	fmt.Printf("Now: %s\n", now.Format("2006-01-02 15:04:05"))
 	fmt.Println()
-	
+
 	fmt.Printf("Is past time before now? %t\n", pastMoment.IsBefore(nowMoment))
 	fmt.Printf("Is future time after now? %t\n", futureMoment.IsAfter(nowMoment))
 	fmt.Printf("Is past time today? %t\n", pastMoment.IsToday())
@@ -69,10 +69,10 @@ func main() {
 	// Demonstrate time manipulation
 	fmt.Println("⚙️ Time Manipulation Examples:")
 	fmt.Println("==============================")
-	
+
 	baseTime := time.Date(2024, 1, 15, 14, 30, 0, 0, time.UTC)
-	baseMoment := time.NewMoment(baseTime)
-	
+	baseMoment := dolphinTime.NewMoment(baseTime)
+
 	fmt.Printf("Base time: %s\n", baseTime.Format("2006-01-02 15:04:05"))
 	fmt.Printf("Start of day: %s\n", baseMoment.StartOfDay().Format("2006-01-02 15:04:05"))
 	fmt.Printf("End of day: %s\n", baseMoment.EndOfDay().Format("2006-01-02 15:04:05"))
@@ -87,7 +87,7 @@ func main() {
 	// Demonstrate duration formatting
 	fmt.Println("⏱️ Duration Formatting Examples:")
 	fmt.Println("================================")
-	
+
 	durations := []time.Duration{
 		30 * time.Second,
 		5 * time.Minute,
@@ -97,12 +97,12 @@ func main() {
 		6 * 30 * 24 * time.Hour,
 		2 * 365 * 24 * time.Hour,
 	}
-	
+
 	for _, d := range durations {
 		fmt.Printf("Duration: %v\n", d)
-		fmt.Printf("  Humanized: %s\n", time.FormatDuration(d))
-		fmt.Printf("  Ago: %s\n", time.FormatDurationAgo(d))
-		fmt.Printf("  In: %s\n", time.FormatDurationIn(d))
+		fmt.Printf("  Humanized: %s\n", dolphinTime.FormatDuration(d))
+		fmt.Printf("  Ago: %s\n", dolphinTime.FormatDurationAgo(d))
+		fmt.Printf("  In: %s\n", dolphinTime.FormatDurationIn(d))
 		fmt.Println()
 	}
 
@@ -230,7 +230,7 @@ func main() {
         <h2>Recent Activity</h2>`
 
 		for _, activity := range activities {
-			moment := time.NewMoment(activity.Timestamp)
+			moment := dolphinTime.NewMoment(activity.Timestamp)
 			html += fmt.Sprintf(`
         <div class="activity">
             <div class="activity-icon"></div>
@@ -270,7 +270,7 @@ func main() {
 
 	// Wait for a moment to show the server is running
 	time.Sleep(2 * time.Second)
-	
+
 	fmt.Println("✅ Server is running!")
 	fmt.Println("✅ Time moment helpers are working!")
 	fmt.Println()

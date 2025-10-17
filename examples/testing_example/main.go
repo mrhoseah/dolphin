@@ -62,7 +62,7 @@ func (uc *UserController) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uc *UserController) Show(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
+	_ = chi.URLParam(r, "id") // Use the id parameter
 
 	// Simulate user retrieval
 	user := User{
@@ -119,7 +119,7 @@ func TestUserController_Create(t *testing.T) {
 	controller := NewUserController(db)
 
 	// Test data
-	userData := User{
+	_ = User{
 		Name:  "Alice Johnson",
 		Email: "alice@example.com",
 	}
@@ -237,10 +237,10 @@ func NewUserTestSuite(t *testing.T) *UserTestSuite {
 
 func (uts *UserTestSuite) Setup() {
 	// Run migrations
-	uts.DB().RunMigrations(uts.TestSuite.T(), appTesting.CommonMigrations)
+	uts.DB().RunMigrations(uts.T(), appTesting.CommonMigrations)
 
 	// Seed test data
-	uts.DB().SeedData(uts.TestSuite.T(), map[string][]map[string]interface{}{
+	uts.DB().SeedData(uts.T(), map[string][]map[string]interface{}{
 		"users": appTesting.TestData.Users,
 		"posts": appTesting.TestData.Posts,
 	})
@@ -248,14 +248,17 @@ func (uts *UserTestSuite) Setup() {
 
 func (uts *UserTestSuite) Teardown() {
 	// Cleanup test data
-	uts.DB().Cleanup(uts.TestSuite.T(), []string{"users", "posts"})
+	uts.DB().Cleanup(uts.T(), []string{"users", "posts"})
 }
 
 func TestUserController_WithTestSuite(t *testing.T) {
 	suite := NewUserTestSuite(t)
 
 	suite.Run("Index with seeded data", func(ts *appTesting.TestSuite) {
-		userSuite := ts.(*UserTestSuite)
+		userSuite := &UserTestSuite{
+			TestSuite:  ts,
+			controller: NewUserController(ts.DB()),
+		}
 
 		// Create request
 		req := httptest.NewRequest("GET", "/users", nil)
@@ -265,18 +268,21 @@ func TestUserController_WithTestSuite(t *testing.T) {
 		userSuite.controller.Index(w, req)
 
 		// Assertions
-		userSuite.HTTP().AssertStatus(userSuite.t, w, http.StatusOK)
-		userSuite.HTTP().AssertHeader(userSuite.t, w, "Content-Type", "application/json")
+		userSuite.HTTP().AssertStatus(userSuite.T(), w, http.StatusOK)
+		userSuite.HTTP().AssertHeader(userSuite.T(), w, "Content-Type", "application/json")
 
 		// Check response contains expected data
 		expected := map[string]interface{}{
 			"users": appTesting.TestData.Users,
 		}
-		userSuite.HTTP().AssertJSONContains(userSuite.t, w, expected)
+		userSuite.HTTP().AssertJSONContains(userSuite.T(), w, expected)
 	})
 
 	suite.Run("Create User with Helper", func(ts *appTesting.TestSuite) {
-		userSuite := ts.(*UserTestSuite)
+		userSuite := &UserTestSuite{
+			TestSuite:  ts,
+			controller: NewUserController(ts.DB()),
+		}
 
 		// Test data
 		userData := map[string]interface{}{
@@ -285,21 +291,22 @@ func TestUserController_WithTestSuite(t *testing.T) {
 		}
 
 		// Create request using helper
-		req := userSuite.HTTP().MakeRequest(userSuite.TestSuite.T(), "POST", "/users", userData)
+		req := userSuite.HTTP().MakeRequest(userSuite.T(), "POST", "/users", userData)
+		w := httptest.NewRecorder()
 
 		// Execute
 		userSuite.controller.Create(w, req)
 
 		// Assertions using helper
-		userSuite.HTTP().AssertStatus(userSuite.TestSuite.T(), w, http.StatusCreated)
-		userSuite.HTTP().AssertHeader(userSuite.TestSuite.T(), w, "Content-Type", "application/json")
+		userSuite.HTTP().AssertStatus(userSuite.T(), w, http.StatusCreated)
+		userSuite.HTTP().AssertHeader(userSuite.T(), w, "Content-Type", "application/json")
 
 		// Check response contains expected data
 		expected := map[string]interface{}{
 			"name":  "Charlie Brown",
 			"email": "charlie@example.com",
 		}
-		userSuite.HTTP().AssertJSONContains(userSuite.TestSuite.T(), w, expected)
+		userSuite.HTTP().AssertJSONContains(userSuite.T(), w, expected)
 	})
 }
 

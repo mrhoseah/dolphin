@@ -291,6 +291,11 @@ type TestSuite struct {
 	config *TestConfig
 }
 
+// T returns the testing.T instance
+func (ts *TestSuite) T() *testing.T {
+	return ts.t
+}
+
 // NewTestSuite creates a new test suite
 func NewTestSuite(t *testing.T) *TestSuite {
 	config := DefaultTestConfig()
