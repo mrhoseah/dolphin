@@ -38,6 +38,7 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, ins
 - **🔄 Graceful Shutdown**: Production-ready shutdown with connection draining
 - **⚡ Circuit Breakers**: Microservices protection with fault tolerance
 - **⚖️ Load Shedding**: Adaptive overload protection with system stability
+- **🔄 Live Reload**: Hot code reload for development productivity
 
 ## 🚀 Quick Start
 
@@ -764,6 +765,260 @@ shedder.Reset()
 - `load_shedder_goroutines` - Number of goroutines
 - `load_shedder_request_rate` - Request rate (req/s)
 - `load_shedder_response_time_seconds` - Average response time
+
+### 🔄 Live Reload
+
+Dolphin provides live reload and hot code reload functionality for development productivity.
+
+#### Features
+
+- **🔄 Multiple Strategies**: Restart, Rebuild, Hot Reload
+- **👀 File Watching**: Automatic detection of file changes
+- **⚡ Hot Reload**: Browser refresh without page reload
+- **⏱️ Debouncing**: Prevents excessive reloads
+- **🌐 WebSocket Integration**: Real-time browser notifications
+- **📊 Statistics**: Detailed metrics and monitoring
+- **🔧 Configurable**: Customizable watch paths and strategies
+
+#### CLI Commands
+
+```bash
+# Live reload development
+dolphin dev start
+dolphin dev stop
+dolphin dev status
+dolphin dev config
+dolphin dev stats
+dolphin dev test
+```
+
+#### Integration
+
+```go
+import "github.com/mrhoseah/dolphin/internal/livereload"
+
+// Create live reload manager
+config := livereload.DefaultConfig()
+manager, err := livereload.NewLiveReloadManager(config, logger)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Start live reload
+if err := manager.Start(); err != nil {
+    log.Fatal(err)
+}
+
+// Stop live reload
+defer manager.Stop()
+```
+
+#### Configuration
+
+```yaml
+# config/livereload.yaml
+livereload:
+  watch_paths:
+    - "."
+    - "cmd"
+    - "internal"
+    - "app"
+    - "ui"
+    - "public"
+  ignore_paths:
+    - ".git"
+    - "node_modules"
+    - "vendor"
+    - "*.log"
+    - "*.tmp"
+    - ".env"
+  file_extensions:
+    - ".go"
+    - ".html"
+    - ".css"
+    - ".js"
+    - ".json"
+    - ".yaml"
+    - ".yml"
+  strategy: "restart"
+  build_command: "go build -o bin/app cmd/dolphin/main.go"
+  run_command: "./bin/app serve"
+  build_timeout: "30s"
+  restart_delay: "1s"
+  enable_hot_reload: true
+  hot_reload_port: 35729
+  hot_reload_paths: ["/"]
+  debounce_delay: "500ms"
+  max_debounce: "5s"
+  enable_logging: true
+  verbose_logging: false
+```
+
+#### Reload Strategies
+
+1. **🔄 Restart**: Stop and restart the entire process
+2. **🔨 Rebuild**: Rebuild the application before restarting
+3. **⚡ Hot Reload**: Send browser refresh notifications without restarting
+
+#### File Watching
+
+```go
+// Custom watch configuration
+config := &livereload.Config{
+    WatchPaths: []string{
+        "cmd",
+        "internal",
+        "ui",
+    },
+    IgnorePaths: []string{
+        ".git",
+        "*.log",
+    },
+    FileExtensions: []string{
+        ".go",
+        ".html",
+        ".css",
+    },
+    Strategy: livereload.StrategyRestart,
+}
+```
+
+#### Hot Reload Server
+
+```go
+// Enable hot reload
+config.EnableHotReload = true
+config.HotReloadPort = 35729
+config.HotReloadPaths = []string{"/", "/admin"}
+
+// The server provides:
+// - WebSocket endpoint: ws://localhost:35729/livereload
+// - Script injection: http://localhost:35729/livereload.js
+// - Health check: http://localhost:35729/health
+```
+
+#### Browser Integration
+
+```html
+<!-- Add to your HTML templates -->
+<script src="http://localhost:35729/livereload.js"></script>
+
+<!-- Or use the WebSocket directly -->
+<script>
+var ws = new WebSocket('ws://localhost:35729/livereload');
+ws.onmessage = function(event) {
+    var data = JSON.parse(event.data);
+    if (data.command === 'reload') {
+        window.location.reload();
+    }
+};
+</script>
+```
+
+#### Statistics and Monitoring
+
+```go
+// Get live reload statistics
+stats := manager.GetStats()
+fmt.Printf("File Changes: %d\n", stats.FileChanges)
+fmt.Printf("Reloads: %d\n", stats.Reloads)
+fmt.Printf("File Change Rate: %.2f/min\n", stats.GetFileChangeRate())
+fmt.Printf("Reload Rate: %.2f/min\n", stats.GetReloadRate())
+
+// Get most changed files
+mostChanged := stats.GetMostChangedFiles(5)
+for _, file := range mostChanged {
+    fmt.Printf("%s: %d changes\n", file.Filename, file.Count)
+}
+
+// Get change type statistics
+changeTypes := stats.GetChangeTypeStats()
+for changeType, count := range changeTypes {
+    fmt.Printf("%s: %d\n", changeType, count)
+}
+```
+
+#### Process Management
+
+```go
+// Check if process is running
+if manager.IsRunning() {
+    fmt.Println("Process is running")
+}
+
+// Get watched paths
+watchedPaths := manager.GetWatchedPaths()
+fmt.Printf("Watching %d paths\n", len(watchedPaths))
+
+// Get detailed statistics
+stats := manager.GetStats()
+fmt.Printf("Uptime: %v\n", time.Since(stats.StartTime))
+fmt.Printf("Process Starts: %d\n", stats.ProcessStarts)
+fmt.Printf("Process Stops: %d\n", stats.ProcessStops)
+```
+
+#### Development Workflow
+
+```bash
+# Start development with live reload
+dolphin dev start
+
+# In another terminal, check status
+dolphin dev status
+
+# View configuration
+dolphin dev config
+
+# View statistics
+dolphin dev stats
+
+# Test live reload functionality
+dolphin dev test
+
+# Stop development server
+dolphin dev stop
+```
+
+#### Advanced Configuration
+
+```go
+// Custom build and run commands
+config := livereload.DefaultConfig()
+config.BuildCommand = "go build -o bin/app cmd/dolphin/main.go"
+config.RunCommand = "./bin/app serve --port 8080"
+config.BuildTimeout = 60 * time.Second
+config.RestartDelay = 2 * time.Second
+
+// Custom debouncing
+config.DebounceDelay = 1 * time.Second
+config.MaxDebounce = 10 * time.Second
+
+// Verbose logging
+config.EnableLogging = true
+config.VerboseLogging = true
+```
+
+#### Error Handling
+
+```go
+// Handle errors gracefully
+manager, err := livereload.NewLiveReloadManager(config, logger)
+if err != nil {
+    log.Fatalf("Failed to create live reload manager: %v", err)
+}
+
+// Start with error handling
+if err := manager.Start(); err != nil {
+    log.Fatalf("Failed to start live reload manager: %v", err)
+}
+
+// Graceful shutdown
+defer func() {
+    if err := manager.Stop(); err != nil {
+        log.Printf("Error stopping live reload manager: %v", err)
+    }
+}()
+```
 
 ### 📄 Static Pages
 
