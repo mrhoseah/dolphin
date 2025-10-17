@@ -49,6 +49,62 @@ Examples:
   dolphin swagger                  # Generate API documentation`,
 		Version: version,
 	}
+
+	// Command declarations moved here to avoid forward reference issues
+	var observabilityCmd = &cobra.Command{
+		Use:   "observability",
+		Short: "Observability management",
+		Long:  "Manage metrics, logging, and tracing for application observability.",
+	}
+
+	var gracefulCmd = &cobra.Command{
+		Use:   "graceful",
+		Short: "Graceful shutdown management",
+		Long:  "Manage graceful shutdown and connection draining.",
+	}
+
+	var circuitCmd = &cobra.Command{
+		Use:   "circuit",
+		Short: "Circuit breaker management",
+		Long:  "Manage circuit breakers for microservices protection.",
+	}
+
+	var loadShedCmd = &cobra.Command{
+		Use:   "loadshed",
+		Short: "Load shedding management",
+		Long:  "Manage adaptive load shedding for overload protection.",
+	}
+
+	var liveReloadCmd = &cobra.Command{
+		Use:   "livereload",
+		Short: "Live reload management",
+		Long:  "Manage live reload and hot code reload for development.",
+	}
+
+	var assetCmd = &cobra.Command{
+		Use:   "asset",
+		Short: "Asset pipeline management",
+		Long:  "Manage asset bundling, optimization, and versioning.",
+	}
+
+	var templateCmd = &cobra.Command{
+		Use:   "template",
+		Short: "Template engine management",
+		Long:  "Manage templating engine and template compilation.",
+	}
+
+	var httpCmd = &cobra.Command{
+		Use:   "http",
+		Short: "HTTP client management",
+		Long:  "Manage HTTP client abstraction and testing.",
+	}
+
+	var graphqlCmd = &cobra.Command{
+		Use:   "graphql",
+		Short: "GraphQL endpoint management",
+		Long:  "Manage GraphQL endpoint configuration and testing.",
+	}
+
 	// Update command
 	var updateCmd = &cobra.Command{
 		Use:   "update",
@@ -730,11 +786,6 @@ Examples:
 	rootCmd.AddCommand(graphqlCmd)
 
 	// GraphQL command group
-	var graphqlCmd = &cobra.Command{
-		Use:   "graphql",
-		Short: "GraphQL endpoint management",
-		Long:  "Manage GraphQL endpoints, schemas, and playground",
-	}
 
 	// GraphQL subcommands
 	var graphqlEnableCmd = &cobra.Command{
@@ -819,11 +870,6 @@ Examples:
 	graphqlCmd.AddCommand(graphqlResetCmd)
 
 	// HTTP client command group
-	var httpCmd = &cobra.Command{
-		Use:   "http",
-		Short: "HTTP client management",
-		Long:  "Manage HTTP client with retries, correlation IDs, and circuit breakers.",
-	}
 
 	var httpTestCmd = &cobra.Command{
 		Use:   "test",
@@ -863,11 +909,6 @@ Examples:
 	httpCmd.AddCommand(httpTestCmd, httpStatsCmd, httpConfigCmd, httpHealthCmd, httpResetCmd)
 
 	// Template engine command group
-	var templateCmd = &cobra.Command{
-		Use:   "template",
-		Short: "Template engine management",
-		Long:  "Manage template engine with helpers, layouts, and components.",
-	}
 
 	var templateListCmd = &cobra.Command{
 		Use:   "list",
@@ -914,11 +955,6 @@ Examples:
 	templateCmd.AddCommand(templateListCmd, templateCompileCmd, templateWatchCmd, templateHelperCmd, templateTestCmd, templateStatsCmd)
 
 	// Asset pipeline command group
-	var assetCmd = &cobra.Command{
-		Use:   "asset",
-		Short: "Asset pipeline management",
-		Long:  "Manage asset pipeline with bundling, versioning, and optimization.",
-	}
 
 	var assetBuildCmd = &cobra.Command{
 		Use:   "build",
@@ -972,11 +1008,6 @@ Examples:
 	assetCmd.AddCommand(assetBuildCmd, assetWatchCmd, assetCleanCmd, assetListCmd, assetStatsCmd, assetOptimizeCmd, assetVersionCmd)
 
 	// Live reload command group
-	var liveReloadCmd = &cobra.Command{
-		Use:   "dev",
-		Short: "Development with live reload",
-		Long:  "Start development server with live reload and hot code reload functionality.",
-	}
 
 	var liveReloadStartCmd = &cobra.Command{
 		Use:   "start",
@@ -1023,11 +1054,6 @@ Examples:
 	liveReloadCmd.AddCommand(liveReloadStartCmd, liveReloadStopCmd, liveReloadStatusCmd, liveReloadConfigCmd, liveReloadStatsCmd, liveReloadTestCmd)
 
 	// Load shedding command group
-	var loadShedCmd = &cobra.Command{
-		Use:   "loadshed",
-		Short: "Load shedding management",
-		Long:  "Manage adaptive load shedding for overload protection and system stability.",
-	}
 
 	var loadShedStatusCmd = &cobra.Command{
 		Use:   "status",
@@ -1085,11 +1111,6 @@ Examples:
 	loadShedCmd.AddCommand(loadShedStatusCmd, loadShedCreateCmd, loadShedTestCmd, loadShedResetCmd, loadShedForceCmd, loadShedListCmd, loadShedMetricsCmd)
 
 	// Circuit breaker command group
-	var circuitCmd = &cobra.Command{
-		Use:   "circuit",
-		Short: "Circuit breaker management",
-		Long:  "Manage circuit breakers for microservices protection and fault tolerance.",
-	}
 
 	var circuitStatusCmd = &cobra.Command{
 		Use:   "status",
@@ -1155,11 +1176,6 @@ Examples:
 	circuitCmd.AddCommand(circuitStatusCmd, circuitCreateCmd, circuitTestCmd, circuitResetCmd, circuitForceOpenCmd, circuitForceCloseCmd, circuitListCmd, circuitMetricsCmd)
 
 	// Graceful shutdown command group
-	var gracefulCmd = &cobra.Command{
-		Use:   "graceful",
-		Short: "Graceful shutdown management",
-		Long:  "Manage graceful shutdown and connection draining for applications.",
-	}
 
 	var gracefulStatusCmd = &cobra.Command{
 		Use:   "status",
@@ -1192,11 +1208,6 @@ Examples:
 	gracefulCmd.AddCommand(gracefulStatusCmd, gracefulTestCmd, gracefulConfigCmd, gracefulDrainCmd)
 
 	// Observability command group
-	var observabilityCmd = &cobra.Command{
-		Use:   "observability",
-		Short: "Observability management",
-		Long:  "Manage metrics, logging, and tracing for application observability.",
-	}
 
 	var metricsCmd = &cobra.Command{
 		Use:   "metrics",
@@ -1257,19 +1268,6 @@ Examples:
 		Short: "Test tracing configuration",
 		Long:  "Test the tracing configuration by generating sample traces.",
 		Run:   tracingTest,
-	}
-
-	var healthCmd = &cobra.Command{
-		Use:   "health",
-		Short: "Health check management",
-		Long:  "Manage application health checks.",
-	}
-
-	var healthCheckCmd = &cobra.Command{
-		Use:   "check",
-		Short: "Run health check",
-		Long:  "Run a comprehensive health check on the application.",
-		Run:   healthCheck,
 	}
 
 	var healthServeCmd = &cobra.Command{
@@ -2666,40 +2664,6 @@ func tracingTest(cmd *cobra.Command, args []string) {
 	fmt.Println("  • Use TracingMiddleware for HTTP requests")
 	fmt.Println("  • Use DatabaseTracingMiddleware for DB operations")
 	fmt.Println("  • Use CacheTracingMiddleware for cache operations")
-}
-
-func healthCheck(cmd *cobra.Command, args []string) {
-	fmt.Println("🏥 Running Health Check...")
-	fmt.Println("")
-
-	// This would normally run actual health checks
-	fmt.Println("🔍 Health Check Results:")
-	fmt.Println("========================")
-	fmt.Println("")
-
-	fmt.Println("✅ Application: Healthy")
-	fmt.Println("✅ Database: Connected")
-	fmt.Println("✅ Cache: Available")
-	fmt.Println("✅ External APIs: Responsive")
-	fmt.Println("")
-
-	fmt.Println("📊 System Metrics:")
-	fmt.Println("  • Memory Usage: 45.2 MB")
-	fmt.Println("  • Goroutines: 23")
-	fmt.Println("  • Uptime: 2h 15m 30s")
-	fmt.Println("  • Active Connections: 12")
-	fmt.Println("")
-
-	fmt.Println("🌐 Health Endpoints:")
-	fmt.Println("  • /health - Overall health status")
-	fmt.Println("  • /health/ready - Readiness probe")
-	fmt.Println("  • /health/live - Liveness probe")
-	fmt.Println("")
-
-	fmt.Println("💡 Usage:")
-	fmt.Println("  • Use 'dolphin observability health serve' to start server")
-	fmt.Println("  • Configure Kubernetes liveness/readiness probes")
-	fmt.Println("  • Monitor application health in production")
 }
 
 func healthServe(cmd *cobra.Command, args []string) {

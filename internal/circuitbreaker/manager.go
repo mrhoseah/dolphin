@@ -115,7 +115,7 @@ func (m *Manager) RemoveCircuit(name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	circuit, exists := m.circuits[name]
+	_, exists := m.circuits[name]
 	if !exists {
 		return fmt.Errorf("circuit breaker %s not found", name)
 	}

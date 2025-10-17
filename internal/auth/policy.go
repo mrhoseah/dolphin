@@ -205,12 +205,20 @@ func (pe *PolicyEngine) GetUserRoles(userID string) ([]string, error) {
 
 // GetPolicies returns all policies
 func (pe *PolicyEngine) GetPolicies() [][]string {
-	return pe.enforcer.GetPolicy()
+	policies, err := pe.enforcer.GetPolicy()
+	if err != nil {
+		return [][]string{}
+	}
+	return policies
 }
 
 // GetRoles returns all roles
 func (pe *PolicyEngine) GetRoles() []string {
-	return pe.enforcer.GetAllRoles()
+	roles, err := pe.enforcer.GetAllRoles()
+	if err != nil {
+		return []string{}
+	}
+	return roles
 }
 
 // getUserRoles gets user roles from context or database
@@ -230,7 +238,7 @@ type MemoryAdapter struct {
 }
 
 // LoadPolicy loads policies from storage
-func (a *MemoryAdapter) LoadPolicy(model casbin.Model) error {
+func (a *MemoryAdapter) LoadPolicy(model model.Model) error {
 	for _, policy := range a.policies {
 		model.AddPolicy("p", "p", policy)
 	}
@@ -238,8 +246,12 @@ func (a *MemoryAdapter) LoadPolicy(model casbin.Model) error {
 }
 
 // SavePolicy saves policies to storage
-func (a *MemoryAdapter) SavePolicy(model casbin.Model) error {
-	a.policies = model.GetPolicy("p", "p")
+func (a *MemoryAdapter) SavePolicy(model model.Model) error {
+	policies, err := model.GetPolicy("p", "p")
+	if err != nil {
+		return err
+	}
+	a.policies = policies
 	return nil
 }
 

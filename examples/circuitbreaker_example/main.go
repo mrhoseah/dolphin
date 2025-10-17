@@ -84,6 +84,7 @@ func main() {
 	// Create HTTP client with circuit breaker
 	httpConfig := circuitbreaker.DefaultHTTPClientConfig()
 	httpClient := circuitbreaker.NewHTTPClient("api-client", config, httpConfig, logger)
+	_ = httpClient
 
 	// Simulate HTTP requests
 	ctx := context.Background()
@@ -164,6 +165,8 @@ func main() {
 	// Create HTTP clients
 	userClient, _ := httpManager.CreateClient("user-api", config, httpConfig)
 	orderClient, _ := httpManager.CreateClient("order-api", config, httpConfig)
+	_ = userClient
+	_ = orderClient
 
 	fmt.Printf("Created HTTP clients: %v\n", httpManager.GetClientNames())
 

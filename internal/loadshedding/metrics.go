@@ -248,9 +248,8 @@ func (m *Metrics) Reset() {
 	m.responseTimeMu.Unlock()
 
 	// Reset Prometheus metrics
-	m.requestsTotal.Add(-m.requestsTotal.Get())
-	m.requestsShed.Add(-m.requestsShed.Get())
-	m.requestsProcessed.Add(-m.requestsProcessed.Get())
+	// Note: Prometheus counters cannot be reset directly
+	// They are cumulative and reset on application restart
 	m.sheddingLevel.Set(0)
 	m.sheddingRate.Set(0)
 	m.cpuUsage.Set(0)

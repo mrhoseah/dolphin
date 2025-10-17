@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mrhoseah/dolphin/internal/observability"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -98,9 +99,15 @@ func main() {
 	om.LogCacheOperation("DELETE", "redis", "user:123", false, fmt.Errorf("key not found"))
 
 	// Record business metrics
-	om.RecordUserRegistration()
-	om.RecordUserLogin()
-	om.RecordAPICall("/api/users", "GET", "200")
+	om.LogBusinessEvent("user_registration", "success", map[string]interface{}{
+		"user_id": "123",
+		"email":   "user@example.com",
+	})
+	om.LogBusinessEvent("user_login", "success", map[string]interface{}{
+		"user_id": "123",
+		"method":  "password",
+	})
+	om.LogHTTPRequest(&http.Request{Method: "GET", URL: &url.URL{Path: "/api/users"}}, 200, 150*time.Millisecond, 1024)
 
 	// Example 4: Distributed Tracing
 	fmt.Println("\n=== Example 4: Distributed Tracing ===")
@@ -108,6 +115,9 @@ func main() {
 	// Start a root span
 	ctx, span := om.StartSpan(context.Background(), "user_operation")
 	defer om.FinishSpan(ctx)
+
+	// Use the span
+	_ = span
 
 	// Add span attributes
 	om.SetSpanAttributes(ctx, map[string]interface{}{
@@ -117,7 +127,9 @@ func main() {
 	})
 
 	// Simulate database operation with tracing
-	ctx, dbSpan := om.StartSpan(ctx, "database_query")
+	var dbSpan trace.Span
+	ctx, dbSpan = om.StartSpan(ctx, "database_query")
+	_ = dbSpan
 	om.SetSpanAttributes(ctx, map[string]interface{}{
 		"db.operation": "UPDATE",
 		"db.table":     "users",
@@ -136,7 +148,9 @@ func main() {
 	om.FinishSpan(ctx)
 
 	// Simulate cache operation with tracing
-	ctx, cacheSpan := om.StartSpan(ctx, "cache_operation")
+	var cacheSpan trace.Span
+	ctx, cacheSpan = om.StartSpan(ctx, "cache_operation")
+	_ = cacheSpan
 	om.SetSpanAttributes(ctx, map[string]interface{}{
 		"cache.operation": "SET",
 		"cache.key":       "user:123",
@@ -221,7 +235,7 @@ func main() {
 
 	// Apply all observability middlewares
 	middlewares := om.GetHTTPMiddlewares()
-	handler := mux
+	var handler http.Handler = mux
 	for _, middleware := range middlewares {
 		handler = middleware(handler)
 	}

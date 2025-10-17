@@ -234,7 +234,7 @@ func (hcm *HTTPClientManager) RemoveClient(name string) error {
 	hcm.mu.Lock()
 	defer hcm.mu.Unlock()
 
-	client, exists := hcm.clients[name]
+	_, exists := hcm.clients[name]
 	if !exists {
 		return fmt.Errorf("HTTP client %s not found", name)
 	}

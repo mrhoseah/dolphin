@@ -116,6 +116,9 @@ func main() {
 	apiShedder, _ := manager.CreateShedder("api-shedder", config)
 	dbShedder, _ := manager.CreateShedder("db-shedder", config)
 	cacheShedder, _ := manager.CreateShedder("cache-shedder", config)
+	_ = apiShedder
+	_ = dbShedder
+	_ = cacheShedder
 
 	fmt.Printf("Created shedders: %v\n", manager.GetShedderNames())
 
@@ -123,6 +126,9 @@ func main() {
 	apiMiddleware, _ := manager.CreateMiddleware("api-middleware", "api-shedder", middlewareConfig)
 	dbMiddleware, _ := manager.CreateMiddleware("db-middleware", "db-shedder", middlewareConfig)
 	cacheMiddleware, _ := manager.CreateMiddleware("cache-middleware", "cache-shedder", middlewareConfig)
+	_ = apiMiddleware
+	_ = dbMiddleware
+	_ = cacheMiddleware
 
 	fmt.Printf("Created middlewares: %v\n", manager.GetMiddlewareNames())
 
@@ -188,14 +194,17 @@ func main() {
 	cpuConfig := loadshedding.DefaultConfig()
 	cpuConfig.Strategy = loadshedding.StrategyCPU
 	cpuShedder, _ := manager.CreateShedder("cpu-shedder", cpuConfig)
+	_ = cpuShedder
 
 	memoryConfig := loadshedding.DefaultConfig()
 	memoryConfig.Strategy = loadshedding.StrategyMemory
 	memoryShedder, _ := manager.CreateShedder("memory-shedder", memoryConfig)
+	_ = memoryShedder
 
 	goroutineConfig := loadshedding.DefaultConfig()
 	goroutineConfig.Strategy = loadshedding.StrategyGoroutines
 	goroutineShedder, _ := manager.CreateShedder("goroutine-shedder", goroutineConfig)
+	_ = goroutineShedder
 
 	fmt.Printf("Created strategy-specific shedders: %v\n", manager.GetShedderNames())
 

@@ -240,6 +240,11 @@ func (ls *LoadShedder) GetStats() Stats {
 	}
 }
 
+// GetMetrics returns the Prometheus metrics for this shedder
+func (ls *LoadShedder) GetMetrics() *Metrics {
+	return ls.metrics
+}
+
 // ForceLevel forces a specific shedding level
 func (ls *LoadShedder) ForceLevel(level SheddingLevel) {
 	ls.mu.Lock()

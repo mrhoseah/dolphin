@@ -191,11 +191,8 @@ func (m *Metrics) Reset() {
 	m.stateChangeCount = 0
 
 	// Reset Prometheus metrics
-	m.requestsTotal.Add(-m.requestsTotal.Get())
-	m.requestsSuccess.Add(-m.requestsSuccess.Get())
-	m.requestsFailure.Add(-m.requestsFailure.Get())
-	m.requestsRejected.Add(-m.requestsRejected.Get())
-	m.stateChanges.Add(-m.stateChanges.Get())
+	// Note: Prometheus counters cannot be reset directly
+	// They are cumulative and reset on application restart
 	m.stateGauge.Set(0)
 	m.failureRate.Set(0)
 	m.successRate.Set(0)
