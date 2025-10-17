@@ -2149,6 +2149,44 @@ client := http.NewClient(&http.ClientConfig{
 })
 ```
 
+### 🕒 Time Utilities
+
+Dolphin includes a comprehensive time utility package similar to moment.js, providing human-readable time formatting and manipulation functions.
+
+```go
+import "github.com/mrhoseah/dolphin/internal/time"
+
+// Create a moment from a time
+moment := time.NewMoment(someTime)
+
+// Get human-readable strings
+fmt.Println(moment.FromNow())     // "2 minutes ago"
+fmt.Println(moment.Calendar())    // "Today at 14:30"
+fmt.Println(moment.Humanize())    // "2 minutes ago"
+```
+
+**Template Integration:**
+```html
+<!-- Display relative time -->
+<p>Last login: {{user.LastLogin | fromNow}}</p>
+
+<!-- Display calendar time -->
+<p>Created: {{post.CreatedAt | calendar}}</p>
+
+<!-- Check if time is today -->
+{{if user.CreatedAt | isToday}}
+    <span class="badge">New today!</span>
+{{end}}
+```
+
+**Features:**
+- **🕒 Human-Readable Formatting**: "2 minutes ago", "yesterday", "last week"
+- **📅 Calendar Display**: "Today at 14:30", "Yesterday at 09:15"
+- **⚡ Template Integration**: Automatic helpers in all templates
+- **🔧 Time Manipulation**: Add/subtract time, get start/end of periods
+- **📊 Time Comparisons**: Check if times are today, this week, etc.
+- **⏱️ Duration Formatting**: Format durations in human-readable ways
+
 ### 🔮 GraphQL Endpoint
 
 Dolphin provides a comprehensive, enterprise-grade GraphQL endpoint with advanced features that can be enabled or disabled as needed.
@@ -2165,6 +2203,7 @@ Dolphin provides a comprehensive, enterprise-grade GraphQL endpoint with advance
 - **🛡️ Security**: Query depth and complexity limits
 - **🔄 Code Generation**: Generate Go types and resolvers from schema
 - **⚡ Performance**: Optimized query execution and caching
+- **🕒 Time Utilities**: Human-readable time formatting (moment.js-like)
 
 #### Advanced Enterprise Features
 

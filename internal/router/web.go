@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/mrhoseah/dolphin/internal/auth"
 	dolphinMiddleware "github.com/mrhoseah/dolphin/internal/middleware"
+	"github.com/mrhoseah/dolphin/internal/time"
 	"github.com/mrhoseah/dolphin/internal/version"
 )
 
@@ -64,12 +65,12 @@ func render(w http.ResponseWriter, pagePath string) error {
 		"Footer":  string(footer),
 	}
 
-	// Parse and execute template
-	tmpl, err := template.New("layout").Parse(string(base))
+	// Parse and execute template with time helpers
+	tmpl, err := template.New("layout").Funcs(time.TemplateHelpers()).Parse(string(base))
 	if err != nil {
 		return err
 	}
-
+	
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
 	return tmpl.Execute(w, data)
