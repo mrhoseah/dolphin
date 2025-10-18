@@ -73,14 +73,14 @@ VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/mrhoseah/dolphin/mai
 Then:
 ```bash
 # Create a new project
-dolphin new my-app
+warden new my-app
 cd my-app
 
 # Install dependencies
 go mod tidy
 
 # Start the development server
-dolphin serve
+warden serve
 ```
 
 ### Telemetry System
@@ -480,7 +480,7 @@ dolphin make:module Post
 
 2) Run the server with debug tools
 ```bash
-dolphin serve
+warden serve
 # visit http://localhost:8080/debug for dashboard (when app.debug=true)
 ```
 
@@ -525,12 +525,12 @@ dolphin new my-awesome-app
 
 ```bash
 # Start development server
-dolphin serve
-dolphin serve --port 3000 --host 0.0.0.0
+warden serve
+warden serve --port 3000 --host 0.0.0.0
 
 # Create new project
-dolphin new my-app
-dolphin new my-app --auth  # Include auth scaffolding
+warden new my-app
+warden new my-app --auth  # Include auth scaffolding
 
 # Update CLI to latest version
 dolphin update
@@ -568,8 +568,8 @@ dolphin db:wipe
 
 ```bash
 # Controllers
-dolphin make:controller UserController
-dolphin make:controller UserController --resource --api
+warden make:controller UserController
+warden make:controller UserController --resource --api
 
 # Models
 dolphin make:model User
@@ -2962,9 +2962,9 @@ dolphin static:serve
 
 | Framework CLI | Dolphin CLI | Description |
 |----------------|-------------|-------------|
-| `php artisan serve` | `dolphin serve` | Start development server |
+| `php artisan serve` | `warden serve` | Start development server |
 | `php artisan migrate` | `dolphin migrate` | Run database migrations |
-| `php artisan make:controller` | `dolphin make:controller` | Create controller |
+| `php artisan make:controller` | `warden make:controller` | Create controller |
 | `php artisan make:model` | `dolphin make:model` | Create model |
 | `php artisan make:migration` | `dolphin make:migration` | Create migration |
 | `php artisan make:middleware` | `dolphin make:middleware` | Create middleware |
@@ -3178,7 +3178,7 @@ Laravel-inspired command-line interface with generators and commands:
 
 ```bash
 # Code generation
-dolphin make:controller UserController --resource
+warden make:controller UserController --resource
 dolphin make:model User --migration --factory --seeder
 dolphin make:migration create_users_table
 
@@ -3193,7 +3193,7 @@ dolphin config:cache
 dolphin route:cache
 
 # Development
-dolphin serve --host=0.0.0.0 --port=8080
+warden serve --host=0.0.0.0 --port=8080
 dolphin tinker
 ```
 
@@ -3392,9 +3392,9 @@ Dolphin comes with beautiful, responsive templates out of the box:
 #### **Authentication Flow**
 ```bash
 # Create project with auth scaffolding
-dolphin new my-app --auth
+warden new my-app --auth
 cd my-app
-dolphin serve
+warden serve
 
 # Visit authentication pages
 open http://localhost:8080/auth/login
@@ -4164,7 +4164,7 @@ cd my-awesome-app
 dolphin make:module Product
 
 # Start developing
-dolphin serve
+warden serve
 
 # Visit your app
 open http://localhost:8080
