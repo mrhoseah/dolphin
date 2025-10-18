@@ -95,6 +95,12 @@ go mod tidy
 dolphin serve
 ```
 
+Visit `http://localhost:8080` to see your application running with:
+- 🎨 Beautiful welcome page
+- 🔍 Health check at `/api/health`
+- 📊 API status at `/api/status`
+- 🛑 Graceful shutdown with `Ctrl+C`
+
 ### Telemetry System
 
 Dolphin Framework includes a comprehensive telemetry system designed to help improve the framework while respecting user privacy. The system is **opt-in by default** and provides complete control over data collection.

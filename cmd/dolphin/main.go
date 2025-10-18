@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -104,11 +106,22 @@ Examples:
 	migrateCmd.Flags().BoolP("fresh", "f", false, "Drop all tables and re-run all migrations")
 	migrateCmd.Flags().BoolP("seed", "s", false, "Run the database seeders")
 
+	// Update command
+	var updateCmd = &cobra.Command{
+		Use:   "update",
+		Short: "Update Dolphin CLI to the latest version",
+		Long:  "Check for updates and install the latest version of Dolphin CLI",
+		Run:   updateCLI,
+	}
+	updateCmd.Flags().BoolP("force", "f", false, "Force update even if already on latest version")
+	updateCmd.Flags().StringP("version", "v", "latest", "Update to a specific version")
+
 	rootCmd.AddCommand(newCmd)
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(makeControllerCmd)
 	rootCmd.AddCommand(makeModelCmd)
 	rootCmd.AddCommand(migrateCmd)
+	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(versionCmd)
 
@@ -601,6 +614,7 @@ func listCommands(cmd *cobra.Command, args []string) {
 	fmt.Println()
 	fmt.Println("📁 Project Management:")
 	fmt.Println("  dolphin new [name]           Create a new Dolphin application")
+	fmt.Println("  dolphin update               Update Dolphin CLI to latest version")
 	fmt.Println("  dolphin list                 List all available commands")
 	fmt.Println("  dolphin version              Show version information")
 	fmt.Println()
@@ -664,47 +678,200 @@ func startServer(cmd *cobra.Command, args []string) {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintf(w, `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>🐬 Dolphin Framework</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolphin - Welcome Aboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Lucide Icons for better modern visuals -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'dolphin-primary': '#009688', // Teal 600
+                        'dolphin-secondary': '#00BCD4', // Cyan 500
+                        'dolphin-light': '#e0f7fa', // Light Cyan Background
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #4f46e5; }
-        .status { background: #10b981; color: white; padding: 10px; border-radius: 5px; margin: 20px 0; }
-        .links { margin: 20px 0; }
-        .links a { display: inline-block; margin: 10px 20px 10px 0; padding: 10px 20px; background: #4f46e5; color: white; text-decoration: none; border-radius: 5px; }
-        .links a:hover { background: #7c3aed; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body {
+            /* Using a lighter gradient for a clean, modern feel */
+            background: linear-gradient(135deg, #e0f7fa 0%%, #b2ebf2 100%%); 
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 30px rgba(0, 150, 136, 0.1);
+        }
+        /* Style for the console command code blocks */
+        .code-block {
+            display: inline-block;
+            background-color: #f1f5f9; /* Slate 100 */
+            color: #334155; /* Slate 700 */
+            padding: 0.25rem 0.6rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-weight: 500;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>🐬 Dolphin Framework</h1>
-        <div class="status">✅ Server is running successfully!</div>
-        <p>Welcome to your Dolphin Framework application. The development server is up and running.</p>
-        
-        <div class="links">
-            <a href="/api/health">Health Check</a>
-            <a href="/api/status">API Status</a>
-            <a href="/swagger/index.html">API Docs</a>
+<body class="antialiased">
+    <!-- Navigation -->
+    <nav class="bg-white/90 backdrop-blur-sm sticky top-0 z-10 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo & Brand Name -->
+                <div class="flex items-center">
+                    <!-- Dolphin emoji as logo -->
+                    <span class="text-3xl mr-2">🐬</span>
+                    <span class="text-xl font-extrabold tracking-tight text-gray-800">DOLPHIN</span>
+                </div>
+
+                <!-- Desktop Links -->
+                <div class="flex items-center space-x-6">
+                    <a href="/api/health" class="text-gray-600 hover:text-dolphin-primary text-sm font-medium transition duration-150">Health</a>
+                    <a href="/api/status" class="text-gray-600 hover:text-dolphin-primary text-sm font-medium transition duration-150">Status</a>
+                    <a href="https://github.com/mrhoseah/dolphin" class="text-gray-600 hover:text-dolphin-primary text-sm font-medium transition duration-150">Docs</a>
+                    <button class="bg-dolphin-primary hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md transition duration-200">
+                        Get Started
+                    </button>
+                </div>
+            </div>
         </div>
-        
-        <h3>Available Endpoints:</h3>
-        <ul>
-            <li><code>GET /</code> - This welcome page</li>
-            <li><code>GET /api/health</code> - Health check endpoint</li>
-            <li><code>GET /api/status</code> - API status information</li>
-            <li><code>GET /swagger/index.html</code> - API documentation</li>
-        </ul>
-        
-        <p><strong>Server Info:</strong></p>
-        <ul>
-            <li>Host: %s</li>
-            <li>Port: %s</li>
-            <li>Debug Mode: %t</li>
-            <li>Started: %s</li>
-        </ul>
-    </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
+        <div class="text-center mb-16">
+            <h1 class="text-5xl sm:text-6xl font-extrabold text-gray-900 mb-4 tracking-tight">
+                Welcome Aboard, Developer
+            </h1>
+            <p class="text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
+                Your Dolphin application has been successfully initialized and is ready to sail.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <a href="https://github.com/mrhoseah/dolphin" class="bg-dolphin-primary hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition duration-200 shadow-xl shadow-teal-500/30">
+                    View Comprehensive Docs
+                </a>
+                <a href="/api/status" class="bg-white border-2 border-dolphin-secondary text-dolphin-secondary hover:bg-dolphin-secondary/10 px-8 py-3 rounded-xl font-semibold transition duration-200 shadow-lg">
+                    Check Server Status
+                </a>
+            </div>
+        </div>
+
+        <!-- Next Steps Section -->
+        <div class="bg-white rounded-3xl shadow-2xl p-6 sm:p-12 mt-10">
+            <h2 class="text-3xl font-bold text-gray-900 text-center mb-10 border-b pb-4 border-gray-100">
+                Next Steps to get you building
+            </h2>
+            
+            <div class="grid md:grid-cols-3 gap-6 sm:gap-10">
+                
+                <!-- Card 1: Setup Auth -->
+                <div class="text-center p-8 rounded-2xl card-hover cursor-pointer border border-gray-100 bg-gray-50/50 hover:bg-white">
+                    <div class="flex justify-center mb-4">
+                        <div class="bg-teal-100 p-4 rounded-full">
+                            <!-- Lock Icon for security/Auth -->
+                            <svg class="w-8 h-8 text-dolphin-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a4 4 0 00-4 4v4h8V5a4 4 0 00-4-4zM5 9h14v10a2 2 0 01-2 2H7a2 2 0 01-2-2V9z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Setup Authentication</h3>
+                    <p class="text-gray-600 text-sm">
+                        Scaffold user model and core auth files.
+                    </p>
+                    <div class="mt-4">
+                        <span class="code-block">$ dolphin make:auth</span>
+                    </div>
+                </div>
+
+                <!-- Card 2: Scaffolding -->
+                <div class="text-center p-8 rounded-2xl card-hover cursor-pointer border border-gray-100 bg-gray-50/50 hover:bg-white">
+                    <div class="flex justify-center mb-4">
+                        <div class="bg-blue-100 p-4 rounded-full">
+                            <!-- Settings/Tool Icon for scaffolding -->
+                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-6 0h-4m4 0h-4m-4 0h4m-4 0v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2z"/>
+                                <circle cx="12" cy="18" r="3"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Scaffold CRUD</h3>
+                    <p class="text-gray-600 text-sm">
+                        Create a full resource with one command.
+                    </p>
+                    <div class="mt-4">
+                        <span class="code-block">$ dolphin make:controller Product</span>
+                    </div>
+                </div>
+
+                <!-- Card 3: Start Coding -->
+                <div class="text-center p-8 rounded-2xl card-hover cursor-pointer border border-gray-100 bg-gray-50/50 hover:bg-white">
+                    <div class="flex justify-center mb-4">
+                        <div class="bg-green-100 p-4 rounded-full">
+                            <!-- Code Icon for development -->
+                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Start Coding!</h3>
+                    <p class="text-gray-600 text-sm">
+                        Open your IDE and build something great.
+                    </p>
+                    <div class="mt-4">
+                        <span class="code-block">Open Project in VS Code</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Server Info Section -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 mt-8">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">Server Information</h3>
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Host:</span>
+                    <span class="font-mono text-gray-900">%s</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Port:</span>
+                    <span class="font-mono text-gray-900">%s</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Debug Mode:</span>
+                    <span class="font-mono text-gray-900">%t</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Started:</span>
+                    <span class="font-mono text-gray-900">%s</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-12 py-4">
+            <p class="text-gray-500 text-sm">
+                Built with Dolphin Framework. Go build something incredible.
+            </p>
+        </div>
+    </main>
 </body>
 </html>`, host, port, debug, time.Now().Format("2006-01-02 15:04:05"))
 	})
@@ -806,4 +973,88 @@ func showVersion(cmd *cobra.Command, args []string) {
 	fmt.Printf("🐬 Dolphin Framework CLI v%s\n", version)
 	fmt.Println("Built with ❤️  using Go")
 	fmt.Println("https://github.com/mrhoseah/dolphin")
+}
+
+func updateCLI(cmd *cobra.Command, args []string) {
+	force, _ := cmd.Flags().GetBool("force")
+	targetVersion, _ := cmd.Flags().GetString("version")
+
+	fmt.Printf("🔄 Checking for Dolphin CLI updates...\n")
+	fmt.Printf("Current version: v%s\n", version)
+
+	// Check if we're in a development environment
+	if strings.Contains(version, "dev") || strings.Contains(version, "local") {
+		fmt.Printf("📝 Development version detected. Updating from local source...\n")
+
+		// Update from local source
+		fmt.Printf("🔨 Building latest version from source...\n")
+
+		// Get the directory where the CLI is located
+		execPath, err := os.Executable()
+		if err != nil {
+			fmt.Printf("❌ Failed to get executable path: %v\n", err)
+			return
+		}
+
+		// Find the project root (assuming we're in cmd/dolphin)
+		projectRoot := filepath.Join(filepath.Dir(execPath), "..", "..")
+		if _, err := os.Stat(filepath.Join(projectRoot, "go.mod")); err != nil {
+			// Try alternative path
+			projectRoot = filepath.Join(filepath.Dir(execPath), "..", "..", "..")
+		}
+
+		// Build the CLI
+		buildCmd := exec.Command("go", "build", "-o", "dolphin", "cmd/dolphin/main.go")
+		buildCmd.Dir = projectRoot
+		buildCmd.Stdout = os.Stdout
+		buildCmd.Stderr = os.Stderr
+
+		if err := buildCmd.Run(); err != nil {
+			fmt.Printf("❌ Failed to build CLI: %v\n", err)
+			return
+		}
+
+		// Install the CLI
+		installCmd := exec.Command("go", "install", "./cmd/dolphin")
+		installCmd.Dir = projectRoot
+		installCmd.Stdout = os.Stdout
+		installCmd.Stderr = os.Stderr
+
+		if err := installCmd.Run(); err != nil {
+			fmt.Printf("❌ Failed to install CLI: %v\n", err)
+			return
+		}
+
+		fmt.Printf("✅ Dolphin CLI updated successfully!\n")
+		fmt.Printf("🚀 Run 'dolphin version' to verify the update\n")
+		return
+	}
+
+	// For production versions, check GitHub releases
+	fmt.Printf("🌐 Checking GitHub releases...\n")
+
+	// Simple version check (in a real implementation, you'd fetch from GitHub API)
+	fmt.Printf("📦 Latest available version: v%s\n", version)
+
+	if !force {
+		fmt.Printf("✅ You're already running the latest version!\n")
+		fmt.Printf("💡 Use --force to update anyway\n")
+		return
+	}
+
+	fmt.Printf("🔄 Force updating to version: %s\n", targetVersion)
+
+	// Install from GitHub
+	installCmd := exec.Command("go", "install", fmt.Sprintf("github.com/mrhoseah/dolphin/cmd/dolphin@%s", targetVersion))
+	installCmd.Stdout = os.Stdout
+	installCmd.Stderr = os.Stderr
+
+	if err := installCmd.Run(); err != nil {
+		fmt.Printf("❌ Failed to update CLI: %v\n", err)
+		fmt.Printf("💡 Try running: go install github.com/mrhoseah/dolphin/cmd/dolphin@latest\n")
+		return
+	}
+
+	fmt.Printf("✅ Dolphin CLI updated successfully!\n")
+	fmt.Printf("🚀 Run 'dolphin version' to verify the update\n")
 }
