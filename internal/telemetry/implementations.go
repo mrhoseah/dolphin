@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -99,7 +100,7 @@ func (hs *HTTPSender) Send(ctx context.Context, data *TelemetryData) error {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", hs.endpoint, jsonData)
+	req, err := http.NewRequestWithContext(ctx, "POST", hs.endpoint, bytes.NewReader(jsonData))
 	if err != nil {
 		return err
 	}

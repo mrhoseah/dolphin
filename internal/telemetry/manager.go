@@ -204,7 +204,7 @@ func (tm *TelemetryManager) CollectFromCollectors(ctx context.Context) error {
 		return nil
 	}
 
-	for name, collector := range collectors {
+	for _, collector := range collectors {
 		if !collector.IsEnabled() {
 			continue
 		}

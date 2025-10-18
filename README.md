@@ -17,6 +17,10 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, tak
 - **📱 Frontend Integration**: Built-in support for Vue.js, React.js, and Tailwind CSS
 - **📚 API Documentation**: Automatic Swagger/OpenAPI documentation with SwagGo
 - **📊 Telemetry System**: Opt-in telemetry with privacy-first design
+- **🏭 Database Factories**: Laravel-style factories for realistic test data
+- **🎭 Mocking System**: Built-in fakes for testing isolation
+- **🌐 HTTP Client**: First-party HTTP client with retries and fluent API
+- **✅ Validation Layer**: Expressive request validation with struct tags
 - **⚡ High Performance**: Built on Go's concurrency and performance
 - **🔧 CLI Tools**: Powerful command-line interface for development
 - **📦 Dependency Injection**: Service container for clean architecture
@@ -130,6 +134,261 @@ dolphin telemetry privacy
 | `dolphin telemetry reset` | Reset to defaults |
 
 📚 **[Complete Telemetry Guide](TELEMETRY_GUIDE.md)** - Comprehensive telemetry documentation
+
+### Database Factories & Seeders
+
+Dolphin Framework includes Laravel-style database factories and seeders for creating realistic test data without manual SQL scripts.
+
+#### Key Features
+
+- **🏭 Model Factories**: Generate realistic test data with customizable attributes
+- **🌱 Database Seeders**: Automated database population with dependency management
+- **🔄 Relationships**: Easy creation of related models with proper foreign keys
+- **🎯 States**: Different model states (admin, inactive, featured, etc.)
+- **📊 Bulk Creation**: Create hundreds of records with a single command
+
+#### Quick Start
+
+```go
+package main
+
+import (
+    "github.com/mrhoseah/dolphin/internal/factories"
+    "github.com/mrhoseah/dolphin/internal/seeders"
+    "gorm.io/gorm"
+)
+
+func main() {
+    // Create factory manager
+    factoryManager := factories.NewFactoryManager(db)
+    
+    // Register factories
+    userFactory := factories.NewUserFactory(db)
+    factoryManager.Register("users", userFactory)
+    
+    // Create users with factories
+    admin := userFactory.Admin().Create(map[string]interface{}{
+        "Name": "Admin User",
+        "Email": "admin@example.com",
+    })
+    
+    users := userFactory.CreateMany(100) // Create 100 users
+    
+    // Create users with states
+    inactiveUsers := userFactory.Inactive().CreateMany(10)
+    
+    // Setup seeders
+    seederManager := seeders.NewSeederManager(db)
+    seederManager.Register(seeders.NewUserSeeder())
+    seederManager.Register(seeders.NewPostSeeder())
+    
+    // Run all seeders
+    seederManager.RunAll()
+}
+```
+
+#### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `dolphin db:seed` | Run all database seeders |
+| `dolphin db:seed --class=UserSeeder` | Run specific seeder |
+| `dolphin db:seed --fresh` | Fresh seed (drop and recreate) |
+
+### Mocking & Fakes System
+
+Built-in mocking system for testing isolation without hitting real infrastructure.
+
+#### Key Features
+
+- **🎭 Service Faking**: Mock cache, storage, events, mailer, queue
+- **🔄 Easy Toggle**: Simple enable/disable for any service
+- **📊 Data Tracking**: Track calls, parameters, and return values
+- **🧪 Test Isolation**: Complete isolation from external dependencies
+- **⚡ Zero Overhead**: No performance impact when disabled
+
+#### Quick Start
+
+```go
+package main
+
+import (
+    "github.com/mrhoseah/dolphin/internal/fakes"
+)
+
+func main() {
+    // Create fake manager
+    fakeManager := fakes.NewFakeManager()
+    
+    // Create and register fake services
+    fakeCache := fakes.NewFakeCache()
+    fakeMailer := fakes.NewFakeMailer()
+    
+    fakeManager.Register("cache", fakeCache)
+    fakeManager.Register("mailer", fakeMailer)
+    
+    // Fake services for testing
+    fakeManager.FakeAll()
+    
+    // Use faked services
+    fakeCache.Set("key", "value", 5*time.Minute)
+    fakeMailer.Send([]string{"test@example.com"}, "Subject", "Body", "HTML")
+    
+    // Check what was called
+    sentMails := fakeMailer.GetSentMails()
+    fmt.Printf("Sent %d emails\n", len(sentMails))
+    
+    // Restore real services
+    fakeManager.RestoreAll()
+}
+```
+
+### First-Party HTTP Client
+
+Elegant HTTP client for making outgoing requests with built-in retries, timeouts, and fluent API.
+
+#### Key Features
+
+- **🔄 Automatic Retries**: Configurable retry logic with exponential backoff
+- **⏱️ Timeouts**: Request-level and client-level timeout support
+- **🌐 Fluent API**: Chainable methods for readable request building
+- **📊 Response Handling**: Structured response parsing and error handling
+- **🛡️ Error Recovery**: Built-in error handling and recovery mechanisms
+
+#### Quick Start
+
+```go
+package main
+
+import (
+    "github.com/mrhoseah/dolphin/internal/httpclient"
+)
+
+func main() {
+    // Create HTTP client
+    client := httpclient.NewClient(&httpclient.Config{
+        BaseURL: "https://api.example.com",
+        Timeout: 30 * time.Second,
+        Retries: 3,
+    })
+    
+    // Simple requests
+    resp, err := client.Get("/users/1")
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    var user map[string]interface{}
+    resp.JSON(&user)
+    
+    // Fluent API
+    resp, err = client.POST("/users").
+        Body(map[string]interface{}{
+            "name": "John Doe",
+            "email": "john@example.com",
+        }).
+        Header("Content-Type", "application/json").
+        QueryParam("include", "profile").
+        Send()
+    
+    // Error handling
+    if resp.IsSuccess() {
+        fmt.Println("Request successful")
+    } else if resp.IsClientError() {
+        fmt.Println("Client error:", resp.StatusCode)
+    }
+}
+```
+
+### Validation Layer
+
+Expressive request validation with struct tags and fluent API for clean, reusable validation logic.
+
+#### Key Features
+
+- **🏷️ Struct Tags**: Validation rules defined in struct tags
+- **🔗 Fluent API**: Chainable validation methods
+- **📋 Rich Rules**: Email, URL, UUID, regex, range, and custom rules
+- **🌍 Localization**: Customizable error messages
+- **🔄 Reusable**: Validation rules can be reused across requests
+
+#### Quick Start
+
+```go
+package main
+
+import (
+    "github.com/mrhoseah/dolphin/internal/validation"
+)
+
+func main() {
+    // Create request with validation
+    request := validation.NewRequest(map[string]interface{}{
+        "name":     "John Doe",
+        "email":    "john@example.com",
+        "age":      25,
+        "password": "secret123",
+    })
+    
+    // Add validation rules (fluent API)
+    request.Required("name").
+        StringWithLength("name", 2, 50).
+        Required("email").
+        Email("email").
+        Required("age").
+        IntegerRange("age", 18, 100).
+        Required("password").
+        StringWithLength("password", 8, 128)
+    
+    // Validate
+    if request.Validate() {
+        fmt.Println("Validation passed")
+        fmt.Printf("Name: %s\n", request.GetString("name"))
+        fmt.Printf("Email: %s\n", request.GetString("email"))
+    } else {
+        fmt.Println("Validation failed")
+        for field, errors := range request.GetErrors() {
+            fmt.Printf("%s: %v\n", field, errors)
+        }
+    }
+    
+    // Struct-based validation
+    type UserRegistration struct {
+        Name     string `validate:"required|string|min_length:2|max_length:50"`
+        Email    string `validate:"required|email"`
+        Age      int    `validate:"required|integer|min:18|max:100"`
+        Password string `validate:"required|string|min_length:8"`
+    }
+    
+    // Parse rules from struct
+    rules := validation.ParseRulesFromStruct(UserRegistration{})
+    validator := validation.NewValidator()
+    for field, fieldRules := range rules {
+        validator.AddRules(field, fieldRules...)
+    }
+}
+```
+
+#### Available Validation Rules
+
+| Rule | Description | Example |
+|------|-------------|---------|
+| `required` | Field is required | `required` |
+| `string` | Field is a string | `string` |
+| `email` | Valid email address | `email` |
+| `integer` | Integer value | `integer` |
+| `numeric` | Numeric value | `numeric` |
+| `boolean` | Boolean value | `boolean` |
+| `date` | Valid date | `date:2006-01-02` |
+| `url` | Valid URL | `url` |
+| `uuid` | Valid UUID | `uuid` |
+| `min_length` | Minimum string length | `min_length:5` |
+| `max_length` | Maximum string length | `max_length:100` |
+| `min` | Minimum numeric value | `min:18` |
+| `max` | Maximum numeric value | `max:100` |
+| `regex` | Regex pattern match | `regex:^[A-Z]+$` |
+| `in` | Value in allowed list | `in:admin,user,guest` |
+| `not_in` | Value not in disallowed list | `not_in:root,admin` |
 
 ### Testing
 

@@ -1,599 +1,586 @@
 package validation
 
 import (
-	"fmt"
-	"net/url"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
-	"time"
-	"unicode"
 )
 
-// Validator defines the interface for validation
-type Validator interface {
-	Validate(data interface{}) error
-	ValidateField(field interface{}, rules []string) error
+// Validator manages validation rules and errors
+type Validator struct {
+	rules  map[string][]Rule
+	errors map[string][]string
 }
 
-// Rule defines a validation rule
-type Rule struct {
-	Name    string
-	Value   interface{}
-	Message string
-}
-
-// ValidationError represents a validation error
-type ValidationError struct {
-	Field   string
-	Message string
-	Value   interface{}
-}
-
-func (e ValidationError) Error() string {
-	return fmt.Sprintf("validation failed for field '%s': %s", e.Field, e.Message)
-}
-
-// ValidationErrors represents multiple validation errors
-type ValidationErrors struct {
-	Errors []ValidationError
-}
-
-func (e ValidationErrors) Error() string {
-	if len(e.Errors) == 0 {
-		return "no validation errors"
+// NewValidator creates a new validator
+func NewValidator() *Validator {
+	return &Validator{
+		rules:  make(map[string][]Rule),
+		errors: make(map[string][]string),
 	}
+}
 
-	var messages []string
-	for _, err := range e.Errors {
-		messages = append(messages, err.Error())
+// AddRule adds a validation rule for a field
+func (v *Validator) AddRule(field string, rule Rule) {
+	if v.rules[field] == nil {
+		v.rules[field] = make([]Rule, 0)
 	}
-	return strings.Join(messages, "; ")
+	v.rules[field] = append(v.rules[field], rule)
 }
 
-// HasErrors returns true if there are validation errors
-func (e ValidationErrors) HasErrors() bool {
-	return len(e.Errors) > 0
-}
-
-// AddError adds a validation error
-func (e *ValidationErrors) AddError(field, message string, value interface{}) {
-	e.Errors = append(e.Errors, ValidationError{
-		Field:   field,
-		Message: message,
-		Value:   value,
-	})
-}
-
-// GetErrors returns all validation errors
-func (e ValidationErrors) GetErrors() []ValidationError {
-	return e.Errors
-}
-
-// FieldValidator validates individual fields
-type FieldValidator struct {
-	rules map[string]func(interface{}, string) error
-}
-
-// NewFieldValidator creates a new field validator
-func NewFieldValidator() *FieldValidator {
-	v := &FieldValidator{
-		rules: make(map[string]func(interface{}, string) error),
-	}
-
-	// Register default rules
-	v.registerDefaultRules()
-
-	return v
-}
-
-// registerDefaultRules registers default validation rules
-func (v *FieldValidator) registerDefaultRules() {
-	v.rules["required"] = v.validateRequired
-	v.rules["email"] = v.validateEmail
-	v.rules["min"] = v.validateMin
-	v.rules["max"] = v.validateMax
-	v.rules["min_length"] = v.validateMinLength
-	v.rules["max_length"] = v.validateMaxLength
-	v.rules["numeric"] = v.validateNumeric
-	v.rules["alpha"] = v.validateAlpha
-	v.rules["alpha_numeric"] = v.validateAlphaNumeric
-	v.rules["url"] = v.validateURL
-	v.rules["date"] = v.validateDate
-	v.rules["regex"] = v.validateRegex
-	v.rules["in"] = v.validateIn
-	v.rules["not_in"] = v.validateNotIn
-	v.rules["confirmed"] = v.validateConfirmed
-	v.rules["different"] = v.validateDifferent
-	v.rules["same"] = v.validateSame
-}
-
-// RegisterRule registers a custom validation rule
-func (v *FieldValidator) RegisterRule(name string, rule func(interface{}, string) error) {
-	v.rules[name] = rule
-}
-
-// ValidateField validates a single field with rules
-func (v *FieldValidator) ValidateField(field interface{}, rules []string) error {
-	var errors ValidationErrors
-
+// AddRules adds multiple validation rules for a field
+func (v *Validator) AddRules(field string, rules ...Rule) {
 	for _, rule := range rules {
-		ruleParts := strings.Split(rule, ":")
-		ruleName := ruleParts[0]
-		ruleValue := ""
-		if len(ruleParts) > 1 {
-			ruleValue = strings.Join(ruleParts[1:], ":")
-		}
-
-		if validator, exists := v.rules[ruleName]; exists {
-			if err := validator(field, ruleValue); err != nil {
-				errors.AddError("field", err.Error(), field)
-			}
-		} else {
-			errors.AddError("field", fmt.Sprintf("unknown validation rule: %s", ruleName), field)
-		}
+		v.AddRule(field, rule)
 	}
-
-	if errors.HasErrors() {
-		return errors
-	}
-
-	return nil
 }
 
-// Validate validates a struct with validation tags
-func (v *FieldValidator) Validate(data interface{}) error {
-	var errors ValidationErrors
+// Validate validates data against all rules
+func (v *Validator) Validate(data map[string]interface{}) bool {
+	v.errors = make(map[string][]string)
+	isValid := true
 
-	val := reflect.ValueOf(data)
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
-	}
+	for field, rules := range v.rules {
+		value, exists := data[field]
 
-	if val.Kind() != reflect.Struct {
-		return fmt.Errorf("validation target must be a struct")
-	}
-
-	typ := val.Type()
-	for i := 0; i < val.NumField(); i++ {
-		field := val.Field(i)
-		fieldType := typ.Field(i)
-
-		// Skip unexported fields
-		if !field.CanInterface() {
-			continue
-		}
-
-		// Get validation rules from struct tag
-		rules := fieldType.Tag.Get("validate")
-		if rules == "" {
-			continue
-		}
-
-		ruleList := strings.Split(rules, "|")
-		fieldName := fieldType.Name
-
-		// Use json tag name if available
-		if jsonTag := fieldType.Tag.Get("json"); jsonTag != "" {
-			fieldName = strings.Split(jsonTag, ",")[0]
-		}
-
-		for _, rule := range ruleList {
-			rule = strings.TrimSpace(rule)
-			if rule == "" {
+		for _, rule := range rules {
+			// Skip validation if field doesn't exist and rule is not required
+			if !exists && !isRequiredRule(rule) {
 				continue
 			}
 
-			ruleParts := strings.Split(rule, ":")
-			ruleName := ruleParts[0]
-			ruleValue := ""
-			if len(ruleParts) > 1 {
-				ruleValue = strings.Join(ruleParts[1:], ":")
+			if err := rule.Validate(value); err != nil {
+				if v.errors[field] == nil {
+					v.errors[field] = make([]string, 0)
+				}
+				v.errors[field] = append(v.errors[field], err.Error())
+				isValid = false
 			}
+		}
+	}
 
-			if validator, exists := v.rules[ruleName]; exists {
-				if err := validator(field.Interface(), ruleValue); err != nil {
-					errors.AddError(fieldName, err.Error(), field.Interface())
+	return isValid
+}
+
+// HasErrors checks if there are any validation errors
+func (v *Validator) HasErrors() bool {
+	return len(v.errors) > 0
+}
+
+// GetErrors returns all validation errors
+func (v *Validator) GetErrors() map[string][]string {
+	return v.errors
+}
+
+// GetError returns the first error for a field
+func (v *Validator) GetError(field string) string {
+	if errors, exists := v.errors[field]; exists && len(errors) > 0 {
+		return errors[0]
+	}
+	return ""
+}
+
+// GetErrorsForField returns all errors for a specific field
+func (v *Validator) GetErrorsForField(field string) []string {
+	if errors, exists := v.errors[field]; exists {
+		return errors
+	}
+	return []string{}
+}
+
+// GetFirstError returns the first error from any field
+func (v *Validator) GetFirstError() string {
+	for _, errors := range v.errors {
+		if len(errors) > 0 {
+			return errors[0]
+		}
+	}
+	return ""
+}
+
+// GetAllErrors returns all errors as a flat slice
+func (v *Validator) GetAllErrors() []string {
+	var allErrors []string
+	for _, errors := range v.errors {
+		allErrors = append(allErrors, errors...)
+	}
+	return allErrors
+}
+
+// ClearErrors clears all validation errors
+func (v *Validator) ClearErrors() {
+	v.errors = make(map[string][]string)
+}
+
+// isRequiredRule checks if a rule is a required rule
+func isRequiredRule(rule Rule) bool {
+	_, ok := rule.(*RequiredRule)
+	return ok
+}
+
+// Request represents a validated request
+type Request struct {
+	data      map[string]interface{}
+	validator *Validator
+	errors    map[string][]string
+}
+
+// NewRequest creates a new request with validation
+func NewRequest(data map[string]interface{}) *Request {
+	return &Request{
+		data:      data,
+		validator: NewValidator(),
+		errors:    make(map[string][]string),
+	}
+}
+
+// Validate validates the request data
+func (r *Request) Validate() bool {
+	isValid := r.validator.Validate(r.data)
+	r.errors = r.validator.GetErrors()
+	return isValid
+}
+
+// HasErrors checks if there are any validation errors
+func (r *Request) HasErrors() bool {
+	return len(r.errors) > 0
+}
+
+// GetErrors returns all validation errors
+func (r *Request) GetErrors() map[string][]string {
+	return r.errors
+}
+
+// GetError returns the first error for a field
+func (r *Request) GetError(field string) string {
+	return r.validator.GetError(field)
+}
+
+// GetErrorsForField returns all errors for a specific field
+func (r *Request) GetErrorsForField(field string) []string {
+	return r.validator.GetErrorsForField(field)
+}
+
+// GetFirstError returns the first error from any field
+func (r *Request) GetFirstError() string {
+	return r.validator.GetFirstError()
+}
+
+// GetAllErrors returns all errors as a flat slice
+func (r *Request) GetAllErrors() []string {
+	return r.validator.GetAllErrors()
+}
+
+// Get returns a value from the request data
+func (r *Request) Get(field string) interface{} {
+	return r.data[field]
+}
+
+// GetString returns a string value from the request data
+func (r *Request) GetString(field string) string {
+	if value, exists := r.data[field]; exists {
+		if str, ok := value.(string); ok {
+			return str
+		}
+	}
+	return ""
+}
+
+// GetInt returns an integer value from the request data
+func (r *Request) GetInt(field string) int {
+	if value, exists := r.data[field]; exists {
+		switch v := value.(type) {
+		case int:
+			return v
+		case int64:
+			return int(v)
+		case float64:
+			return int(v)
+		case string:
+			// Try to parse string to int
+			if i, err := strconv.Atoi(v); err == nil {
+				return i
+			}
+		}
+	}
+	return 0
+}
+
+// GetFloat returns a float value from the request data
+func (r *Request) GetFloat(field string) float64 {
+	if value, exists := r.data[field]; exists {
+		switch v := value.(type) {
+		case float64:
+			return v
+		case float32:
+			return float64(v)
+		case int:
+			return float64(v)
+		case int64:
+			return float64(v)
+		case string:
+			// Try to parse string to float
+			if f, err := strconv.ParseFloat(v, 64); err == nil {
+				return f
+			}
+		}
+	}
+	return 0.0
+}
+
+// GetBool returns a boolean value from the request data
+func (r *Request) GetBool(field string) bool {
+	if value, exists := r.data[field]; exists {
+		switch v := value.(type) {
+		case bool:
+			return v
+		case string:
+			return strings.ToLower(v) == "true" || v == "1"
+		case int:
+			return v != 0
+		}
+	}
+	return false
+}
+
+// GetArray returns an array value from the request data
+func (r *Request) GetArray(field string) []interface{} {
+	if value, exists := r.data[field]; exists {
+		if arr, ok := value.([]interface{}); ok {
+			return arr
+		}
+	}
+	return []interface{}{}
+}
+
+// GetMap returns a map value from the request data
+func (r *Request) GetMap(field string) map[string]interface{} {
+	if value, exists := r.data[field]; exists {
+		if m, ok := value.(map[string]interface{}); ok {
+			return m
+		}
+	}
+	return map[string]interface{}{}
+}
+
+// Set sets a value in the request data
+func (r *Request) Set(field string, value interface{}) {
+	r.data[field] = value
+}
+
+// Has checks if a field exists in the request data
+func (r *Request) Has(field string) bool {
+	_, exists := r.data[field]
+	return exists
+}
+
+// All returns all request data
+func (r *Request) All() map[string]interface{} {
+	return r.data
+}
+
+// Only returns only the specified fields from request data
+func (r *Request) Only(fields ...string) map[string]interface{} {
+	result := make(map[string]interface{})
+	for _, field := range fields {
+		if value, exists := r.data[field]; exists {
+			result[field] = value
+		}
+	}
+	return result
+}
+
+// Except returns all fields except the specified ones
+func (r *Request) Except(fields ...string) map[string]interface{} {
+	result := make(map[string]interface{})
+	excluded := make(map[string]bool)
+
+	for _, field := range fields {
+		excluded[field] = true
+	}
+
+	for field, value := range r.data {
+		if !excluded[field] {
+			result[field] = value
+		}
+	}
+
+	return result
+}
+
+// AddRule adds a validation rule
+func (r *Request) AddRule(field string, rule Rule) {
+	r.validator.AddRule(field, rule)
+}
+
+// AddRules adds multiple validation rules
+func (r *Request) AddRules(field string, rules ...Rule) {
+	r.validator.AddRules(field, rules...)
+}
+
+// Fluent validation methods
+
+// Required marks a field as required
+func (r *Request) Required(field string, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewRequiredRule(field, msg))
+	return r
+}
+
+// String validates that a field is a string
+func (r *Request) String(field string, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewStringRule(field, msg, 0, 0))
+	return r
+}
+
+// StringWithLength validates that a field is a string with specific length constraints
+func (r *Request) StringWithLength(field string, minLength, maxLength int, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewStringRule(field, msg, minLength, maxLength))
+	return r
+}
+
+// Email validates that a field is a valid email
+func (r *Request) Email(field string, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewEmailRule(field, msg))
+	return r
+}
+
+// Numeric validates that a field is numeric
+func (r *Request) Numeric(field string, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewNumericRule(field, msg, 0, 0))
+	return r
+}
+
+// NumericRange validates that a field is numeric within a range
+func (r *Request) NumericRange(field string, min, max float64, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewNumericRule(field, msg, min, max))
+	return r
+}
+
+// Integer validates that a field is an integer
+func (r *Request) Integer(field string, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewIntegerRule(field, msg, 0, 0))
+	return r
+}
+
+// IntegerRange validates that a field is an integer within a range
+func (r *Request) IntegerRange(field string, min, max int64, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewIntegerRule(field, msg, min, max))
+	return r
+}
+
+// Boolean validates that a field is a boolean
+func (r *Request) Boolean(field string, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewBooleanRule(field, msg))
+	return r
+}
+
+// Date validates that a field is a valid date
+func (r *Request) Date(field string, format string, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewDateRule(field, msg, format))
+	return r
+}
+
+// In validates that a field value is in a list of allowed values
+func (r *Request) In(field string, allowed []interface{}, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewInRule(field, msg, allowed))
+	return r
+}
+
+// NotIn validates that a field value is not in a list of disallowed values
+func (r *Request) NotIn(field string, disallowed []interface{}, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewNotInRule(field, msg, disallowed))
+	return r
+}
+
+// Regex validates that a field matches a regular expression
+func (r *Request) Regex(field string, pattern string, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewRegexRule(field, msg, pattern))
+	return r
+}
+
+// URL validates that a field is a valid URL
+func (r *Request) URL(field string, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewURLRule(field, msg))
+	return r
+}
+
+// UUID validates that a field is a valid UUID
+func (r *Request) UUID(field string, message ...string) *Request {
+	msg := ""
+	if len(message) > 0 {
+		msg = message[0]
+	}
+	r.AddRule(field, NewUUIDRule(field, msg))
+	return r
+}
+
+// Custom adds a custom validation rule
+func (r *Request) Custom(field string, rule Rule) *Request {
+	r.AddRule(field, rule)
+	return r
+}
+
+// Helper function to create validation rules from struct tags
+func ParseRulesFromStruct(s interface{}) map[string][]Rule {
+	rules := make(map[string][]Rule)
+
+	val := reflect.ValueOf(s)
+	typ := reflect.TypeOf(s)
+
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+		typ = typ.Elem()
+	}
+
+	for i := 0; i < val.NumField(); i++ {
+		field := typ.Field(i)
+		fieldName := strings.ToLower(field.Name)
+
+		// Parse validation tags
+		if tag := field.Tag.Get("validate"); tag != "" {
+			ruleStrings := strings.Split(tag, "|")
+
+			for _, ruleString := range ruleStrings {
+				ruleString = strings.TrimSpace(ruleString)
+				if ruleString == "" {
+					continue
+				}
+
+				rule := parseRuleFromString(fieldName, ruleString)
+				if rule != nil {
+					if rules[fieldName] == nil {
+						rules[fieldName] = make([]Rule, 0)
+					}
+					rules[fieldName] = append(rules[fieldName], rule)
 				}
 			}
 		}
 	}
 
-	if errors.HasErrors() {
-		return errors
-	}
-
-	return nil
+	return rules
 }
 
-// Validation rule implementations
+// parseRuleFromString parses a validation rule from a string
+func parseRuleFromString(field, ruleString string) Rule {
+	parts := strings.SplitN(ruleString, ":", 2)
+	ruleName := parts[0]
 
-func (v *FieldValidator) validateRequired(value interface{}, ruleValue string) error {
-	if value == nil {
-		return fmt.Errorf("field is required")
-	}
-
-	switch val := value.(type) {
-	case string:
-		if strings.TrimSpace(val) == "" {
-			return fmt.Errorf("field is required")
+	switch ruleName {
+	case "required":
+		return NewRequiredRule(field, "")
+	case "string":
+		return NewStringRule(field, "", 0, 0)
+	case "email":
+		return NewEmailRule(field, "")
+	case "numeric":
+		return NewNumericRule(field, "", 0, 0)
+	case "integer":
+		return NewIntegerRule(field, "", 0, 0)
+	case "boolean":
+		return NewBooleanRule(field, "")
+	case "date":
+		format := "2006-01-02"
+		if len(parts) > 1 {
+			format = parts[1]
 		}
-	case int, int8, int16, int32, int64:
-		if val == 0 {
-			return fmt.Errorf("field is required")
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		if val == 0 {
-			return fmt.Errorf("field is required")
-		}
-	case float32, float64:
-		if val == 0.0 {
-			return fmt.Errorf("field is required")
-		}
-	case bool:
-		// Bool is always valid, even if false
-		return nil
-	}
-
-	return nil
-}
-
-func (v *FieldValidator) validateEmail(value interface{}, ruleValue string) error {
-	str, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("field must be a string")
-	}
-
-	if str == "" {
-		return nil // Empty string is valid (use required rule for that)
-	}
-
-	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	if !emailRegex.MatchString(str) {
-		return fmt.Errorf("field must be a valid email address")
-	}
-
-	return nil
-}
-
-func (v *FieldValidator) validateMin(value interface{}, ruleValue string) error {
-	min, err := strconv.ParseFloat(ruleValue, 64)
-	if err != nil {
-		return fmt.Errorf("invalid min rule value: %s", ruleValue)
-	}
-
-	switch val := value.(type) {
-	case int:
-		if float64(val) < min {
-			return fmt.Errorf("field must be at least %v", min)
-		}
-	case int8:
-		if float64(val) < min {
-			return fmt.Errorf("field must be at least %v", min)
-		}
-	case int16:
-		if float64(val) < min {
-			return fmt.Errorf("field must be at least %v", min)
-		}
-	case int32:
-		if float64(val) < min {
-			return fmt.Errorf("field must be at least %v", min)
-		}
-	case int64:
-		if float64(val) < min {
-			return fmt.Errorf("field must be at least %v", min)
-		}
-	case uint:
-		if float64(val) < min {
-			return fmt.Errorf("field must be at least %v", min)
-		}
-	case uint8:
-		if float64(val) < min {
-			return fmt.Errorf("field must be at least %v", min)
-		}
-	case uint16:
-		if float64(val) < min {
-			return fmt.Errorf("field must be at least %v", min)
-		}
-	case uint32:
-		if float64(val) < min {
-			return fmt.Errorf("field must be at least %v", min)
-		}
-	case uint64:
-		if float64(val) < min {
-			return fmt.Errorf("field must be at least %v", min)
-		}
-	case float32:
-		if float64(val) < min {
-			return fmt.Errorf("field must be at least %v", min)
-		}
-	case float64:
-		if val < min {
-			return fmt.Errorf("field must be at least %v", min)
-		}
+		return NewDateRule(field, "", format)
+	case "url":
+		return NewURLRule(field, "")
+	case "uuid":
+		return NewUUIDRule(field, "")
 	default:
-		return fmt.Errorf("field must be a number")
-	}
+		// Handle parameterized rules
+		if len(parts) > 1 {
+			params := strings.Split(parts[1], ",")
 
-	return nil
-}
-
-func (v *FieldValidator) validateMax(value interface{}, ruleValue string) error {
-	max, err := strconv.ParseFloat(ruleValue, 64)
-	if err != nil {
-		return fmt.Errorf("invalid max rule value: %s", ruleValue)
-	}
-
-	switch val := value.(type) {
-	case int:
-		if float64(val) > max {
-			return fmt.Errorf("field must be at most %v", max)
-		}
-	case int8:
-		if float64(val) > max {
-			return fmt.Errorf("field must be at most %v", max)
-		}
-	case int16:
-		if float64(val) > max {
-			return fmt.Errorf("field must be at most %v", max)
-		}
-	case int32:
-		if float64(val) > max {
-			return fmt.Errorf("field must be at most %v", max)
-		}
-	case int64:
-		if float64(val) > max {
-			return fmt.Errorf("field must be at most %v", max)
-		}
-	case uint:
-		if float64(val) > max {
-			return fmt.Errorf("field must be at most %v", max)
-		}
-	case uint8:
-		if float64(val) > max {
-			return fmt.Errorf("field must be at most %v", max)
-		}
-	case uint16:
-		if float64(val) > max {
-			return fmt.Errorf("field must be at most %v", max)
-		}
-	case uint32:
-		if float64(val) > max {
-			return fmt.Errorf("field must be at most %v", max)
-		}
-	case uint64:
-		if float64(val) > max {
-			return fmt.Errorf("field must be at most %v", max)
-		}
-	case float32:
-		if float64(val) > max {
-			return fmt.Errorf("field must be at most %v", max)
-		}
-	case float64:
-		if val > max {
-			return fmt.Errorf("field must be at most %v", max)
-		}
-	default:
-		return fmt.Errorf("field must be a number")
-	}
-
-	return nil
-}
-
-func (v *FieldValidator) validateMinLength(value interface{}, ruleValue string) error {
-	minLen, err := strconv.Atoi(ruleValue)
-	if err != nil {
-		return fmt.Errorf("invalid min_length rule value: %s", ruleValue)
-	}
-
-	str, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("field must be a string")
-	}
-
-	if len(str) < minLen {
-		return fmt.Errorf("field must be at least %d characters long", minLen)
-	}
-
-	return nil
-}
-
-func (v *FieldValidator) validateMaxLength(value interface{}, ruleValue string) error {
-	maxLen, err := strconv.Atoi(ruleValue)
-	if err != nil {
-		return fmt.Errorf("invalid max_length rule value: %s", ruleValue)
-	}
-
-	str, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("field must be a string")
-	}
-
-	if len(str) > maxLen {
-		return fmt.Errorf("field must be at most %d characters long", maxLen)
-	}
-
-	return nil
-}
-
-func (v *FieldValidator) validateNumeric(value interface{}, ruleValue string) error {
-	switch value.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
-		return nil
-	case string:
-		str := value.(string)
-		if str == "" {
-			return nil // Empty string is valid (use required rule for that)
-		}
-		_, err := strconv.ParseFloat(str, 64)
-		if err != nil {
-			return fmt.Errorf("field must be numeric")
-		}
-		return nil
-	default:
-		return fmt.Errorf("field must be numeric")
-	}
-}
-
-func (v *FieldValidator) validateAlpha(value interface{}, ruleValue string) error {
-	str, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("field must be a string")
-	}
-
-	if str == "" {
-		return nil // Empty string is valid (use required rule for that)
-	}
-
-	for _, char := range str {
-		if !unicode.IsLetter(char) {
-			return fmt.Errorf("field must contain only letters")
+			switch ruleName {
+			case "min":
+				if len(params) > 0 {
+					if min, err := strconv.ParseFloat(params[0], 64); err == nil {
+						return NewNumericRule(field, "", min, 0)
+					}
+				}
+			case "max":
+				if len(params) > 0 {
+					if max, err := strconv.ParseFloat(params[0], 64); err == nil {
+						return NewNumericRule(field, "", 0, max)
+					}
+				}
+			case "min_length":
+				if len(params) > 0 {
+					if min, err := strconv.Atoi(params[0]); err == nil {
+						return NewStringRule(field, "", min, 0)
+					}
+				}
+			case "max_length":
+				if len(params) > 0 {
+					if max, err := strconv.Atoi(params[0]); err == nil {
+						return NewStringRule(field, "", 0, max)
+					}
+				}
+			case "regex":
+				if len(params) > 0 {
+					return NewRegexRule(field, "", params[0])
+				}
+			}
 		}
 	}
 
-	return nil
-}
-
-func (v *FieldValidator) validateAlphaNumeric(value interface{}, ruleValue string) error {
-	str, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("field must be a string")
-	}
-
-	if str == "" {
-		return nil // Empty string is valid (use required rule for that)
-	}
-
-	for _, char := range str {
-		if !unicode.IsLetter(char) && !unicode.IsNumber(char) {
-			return fmt.Errorf("field must contain only letters and numbers")
-		}
-	}
-
-	return nil
-}
-
-func (v *FieldValidator) validateURL(value interface{}, ruleValue string) error {
-	str, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("field must be a string")
-	}
-
-	if str == "" {
-		return nil // Empty string is valid (use required rule for that)
-	}
-
-	_, err := url.ParseRequestURI(str)
-	if err != nil {
-		return fmt.Errorf("field must be a valid URL")
-	}
-
-	return nil
-}
-
-func (v *FieldValidator) validateDate(value interface{}, ruleValue string) error {
-	str, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("field must be a string")
-	}
-
-	if str == "" {
-		return nil // Empty string is valid (use required rule for that)
-	}
-
-	format := "2006-01-02"
-	if ruleValue != "" {
-		format = ruleValue
-	}
-
-	_, err := time.Parse(format, str)
-	if err != nil {
-		return fmt.Errorf("field must be a valid date in format %s", format)
-	}
-
-	return nil
-}
-
-func (v *FieldValidator) validateRegex(value interface{}, ruleValue string) error {
-	str, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("field must be a string")
-	}
-
-	if str == "" {
-		return nil // Empty string is valid (use required rule for that)
-	}
-
-	regex, err := regexp.Compile(ruleValue)
-	if err != nil {
-		return fmt.Errorf("invalid regex pattern: %s", ruleValue)
-	}
-
-	if !regex.MatchString(str) {
-		return fmt.Errorf("field does not match required pattern")
-	}
-
-	return nil
-}
-
-func (v *FieldValidator) validateIn(value interface{}, ruleValue string) error {
-	if ruleValue == "" {
-		return fmt.Errorf("in rule requires a list of values")
-	}
-
-	allowedValues := strings.Split(ruleValue, ",")
-	for i, val := range allowedValues {
-		allowedValues[i] = strings.TrimSpace(val)
-	}
-
-	str := fmt.Sprintf("%v", value)
-	for _, allowed := range allowedValues {
-		if str == allowed {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("field must be one of: %s", strings.Join(allowedValues, ", "))
-}
-
-func (v *FieldValidator) validateNotIn(value interface{}, ruleValue string) error {
-	if ruleValue == "" {
-		return fmt.Errorf("not_in rule requires a list of values")
-	}
-
-	forbiddenValues := strings.Split(ruleValue, ",")
-	for i, val := range forbiddenValues {
-		forbiddenValues[i] = strings.TrimSpace(val)
-	}
-
-	str := fmt.Sprintf("%v", value)
-	for _, forbidden := range forbiddenValues {
-		if str == forbidden {
-			return fmt.Errorf("field must not be one of: %s", strings.Join(forbiddenValues, ", "))
-		}
-	}
-
-	return nil
-}
-
-func (v *FieldValidator) validateConfirmed(value interface{}, ruleValue string) error {
-	// This is a placeholder - confirmation validation typically requires
-	// comparing two fields (e.g., password and password_confirmation)
-	// This would need to be implemented at the struct level
-	return nil
-}
-
-func (v *FieldValidator) validateDifferent(value interface{}, ruleValue string) error {
-	// This is a placeholder - different validation typically requires
-	// comparing two fields
-	// This would need to be implemented at the struct level
-	return nil
-}
-
-func (v *FieldValidator) validateSame(value interface{}, ruleValue string) error {
-	// This is a placeholder - same validation typically requires
-	// comparing two fields
-	// This would need to be implemented at the struct level
 	return nil
 }
