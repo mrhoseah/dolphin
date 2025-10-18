@@ -106,6 +106,15 @@ Examples:
 	migrateCmd.Flags().BoolP("fresh", "f", false, "Drop all tables and re-run all migrations")
 	migrateCmd.Flags().BoolP("seed", "s", false, "Run the database seeders")
 
+	// Make Auth command
+	var makeAuthCmd = &cobra.Command{
+		Use:   "make:auth",
+		Short: "Scaffold authentication files and user model",
+		Long:  "Create user model, auth controller, middleware, and migration files for authentication",
+		Run:   makeAuth,
+	}
+	makeAuthCmd.Flags().BoolP("force", "f", false, "Overwrite existing files")
+
 	// Update command
 	var updateCmd = &cobra.Command{
 		Use:   "update",
@@ -120,6 +129,7 @@ Examples:
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(makeControllerCmd)
 	rootCmd.AddCommand(makeModelCmd)
+	rootCmd.AddCommand(makeAuthCmd)
 	rootCmd.AddCommand(migrateCmd)
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(listCmd)
@@ -641,6 +651,7 @@ func listCommands(cmd *cobra.Command, args []string) {
 	fmt.Println("  dolphin make:middleware Auth     Create a new middleware")
 	fmt.Println("  dolphin make:seeder UserSeeder   Create a new seeder")
 	fmt.Println("  dolphin make:request UserRequest Create a new form request")
+	fmt.Println("  dolphin make:auth                Scaffold authentication system")
 	fmt.Println()
 	fmt.Println("📚 Documentation:")
 	fmt.Println("  dolphin swagger               Generate Swagger documentation")
@@ -1057,4 +1068,350 @@ func updateCLI(cmd *cobra.Command, args []string) {
 
 	fmt.Printf("✅ Dolphin CLI updated successfully!\n")
 	fmt.Printf("🚀 Run 'dolphin version' to verify the update\n")
+}
+
+func makeAuth(cmd *cobra.Command, args []string) {
+	force, _ := cmd.Flags().GetBool("force")
+
+	fmt.Printf("🔐 Scaffolding authentication system...\n")
+
+	// Check if we're in a Dolphin project
+	if _, err := os.Stat("go.mod"); err != nil {
+		fmt.Printf("❌ Not in a Dolphin project directory\n")
+		fmt.Printf("💡 Run 'dolphin new [project-name]' first\n")
+		return
+	}
+
+	// Create directories
+	dirs := []string{
+		"app/models",
+		"app/http/controllers",
+		"app/http/middleware",
+		"database/migrations",
+		"internal/auth",
+	}
+
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			fmt.Printf("❌ Failed to create directory %s: %v\n", dir, err)
+			return
+		}
+		fmt.Printf("📁 Created directory: %s\n", dir)
+	}
+
+	// Create User model
+	userModel := `package models
+
+import (
+	"time"
+	"golang.org/x/crypto/bcrypt"
+)
+
+type User struct {
+	ID        uint      ` + "`json:\"id\" gorm:\"primaryKey\"`" + `
+	Name      string    ` + "`json:\"name\" gorm:\"not null\"`" + `
+	Email     string    ` + "`json:\"email\" gorm:\"uniqueIndex;not null\"`" + `
+	Password  string    ` + "`json:\"-\" gorm:\"not null\"`" + `
+	CreatedAt time.Time ` + "`json:\"created_at\"`" + `
+	UpdatedAt time.Time ` + "`json:\"updated_at\"`" + `
+}
+
+// SetPassword hashes the password before storing
+func (u *User) SetPassword(password string) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	u.Password = string(hashedPassword)
+	return nil
+}
+
+// CheckPassword verifies the password
+func (u *User) CheckPassword(password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+	return err == nil
+}
+`
+
+	userModelPath := "app/models/user.go"
+	if _, err := os.Stat(userModelPath); err == nil && !force {
+		fmt.Printf("⚠️  User model already exists. Use --force to overwrite\n")
+	} else {
+		if err := os.WriteFile(userModelPath, []byte(userModel), 0644); err != nil {
+			fmt.Printf("❌ Failed to create user model: %v\n", err)
+			return
+		}
+		fmt.Printf("✅ Created user model: %s\n", userModelPath)
+	}
+
+	// Create Auth Controller
+	authController := `package controllers
+
+import (
+	"net/http"
+	"strconv"
+	"time"
+	
+	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
+)
+
+type AuthController struct{}
+
+type LoginRequest struct {
+	Email    string ` + "`json:\"email\" binding:\"required,email\"`" + `
+	Password string ` + "`json:\"password\" binding:\"required\"`" + `
+}
+
+type RegisterRequest struct {
+	Name     string ` + "`json:\"name\" binding:\"required\"`" + `
+	Email    string ` + "`json:\"email\" binding:\"required,email\"`" + `
+	Password string ` + "`json:\"password\" binding:\"required,min=6\"`" + `
+}
+
+// Login handles user authentication
+func (ac *AuthController) Login(c *gin.Context) {
+	var req LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	// TODO: Implement user lookup and password verification
+	// This is a placeholder implementation
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Login endpoint ready",
+		"user":    req.Email,
+	})
+}
+
+// Register handles user registration
+func (ac *AuthController) Register(c *gin.Context) {
+	var req RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	// TODO: Implement user creation
+	// This is a placeholder implementation
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Registration endpoint ready",
+		"user":    req.Email,
+	})
+}
+
+// Logout handles user logout
+func (ac *AuthController) Logout(c *gin.Context) {
+	// TODO: Implement logout logic (token invalidation, etc.)
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}
+
+// Profile returns user profile
+func (ac *AuthController) Profile(c *gin.Context) {
+	// TODO: Get user from context (set by auth middleware)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Profile endpoint ready",
+		"user":    "authenticated_user",
+	})
+}
+`
+
+	authControllerPath := "app/http/controllers/auth_controller.go"
+	if _, err := os.Stat(authControllerPath); err == nil && !force {
+		fmt.Printf("⚠️  Auth controller already exists. Use --force to overwrite\n")
+	} else {
+		if err := os.WriteFile(authControllerPath, []byte(authController), 0644); err != nil {
+			fmt.Printf("❌ Failed to create auth controller: %v\n", err)
+			return
+		}
+		fmt.Printf("✅ Created auth controller: %s\n", authControllerPath)
+	}
+
+	// Create Auth Middleware
+	authMiddleware := `package middleware
+
+import (
+	"net/http"
+	"strings"
+	
+	"github.com/gin-gonic/gin"
+)
+
+// AuthMiddleware validates JWT tokens
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+			c.Abort()
+			return
+		}
+		
+		// Check for Bearer token
+		tokenParts := strings.Split(authHeader, " ")
+		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
+			c.Abort()
+			return
+		}
+		
+		token := tokenParts[1]
+		
+		// TODO: Implement JWT token validation
+		// For now, just check if token exists
+		if token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
+		
+		// TODO: Parse token and set user context
+		// c.Set("user", user)
+		
+		c.Next()
+	}
+}
+
+// GuestMiddleware redirects authenticated users
+func GuestMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// TODO: Check if user is authenticated
+		// If authenticated, redirect to dashboard
+		c.Next()
+	}
+}
+`
+
+	authMiddlewarePath := "app/http/middleware/auth.go"
+	if _, err := os.Stat(authMiddlewarePath); err == nil && !force {
+		fmt.Printf("⚠️  Auth middleware already exists. Use --force to overwrite\n")
+	} else {
+		if err := os.WriteFile(authMiddlewarePath, []byte(authMiddleware), 0644); err != nil {
+			fmt.Printf("❌ Failed to create auth middleware: %v\n", err)
+			return
+		}
+		fmt.Printf("✅ Created auth middleware: %s\n", authMiddlewarePath)
+	}
+
+	// Create migration for users table
+	migration := `package migrations
+
+import (
+	"gorm.io/gorm"
+)
+
+func CreateUsersTable(db *gorm.DB) error {
+	return db.Exec(` + "`" + `
+		CREATE TABLE IF NOT EXISTS users (
+			id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+			name VARCHAR(255) NOT NULL,
+			email VARCHAR(255) UNIQUE NOT NULL,
+			password VARCHAR(255) NOT NULL,
+			created_at TIMESTAMP NULL,
+			updated_at TIMESTAMP NULL
+		)
+	` + "`" + `).Error
+}
+
+func DropUsersTable(db *gorm.DB) error {
+	return db.Exec("DROP TABLE IF EXISTS users").Error
+}
+`
+
+	migrationPath := "database/migrations/create_users_table.go"
+	if _, err := os.Stat(migrationPath); err == nil && !force {
+		fmt.Printf("⚠️  Users migration already exists. Use --force to overwrite\n")
+	} else {
+		if err := os.WriteFile(migrationPath, []byte(migration), 0644); err != nil {
+			fmt.Printf("❌ Failed to create users migration: %v\n", err)
+			return
+		}
+		fmt.Printf("✅ Created users migration: %s\n", migrationPath)
+	}
+
+	// Create auth service
+	authService := `package auth
+
+import (
+	"errors"
+	"time"
+	
+	"golang.org/x/crypto/bcrypt"
+)
+
+type AuthService struct {
+	// Add dependencies like user repository, JWT service, etc.
+}
+
+type LoginCredentials struct {
+	Email    string
+	Password string
+}
+
+type RegisterData struct {
+	Name     string
+	Email    string
+	Password string
+}
+
+// Login authenticates a user
+func (as *AuthService) Login(credentials LoginCredentials) (string, error) {
+	// TODO: Implement user lookup and password verification
+	// Return JWT token on success
+	return "jwt_token_placeholder", nil
+}
+
+// Register creates a new user
+func (as *AuthService) Register(data RegisterData) (*User, error) {
+	// TODO: Implement user creation
+	// Hash password, save to database
+	return &User{}, nil
+}
+
+// ValidateToken validates a JWT token
+func (as *AuthService) ValidateToken(token string) (*User, error) {
+	// TODO: Implement JWT validation
+	return &User{}, nil
+}
+
+// Logout invalidates a token
+func (as *AuthService) Logout(token string) error {
+	// TODO: Implement token invalidation
+	return nil
+}
+
+type User struct {
+	ID        uint      ` + "`json:\"id\"`" + `
+	Name      string    ` + "`json:\"name\"`" + `
+	Email     string    ` + "`json:\"email\"`" + `
+	CreatedAt time.Time ` + "`json:\"created_at\"`" + `
+	UpdatedAt time.Time ` + "`json:\"updated_at\"`" + `
+}
+`
+
+	authServicePath := "internal/auth/service.go"
+	if _, err := os.Stat(authServicePath); err == nil && !force {
+		fmt.Printf("⚠️  Auth service already exists. Use --force to overwrite\n")
+	} else {
+		if err := os.WriteFile(authServicePath, []byte(authService), 0644); err != nil {
+			fmt.Printf("❌ Failed to create auth service: %v\n", err)
+			return
+		}
+		fmt.Printf("✅ Created auth service: %s\n", authServicePath)
+	}
+
+	fmt.Printf("\n🎉 Authentication scaffolding completed!\n")
+	fmt.Printf("\n📋 Next steps:\n")
+	fmt.Printf("1. Run 'dolphin migrate' to create the users table\n")
+	fmt.Printf("2. Install dependencies: go get golang.org/x/crypto/bcrypt\n")
+	fmt.Printf("3. Implement JWT token generation and validation\n")
+	fmt.Printf("4. Add routes for login, register, logout, and profile\n")
+	fmt.Printf("5. Test your authentication endpoints\n")
+	fmt.Printf("\n💡 Files created:\n")
+	fmt.Printf("   - app/models/user.go (User model)\n")
+	fmt.Printf("   - app/http/controllers/auth_controller.go (Auth controller)\n")
+	fmt.Printf("   - app/http/middleware/auth.go (Auth middleware)\n")
+	fmt.Printf("   - database/migrations/create_users_table.go (Users migration)\n")
+	fmt.Printf("   - internal/auth/service.go (Auth service)\n")
 }
