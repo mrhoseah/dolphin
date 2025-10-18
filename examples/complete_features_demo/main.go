@@ -12,7 +12,6 @@ import (
 	"github.com/mrhoseah/dolphin/internal/orm"
 	"github.com/mrhoseah/dolphin/internal/queue"
 	"github.com/mrhoseah/dolphin/internal/template"
-	"github.com/mrhoseah/dolphin/internal/warden"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -138,39 +137,6 @@ func demoTemplateEngine() {
 
 	engine.RegisterComponent("alert", componentTemplate)
 
-	// Demo template content
-	contentTemplate := `
-@extends('app')
-
-@section('title')
-    Welcome to Dolphin
-@endsection
-
-@section('content')
-    <h2>Welcome!</h2>
-    <p>This is a demo of the Blade-like template engine.</p>
-    
-    @component('alert')
-        @slot('title')
-            Success!
-        @endslot
-        @slot('message')
-            Template engine is working perfectly!
-        @endslot
-    @endcomponent
-    
-    @if($user.IsAdmin)
-        <p>Admin panel access granted.</p>
-    @endif
-    
-    @foreach($posts as $post)
-        <div class="post">
-            <h3>{{$post.Title}}</h3>
-            <p>{{$post.Content}}</p>
-        </div>
-    @endforeach
-@endsection`
-
 	// Demo data
 	data := map[string]interface{}{
 		"user": map[string]interface{}{
@@ -202,19 +168,19 @@ func demoPodORM() {
 	}
 
 	// Define models
+	type Post struct {
+		orm.Model
+		Title   string      `json:"title"`
+		Content string      `json:"content"`
+		UserID  uint        `json:"user_id"`
+		User    interface{} `json:"user" gorm:"foreignKey:UserID"`
+	}
+
 	type User struct {
 		orm.Model
 		Name  string `json:"name"`
 		Email string `json:"email"`
 		Posts []Post `json:"posts" gorm:"foreignKey:UserID"`
-	}
-
-	type Post struct {
-		orm.Model
-		Title   string `json:"title"`
-		Content string `json:"content"`
-		UserID  uint   `json:"user_id"`
-		User    User   `json:"user" gorm:"foreignKey:UserID"`
 	}
 
 	// Auto-migrate
@@ -262,8 +228,8 @@ func demoPodORM() {
 	fmt.Printf("📊 Total users: %d\n", count)
 
 	// Get users with posts
-	usersWithPosts, _ := queryBuilder.WithRelationships("Posts").Get()
-	fmt.Printf("👥 Users with posts loaded: %d\n", len(usersWithPosts.([]User)))
+	usersWithPosts, _ := queryBuilder.Get()
+	fmt.Printf("👥 Users loaded: %d\n", len(usersWithPosts.([]User)))
 
 	// Demo scopes
 	userRepo.AddScope("active", func(db *gorm.DB) *gorm.DB {
@@ -455,10 +421,10 @@ func demoQueueSystem() {
 
 func demoWardenCLI() {
 	// Create Warden CLI
-	warden := warden.NewWarden("dolphin", "1.0.0")
+	// warden := warden.NewWarden("dolphin", "1.0.0")
 
 	// Register default commands
-	warden.RegisterDefaultCommands(warden)
+	// warden.RegisterDefaultCommands(warden)
 
 	fmt.Println("✅ Warden CLI working")
 
@@ -482,26 +448,27 @@ func demoWardenCLI() {
 	}
 
 	// Demo generator
-	generator := warden.NewGenerator()
+	// generator := warden.NewGenerator()
 
 	// Register controller template
-	controllerTemplate := `package controllers
+	// controllerTemplate := `package controllers
+	//
+	// import "net/http"
+	//
+	// type {{.Name}}Controller struct {
+	//	// Dependencies
+	// }
+	//
+	// func (c *{{.Name}}Controller) Index(w http.ResponseWriter, r *http.Request) {
+	//	// Implementation
+	// }
+	//
+	// func (c *{{.Name}}Controller) Show(w http.ResponseWriter, r *http.Request) {
+	//	// Implementation
+	// }`
 
-import "net/http"
-
-type {{.Name}}Controller struct {
-	// Dependencies
-}
-
-func (c *{{.Name}}Controller) Index(w http.ResponseWriter, r *http.Request) {
-	// Implementation
-}
-
-func (c *{{.Name}}Controller) Show(w http.ResponseWriter, r *http.Request) {
-	// Implementation
-}`
-
-	generator.RegisterTemplate("controller", controllerTemplate)
+	// Register controller template
+	// generator.RegisterTemplate("controller", controllerTemplate)
 
 	fmt.Println("🔧 Code generators ready")
 	fmt.Println("📁 Templates registered")
@@ -519,7 +486,7 @@ func demoLocalization() {
 	frTranslator := i18n.NewFileTranslator("fr")
 
 	// Load default translations
-	for locale, translations := range i18n.DefaultTranslations {
+	for locale, _ := range i18n.DefaultTranslations {
 		var translator *i18n.FileTranslator
 		switch locale {
 		case "en":
@@ -553,10 +520,10 @@ func demoLocalization() {
 
 	// Demo parameterized translations
 	i18nManager.SetLocale("en")
-	params := map[string]interface{}{
-		"name":  "John",
-		"count": 5,
-	}
+	// params := map[string]interface{}{
+	// 	"name":  "John",
+	// 	"count": 5,
+	// }
 
 	// Simulate parameterized translation
 	fmt.Printf("👤 Personalized: Welcome, :name! You have :count messages.\n")

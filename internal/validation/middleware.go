@@ -10,7 +10,7 @@ import (
 )
 
 // ValidationMiddleware creates a middleware for request validation
-func ValidationMiddleware(validator *FieldValidator, logger *zap.Logger) func(next http.Handler) http.Handler {
+func ValidationMiddleware(validator *Validator, logger *zap.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Parse request body
@@ -47,7 +47,7 @@ func ValidationMiddleware(validator *FieldValidator, logger *zap.Logger) func(ne
 }
 
 // SanitizationMiddleware creates a middleware for request sanitization
-func SanitizationMiddleware(sanitizer *FieldSanitizer, logger *zap.Logger) func(next http.Handler) http.Handler {
+func SanitizationMiddleware(sanitizer *RequestSanitizer, logger *zap.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Parse request body
@@ -83,7 +83,7 @@ func SanitizationMiddleware(sanitizer *FieldSanitizer, logger *zap.Logger) func(
 }
 
 // FormValidationMiddleware creates a middleware for form validation
-func FormValidationMiddleware(validator *FieldValidator, logger *zap.Logger) func(next http.Handler) http.Handler {
+func FormValidationMiddleware(validator *Validator, logger *zap.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Parse form data
@@ -190,8 +190,8 @@ func GetSanitizedForm(ctx context.Context) map[string]interface{} {
 
 // ValidationManager manages validation and sanitization
 type ValidationManager struct {
-	validator    *FieldValidator
-	sanitizer    *FieldSanitizer
+	validator    *Validator
+	sanitizer    *RequestSanitizer
 	reqSanitizer *RequestSanitizer
 	logger       *zap.Logger
 }
@@ -199,20 +199,20 @@ type ValidationManager struct {
 // NewValidationManager creates a new validation manager
 func NewValidationManager(logger *zap.Logger) *ValidationManager {
 	return &ValidationManager{
-		validator:    NewFieldValidator(),
-		sanitizer:    NewFieldSanitizer(),
+		validator:    NewValidator(),
+		sanitizer:    NewRequestSanitizer(),
 		reqSanitizer: NewRequestSanitizer(),
 		logger:       logger,
 	}
 }
 
 // GetValidator returns the field validator
-func (vm *ValidationManager) GetValidator() *FieldValidator {
+func (vm *ValidationManager) GetValidator() *Validator {
 	return vm.validator
 }
 
 // GetSanitizer returns the field sanitizer
-func (vm *ValidationManager) GetSanitizer() *FieldSanitizer {
+func (vm *ValidationManager) GetSanitizer() *RequestSanitizer {
 	return vm.sanitizer
 }
 

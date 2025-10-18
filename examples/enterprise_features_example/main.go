@@ -425,8 +425,8 @@ func demoValidationLayer() {
 
 	// Custom rule: username cannot be "admin"
 	customRule := &validation.BaseRule{
-		field:   "username",
-		message: "Username 'admin' is reserved",
+		Field:   "username",
+		Message: "Username 'admin' is reserved",
 	}
 
 	customRequest.Custom("username", &validation.RequiredRule{BaseRule: customRule})
@@ -434,8 +434,8 @@ func demoValidationLayer() {
 
 	// Add custom validation logic
 	customRequest.Custom("username", &validation.BaseRule{
-		field:   "username",
-		message: "Username 'admin' is reserved",
+		Field:   "username",
+		Message: "Username 'admin' is reserved",
 	})
 
 	if !customRequest.Validate() {

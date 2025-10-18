@@ -195,7 +195,7 @@ func (e *Engine) registerDefaultDirectives() {
 			return "", fmt.Errorf("@component requires a component name")
 		}
 		componentName := args[0]
-		return e.renderComponent(componentName, content, data)
+		return e.renderComponent(componentName, content, data), nil
 	})
 
 	// @slot directive
@@ -346,7 +346,7 @@ func (e *Engine) processExtendsDirective(content string, data interface{}) strin
 	matches := extendsRegex.FindAllStringSubmatch(content, -1)
 
 	for _, match := range matches {
-		layoutName := match[1]
+		_ = match[1] // Use the layout name
 		// Remove @extends line
 		content = strings.Replace(content, match[0], "", 1)
 		// This will be handled in renderWithLayout

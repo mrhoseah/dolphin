@@ -385,9 +385,8 @@ func (m *Middleware) detectLocale(r *http.Request) string {
 func T(key string, params ...map[string]interface{}) string {
 	// This would be called from templates
 	// In a real implementation, this would access the global i18n manager
-	var p map[string]interface{}
 	if len(params) > 0 {
-		p = params[0]
+		_ = params[0] // Use the parameter
 	}
 
 	// For now, return the key
@@ -397,9 +396,8 @@ func T(key string, params ...map[string]interface{}) string {
 // TPlural translates a plural key in templates
 func TPlural(key string, count int, params ...map[string]interface{}) string {
 	// This would be called from templates
-	var p map[string]interface{}
 	if len(params) > 0 {
-		p = params[0]
+		_ = params[0] // Use the parameter
 	}
 
 	// For now, return the key

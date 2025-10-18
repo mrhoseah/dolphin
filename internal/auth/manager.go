@@ -222,6 +222,44 @@ type JWTPayload struct {
 	IssuedAt  int64       `json:"iat"`
 }
 
+// Valid implements jwt.Claims interface
+func (p JWTPayload) Valid() error {
+	if time.Now().Unix() > p.ExpiresAt {
+		return fmt.Errorf("token expired")
+	}
+	return nil
+}
+
+// GetAudience implements jwt.Claims interface
+func (p JWTPayload) GetAudience() (jwt.ClaimStrings, error) {
+	return jwt.ClaimStrings{}, nil
+}
+
+// GetExpirationTime implements jwt.Claims interface
+func (p JWTPayload) GetExpirationTime() (*jwt.NumericDate, error) {
+	return jwt.NewNumericDate(time.Unix(p.ExpiresAt, 0)), nil
+}
+
+// GetIssuedAt implements jwt.Claims interface
+func (p JWTPayload) GetIssuedAt() (*jwt.NumericDate, error) {
+	return jwt.NewNumericDate(time.Unix(p.IssuedAt, 0)), nil
+}
+
+// GetIssuer implements jwt.Claims interface
+func (p JWTPayload) GetIssuer() (string, error) {
+	return "", nil
+}
+
+// GetNotBefore implements jwt.Claims interface
+func (p JWTPayload) GetNotBefore() (*jwt.NumericDate, error) {
+	return jwt.NewNumericDate(time.Unix(p.IssuedAt, 0)), nil
+}
+
+// GetSubject implements jwt.Claims interface
+func (p JWTPayload) GetSubject() (string, error) {
+	return p.Email, nil
+}
+
 // JWTGuard implements Guard using JWT tokens
 type JWTGuard struct {
 	name     string
