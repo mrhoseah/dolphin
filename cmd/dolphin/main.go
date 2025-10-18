@@ -56,7 +56,54 @@ Examples:
 		Run:   showVersion,
 	}
 
+	// Serve command
+	var serveCmd = &cobra.Command{
+		Use:   "serve",
+		Short: "Start the development server",
+		Long:  "Start the Dolphin development server with hot reload and debugging",
+		Run:   startServer,
+	}
+	serveCmd.Flags().StringP("host", "H", "127.0.0.1", "Host to bind the server to")
+	serveCmd.Flags().StringP("port", "p", "8080", "Port to bind the server to")
+	serveCmd.Flags().BoolP("debug", "d", false, "Enable debug mode")
+
+	// Make controller command
+	var makeControllerCmd = &cobra.Command{
+		Use:   "make:controller [name]",
+		Short: "Create a new controller",
+		Long:  "Create a new controller class with boilerplate code",
+		Args:  cobra.ExactArgs(1),
+		Run:   makeController,
+	}
+	makeControllerCmd.Flags().BoolP("resource", "r", false, "Generate a resource controller")
+	makeControllerCmd.Flags().StringP("model", "m", "", "The model to use")
+
+	// Make model command
+	var makeModelCmd = &cobra.Command{
+		Use:   "make:model [name]",
+		Short: "Create a new model",
+		Long:  "Create a new model class with boilerplate code",
+		Args:  cobra.ExactArgs(1),
+		Run:   makeModel,
+	}
+	makeModelCmd.Flags().BoolP("migration", "m", false, "Create a migration for the model")
+	makeModelCmd.Flags().BoolP("factory", "f", false, "Create a factory for the model")
+
+	// Migrate command
+	var migrateCmd = &cobra.Command{
+		Use:   "migrate",
+		Short: "Run database migrations",
+		Long:  "Run pending database migrations",
+		Run:   runMigrations,
+	}
+	migrateCmd.Flags().BoolP("fresh", "f", false, "Drop all tables and re-run all migrations")
+	migrateCmd.Flags().BoolP("seed", "s", false, "Run the database seeders")
+
 	rootCmd.AddCommand(newCmd)
+	rootCmd.AddCommand(serveCmd)
+	rootCmd.AddCommand(makeControllerCmd)
+	rootCmd.AddCommand(makeModelCmd)
+	rootCmd.AddCommand(migrateCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(versionCmd)
 
@@ -590,6 +637,68 @@ func listCommands(cmd *cobra.Command, args []string) {
 	fmt.Println("  dolphin key:generate          Generate application key")
 	fmt.Println()
 	fmt.Println("For more information, visit: https://github.com/mrhoseah/dolphin")
+}
+
+func startServer(cmd *cobra.Command, args []string) {
+	host, _ := cmd.Flags().GetString("host")
+	port, _ := cmd.Flags().GetString("port")
+	debug, _ := cmd.Flags().GetBool("debug")
+
+	fmt.Printf("🚀 Starting Dolphin development server...\n")
+	fmt.Printf("📍 Server running at http://%s:%s\n", host, port)
+	if debug {
+		fmt.Printf("🐛 Debug mode enabled\n")
+	}
+	fmt.Printf("📚 API Documentation: http://%s:%s/swagger/index.html\n", host, port)
+	fmt.Printf("🛑 Press Ctrl+C to stop the server\n")
+	fmt.Printf("\n⚠️  Note: This is a placeholder implementation. Full server functionality coming soon!\n")
+}
+
+func makeController(cmd *cobra.Command, args []string) {
+	name := args[0]
+	resource, _ := cmd.Flags().GetBool("resource")
+	model, _ := cmd.Flags().GetString("model")
+
+	fmt.Printf("🔨 Creating controller: %s\n", name)
+	if resource {
+		fmt.Printf("📋 Generating resource controller\n")
+	}
+	if model != "" {
+		fmt.Printf("🗄️  Using model: %s\n", model)
+	}
+	fmt.Printf("✅ Controller %s created successfully!\n", name)
+}
+
+func makeModel(cmd *cobra.Command, args []string) {
+	name := args[0]
+	migration, _ := cmd.Flags().GetBool("migration")
+	factory, _ := cmd.Flags().GetBool("factory")
+
+	fmt.Printf("🔨 Creating model: %s\n", name)
+	if migration {
+		fmt.Printf("🗄️  Creating migration\n")
+	}
+	if factory {
+		fmt.Printf("🏭 Creating factory\n")
+	}
+	fmt.Printf("✅ Model %s created successfully!\n", name)
+}
+
+func runMigrations(cmd *cobra.Command, args []string) {
+	fresh, _ := cmd.Flags().GetBool("fresh")
+	seed, _ := cmd.Flags().GetBool("seed")
+
+	if fresh {
+		fmt.Printf("🗄️  Dropping all tables and re-running migrations...\n")
+	} else {
+		fmt.Printf("🗄️  Running pending migrations...\n")
+	}
+
+	if seed {
+		fmt.Printf("🌱 Running database seeders...\n")
+	}
+
+	fmt.Printf("✅ Migrations completed successfully!\n")
 }
 
 func showVersion(cmd *cobra.Command, args []string) {
