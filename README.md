@@ -8,6 +8,18 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, tak
 
 **Why Dolphin?** Because building web applications shouldn't feel like navigating through endless documentation, configuring complex build systems, or wrestling with boilerplate code. Dolphin brings a polished developer experience to Go—inspired by productive frameworks—so rapid development feels natural and delightful.
 
+## 📚 Documentation
+
+**👉 [View Complete Documentation](https://dolphin-docs.netlify.app/)**
+
+The comprehensive documentation includes:
+- **Getting Started** guides and installation instructions
+- **Core Features** documentation (Routing, Fin Templates, Pod ORM)
+- **Advanced Features** (Dependency Injection, AOP, Auto-Configuration)
+- **Deployment** guides for Docker, cloud platforms, and traditional hosting
+- **Enterprise Features** including GraphQL and authentication
+- **API Reference** and examples
+
 ## ✨ Key Features
 
 - **🚀 Rapid Development**: Built-in scaffolding and code generation
