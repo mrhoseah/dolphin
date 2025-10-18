@@ -47,6 +47,14 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, tak
 - **📦 Asset Pipeline**: Bundling, versioning, and optimization for front-end assets
 - **🎨 Templating Engine**: Advanced templating with helpers, layouts, and components
 - **🧪 Testing Framework**: Comprehensive testing utilities with coverage and watch mode
+- **🎨 Blade-like Templates**: Advanced templating with @extends, @section, @yield directives
+- **🗄️ Pod ORM**: Advanced ORM with relationships, scopes, and query builder
+- **🔐 Multi-Guard Auth**: Session, JWT, and API authentication with providers
+- **📧 Mail System**: SMTP, Mailgun, SendGrid drivers with mailable classes
+- **🔄 Queue System**: Background job processing with workers and failed job handling
+- **⚡ Warden CLI**: Laravel-inspired CLI with generators and commands
+- **🌍 Localization**: Multi-locale support with file-based translations
+- **📝 Form Helpers**: Fluent form builder with validation integration
 
 ## 🚀 Quick Start
 

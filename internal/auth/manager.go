@@ -1,238 +1,564 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"errors"
 	"fmt"
-	"sync"
+	"net/http"
+	"reflect"
+	"strings"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
-// AuthManager manages authentication guards and providers
-type AuthManager struct {
-	guards       map[string]Guard
-	providers    map[string]UserProvider
-	defaultGuard string
-	mutex        sync.RWMutex
+// User represents an authenticated user
+type User struct {
+	ID              uint       `gorm:"primaryKey" json:"id"`
+	Email           string     `gorm:"uniqueIndex;not null" json:"email"`
+	Password        string     `gorm:"not null" json:"-"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at"`
+	RememberToken   string     `json:"remember_token"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
-// NewAuthManager creates a new authentication manager
+// Guard represents an authentication guard
+type Guard interface {
+	Attempt(credentials map[string]string) (bool, error)
+	Login(user interface{}) error
+	Logout() error
+	Check() bool
+	User() interface{}
+	ID() interface{}
+	Guest() bool
+}
+
+// Provider represents a user provider
+type Provider interface {
+	RetrieveByID(id interface{}) (interface{}, error)
+	RetrieveByCredentials(credentials map[string]string) (interface{}, error)
+	ValidateCredentials(user interface{}, credentials map[string]string) bool
+}
+
+// DatabaseProvider implements Provider using database
+type DatabaseProvider struct {
+	db    *gorm.DB
+	model interface{}
+}
+
+// NewDatabaseProvider creates a new database provider
+func NewDatabaseProvider(db *gorm.DB, model interface{}) *DatabaseProvider {
+	return &DatabaseProvider{
+		db:    db,
+		model: model,
+	}
+}
+
+// RetrieveByID retrieves a user by ID
+func (dp *DatabaseProvider) RetrieveByID(id interface{}) (interface{}, error) {
+	var user interface{}
+	err := dp.db.First(&user, id).Error
+	return user, err
+}
+
+// RetrieveByCredentials retrieves a user by credentials
+func (dp *DatabaseProvider) RetrieveByCredentials(credentials map[string]string) (interface{}, error) {
+	var user interface{}
+	query := dp.db
+
+	for key, value := range credentials {
+		if key != "password" {
+			query = query.Where(fmt.Sprintf("%s = ?", key), value)
+		}
+	}
+
+	err := query.First(&user).Error
+	return user, err
+}
+
+// ValidateCredentials validates user credentials
+func (dp *DatabaseProvider) ValidateCredentials(user interface{}, credentials map[string]string) bool {
+	if password, exists := credentials["password"]; exists {
+		// Get password field from user struct
+		userValue := reflect.ValueOf(user)
+		if userValue.Kind() == reflect.Ptr {
+			userValue = userValue.Elem()
+		}
+
+		passwordField := userValue.FieldByName("Password")
+		if passwordField.IsValid() {
+			storedPassword := passwordField.String()
+			return bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(password)) == nil
+		}
+	}
+	return false
+}
+
+// SessionGuard implements Guard using sessions
+type SessionGuard struct {
+	name     string
+	provider Provider
+	session  SessionStore
+	user     interface{}
+}
+
+// NewSessionGuard creates a new session guard
+func NewSessionGuard(name string, provider Provider, session SessionStore) *SessionGuard {
+	return &SessionGuard{
+		name:     name,
+		provider: provider,
+		session:  session,
+	}
+}
+
+// Attempt attempts to authenticate a user
+func (sg *SessionGuard) Attempt(credentials map[string]string) (bool, error) {
+	user, err := sg.provider.RetrieveByCredentials(credentials)
+	if err != nil {
+		return false, err
+	}
+
+	if sg.provider.ValidateCredentials(user, credentials) {
+		sg.Login(user)
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// Login logs in a user
+func (sg *SessionGuard) Login(user interface{}) error {
+	sg.user = user
+
+	// Get user ID
+	userValue := reflect.ValueOf(user)
+	if userValue.Kind() == reflect.Ptr {
+		userValue = userValue.Elem()
+	}
+
+	idField := userValue.FieldByName("ID")
+	if !idField.IsValid() {
+		return errors.New("user must have an ID field")
+	}
+
+	userID := idField.Interface()
+
+	// Store in session
+	sg.session.Put(fmt.Sprintf("auth.%s", sg.name), userID)
+	sg.session.Put(fmt.Sprintf("auth.%s.login", sg.name), time.Now().Unix())
+
+	return nil
+}
+
+// Logout logs out the current user
+func (sg *SessionGuard) Logout() error {
+	sg.user = nil
+	sg.session.Forget(fmt.Sprintf("auth.%s", sg.name))
+	sg.session.Forget(fmt.Sprintf("auth.%s.login", sg.name))
+	return nil
+}
+
+// Check checks if user is authenticated
+func (sg *SessionGuard) Check() bool {
+	if sg.user != nil {
+		return true
+	}
+
+	userID := sg.session.Get(fmt.Sprintf("auth.%s", sg.name))
+	if userID == nil {
+		return false
+	}
+
+	user, err := sg.provider.RetrieveByID(userID)
+	if err != nil {
+		return false
+	}
+
+	sg.user = user
+	return true
+}
+
+// User returns the authenticated user
+func (sg *SessionGuard) User() interface{} {
+	if !sg.Check() {
+		return nil
+	}
+	return sg.user
+}
+
+// ID returns the authenticated user's ID
+func (sg *SessionGuard) ID() interface{} {
+	if !sg.Check() {
+		return nil
+	}
+
+	userValue := reflect.ValueOf(sg.user)
+	if userValue.Kind() == reflect.Ptr {
+		userValue = userValue.Elem()
+	}
+
+	idField := userValue.FieldByName("ID")
+	if idField.IsValid() {
+		return idField.Interface()
+	}
+
+	return nil
+}
+
+// Guest checks if user is a guest
+func (sg *SessionGuard) Guest() bool {
+	return !sg.Check()
+}
+
+// JWTPayload represents JWT payload
+type JWTPayload struct {
+	UserID    interface{} `json:"user_id"`
+	Email     string      `json:"email"`
+	ExpiresAt int64       `json:"exp"`
+	IssuedAt  int64       `json:"iat"`
+}
+
+// JWTGuard implements Guard using JWT tokens
+type JWTGuard struct {
+	name     string
+	provider Provider
+	secret   string
+	user     interface{}
+}
+
+// NewJWTGuard creates a new JWT guard
+func NewJWTGuard(name string, provider Provider, secret string) *JWTGuard {
+	return &JWTGuard{
+		name:     name,
+		provider: provider,
+		secret:   secret,
+	}
+}
+
+// Attempt attempts to authenticate a user
+func (jg *JWTGuard) Attempt(credentials map[string]string) (bool, error) {
+	user, err := jg.provider.RetrieveByCredentials(credentials)
+	if err != nil {
+		return false, err
+	}
+
+	if jg.provider.ValidateCredentials(user, credentials) {
+		jg.Login(user)
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// Login logs in a user and returns a token
+func (jg *JWTGuard) Login(user interface{}) error {
+	jg.user = user
+
+	// Get user data
+	userValue := reflect.ValueOf(user)
+	if userValue.Kind() == reflect.Ptr {
+		userValue = userValue.Elem()
+	}
+
+	idField := userValue.FieldByName("ID")
+	emailField := userValue.FieldByName("Email")
+
+	if !idField.IsValid() {
+		return errors.New("user must have an ID field")
+	}
+
+	userID := idField.Interface()
+	email := ""
+	if emailField.IsValid() {
+		email = emailField.String()
+	}
+
+	// Create JWT token
+	now := time.Now()
+	payload := JWTPayload{
+		UserID:    userID,
+		Email:     email,
+		ExpiresAt: now.Add(24 * time.Hour).Unix(),
+		IssuedAt:  now.Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, payload)
+	tokenString, err := token.SignedString([]byte(jg.secret))
+	if err != nil {
+		return err
+	}
+
+	// Store token in user struct if possible
+	tokenField := userValue.FieldByName("RememberToken")
+	if tokenField.IsValid() && tokenField.CanSet() {
+		tokenField.SetString(tokenString)
+	}
+
+	return nil
+}
+
+// Logout logs out the current user
+func (jg *JWTGuard) Logout() error {
+	jg.user = nil
+	return nil
+}
+
+// Check checks if user is authenticated
+func (jg *JWTGuard) Check() bool {
+	return jg.user != nil
+}
+
+// User returns the authenticated user
+func (jg *JWTGuard) User() interface{} {
+	return jg.user
+}
+
+// ID returns the authenticated user's ID
+func (jg *JWTGuard) ID() interface{} {
+	if jg.user == nil {
+		return nil
+	}
+
+	userValue := reflect.ValueOf(jg.user)
+	if userValue.Kind() == reflect.Ptr {
+		userValue = userValue.Elem()
+	}
+
+	idField := userValue.FieldByName("ID")
+	if idField.IsValid() {
+		return idField.Interface()
+	}
+
+	return nil
+}
+
+// Guest checks if user is a guest
+func (jg *JWTGuard) Guest() bool {
+	return jg.user == nil
+}
+
+// ValidateToken validates a JWT token
+func (jg *JWTGuard) ValidateToken(tokenString string) (*JWTPayload, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &JWTPayload{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(jg.secret), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*JWTPayload); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, errors.New("invalid token")
+}
+
+// AuthenticateFromToken authenticates a user from a JWT token
+func (jg *JWTGuard) AuthenticateFromToken(tokenString string) error {
+	payload, err := jg.ValidateToken(tokenString)
+	if err != nil {
+		return err
+	}
+
+	user, err := jg.provider.RetrieveByID(payload.UserID)
+	if err != nil {
+		return err
+	}
+
+	jg.user = user
+	return nil
+}
+
+// AuthManager manages authentication
+type AuthManager struct {
+	guards       map[string]Guard
+	providers    map[string]Provider
+	defaultGuard string
+}
+
+// NewAuthManager creates a new auth manager
 func NewAuthManager() *AuthManager {
 	return &AuthManager{
 		guards:       make(map[string]Guard),
-		providers:    make(map[string]UserProvider),
+		providers:    make(map[string]Provider),
 		defaultGuard: "web",
 	}
 }
 
-// Guard returns the specified guard
-func (m *AuthManager) Guard(name string) Guard {
-	if name == "" {
-		name = m.defaultGuard
+// Guard returns a guard by name
+func (am *AuthManager) Guard(name string) Guard {
+	if guard, exists := am.guards[name]; exists {
+		return guard
 	}
-
-	m.mutex.RLock()
-	guard, exists := m.guards[name]
-	m.mutex.RUnlock()
-
-	if !exists {
-		panic(fmt.Sprintf("Auth guard [%s] is not defined", name))
-	}
-
-	return guard
+	return nil
 }
 
 // DefaultGuard returns the default guard
-func (m *AuthManager) DefaultGuard() Guard {
-	return m.Guard(m.defaultGuard)
-}
-
-// Check determines if the current user is authenticated
-func (m *AuthManager) Check() bool {
-	return m.DefaultGuard().Check()
-}
-
-// Guest determines if the current user is a guest
-func (m *AuthManager) Guest() bool {
-	return m.DefaultGuard().Guest()
-}
-
-// User returns the currently authenticated user
-func (m *AuthManager) User() Authenticatable {
-	return m.DefaultGuard().User()
-}
-
-// ID returns the ID of the currently authenticated user
-func (m *AuthManager) ID() uint {
-	return m.DefaultGuard().ID()
-}
-
-// Login logs in a user
-func (m *AuthManager) Login(user Authenticatable) error {
-	return m.DefaultGuard().Login(user)
-}
-
-// LoginUsingID logs in a user by ID
-func (m *AuthManager) LoginUsingID(id uint) error {
-	return m.DefaultGuard().LoginUsingID(id)
-}
-
-// LoginWithCredentials logs in a user with credentials
-func (m *AuthManager) LoginWithCredentials(credentials map[string]string) error {
-	return m.DefaultGuard().LoginWithCredentials(credentials)
-}
-
-// Logout logs out the current user
-func (m *AuthManager) Logout() {
-	m.DefaultGuard().Logout()
-}
-
-// Once logs in a user for a single request
-func (m *AuthManager) Once(user Authenticatable) error {
-	return m.DefaultGuard().Once(user)
-}
-
-// OnceUsingID logs in a user by ID for a single request
-func (m *AuthManager) OnceUsingID(id uint) error {
-	return m.DefaultGuard().OnceUsingID(id)
-}
-
-// Validate validates the given credentials
-func (m *AuthManager) Validate(credentials map[string]string) bool {
-	return m.DefaultGuard().Validate(credentials)
-}
-
-// Attempt attempts to authenticate a user with the given credentials
-func (m *AuthManager) Attempt(credentials map[string]string) bool {
-	return m.DefaultGuard().Attempt(credentials)
-}
-
-// AttemptWithRemember attempts to authenticate a user with the given credentials and remember option
-func (m *AuthManager) AttemptWithRemember(credentials map[string]string, remember bool) bool {
-	return m.DefaultGuard().AttemptWithRemember(credentials, remember)
+func (am *AuthManager) DefaultGuard() Guard {
+	return am.Guard(am.defaultGuard)
 }
 
 // RegisterGuard registers a guard
-func (m *AuthManager) RegisterGuard(name string, guard Guard) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	m.guards[name] = guard
+func (am *AuthManager) RegisterGuard(name string, guard Guard) {
+	am.guards[name] = guard
 }
 
-// RegisterProvider registers a user provider
-func (m *AuthManager) RegisterProvider(name string, provider UserProvider) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	m.providers[name] = provider
+// RegisterProvider registers a provider
+func (am *AuthManager) RegisterProvider(name string, provider Provider) {
+	am.providers[name] = provider
 }
 
 // SetDefaultGuard sets the default guard
-func (m *AuthManager) SetDefaultGuard(name string) {
-	m.defaultGuard = name
+func (am *AuthManager) SetDefaultGuard(name string) {
+	am.defaultGuard = name
 }
 
-// AuthFacade provides a static interface to the authentication manager
-type AuthFacade struct {
-	manager *AuthManager
+// Attempt attempts to authenticate using the default guard
+func (am *AuthManager) Attempt(credentials map[string]string) (bool, error) {
+	return am.DefaultGuard().Attempt(credentials)
 }
 
-// NewAuthFacade creates a new auth facade
-func NewAuthFacade(manager *AuthManager) *AuthFacade {
-	return &AuthFacade{manager: manager}
+// Login logs in a user using the default guard
+func (am *AuthManager) Login(user interface{}) error {
+	return am.DefaultGuard().Login(user)
 }
 
-// Check determines if the current user is authenticated
-func (f *AuthFacade) Check() bool {
-	return f.manager.Check()
+// Logout logs out the current user using the default guard
+func (am *AuthManager) Logout() error {
+	return am.DefaultGuard().Logout()
 }
 
-// Guest determines if the current user is a guest
-func (f *AuthFacade) Guest() bool {
-	return f.manager.Guest()
+// Check checks if user is authenticated using the default guard
+func (am *AuthManager) Check() bool {
+	return am.DefaultGuard().Check()
 }
 
-// User returns the currently authenticated user
-func (f *AuthFacade) User() Authenticatable {
-	return f.manager.User()
+// User returns the authenticated user using the default guard
+func (am *AuthManager) User() interface{} {
+	return am.DefaultGuard().User()
 }
 
-// ID returns the ID of the currently authenticated user
-func (f *AuthFacade) ID() uint {
-	return f.manager.ID()
+// ID returns the authenticated user's ID using the default guard
+func (am *AuthManager) ID() interface{} {
+	return am.DefaultGuard().ID()
 }
 
-// Login logs in a user
-func (f *AuthFacade) Login(user Authenticatable) error {
-	return f.manager.Login(user)
+// Guest checks if user is a guest using the default guard
+func (am *AuthManager) Guest() bool {
+	return am.DefaultGuard().Guest()
 }
 
-// LoginUsingID logs in a user by ID
-func (f *AuthFacade) LoginUsingID(id uint) error {
-	return f.manager.LoginUsingID(id)
+// SessionStore represents a session store interface
+type SessionStore interface {
+	Get(key string) interface{}
+	Put(key string, value interface{})
+	Forget(key string)
+	Flush()
 }
 
-// LoginWithCredentials logs in a user with credentials
-func (f *AuthFacade) LoginWithCredentials(credentials map[string]string) error {
-	return f.manager.LoginWithCredentials(credentials)
+// PasswordHasher handles password hashing
+type PasswordHasher struct{}
+
+// Hash hashes a password
+func (ph *PasswordHasher) Hash(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(hash), err
 }
 
-// Logout logs out the current user
-func (f *AuthFacade) Logout() {
-	f.manager.Logout()
+// Check checks a password against a hash
+func (ph *PasswordHasher) Check(password, hash string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }
 
-// Once logs in a user for a single request
-func (f *AuthFacade) Once(user Authenticatable) error {
-	return f.manager.Once(user)
+// GenerateRememberToken generates a remember token
+func (ph *PasswordHasher) GenerateRememberToken() string {
+	bytes := make([]byte, 32)
+	rand.Read(bytes)
+	return base64.URLEncoding.EncodeToString(bytes)
 }
 
-// OnceUsingID logs in a user by ID for a single request
-func (f *AuthFacade) OnceUsingID(id uint) error {
-	return f.manager.OnceUsingID(id)
+// Middleware represents authentication middleware
+type Middleware struct {
+	authManager *AuthManager
 }
 
-// Validate validates the given credentials
-func (f *AuthFacade) Validate(credentials map[string]string) bool {
-	return f.manager.Validate(credentials)
+// NewMiddleware creates new authentication middleware
+func NewMiddleware(authManager *AuthManager) *Middleware {
+	return &Middleware{
+		authManager: authManager,
+	}
 }
 
-// Attempt attempts to authenticate a user with the given credentials
-func (f *AuthFacade) Attempt(credentials map[string]string) bool {
-	return f.manager.Attempt(credentials)
+// Authenticate middleware checks if user is authenticated
+func (m *Middleware) Authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !m.authManager.Check() {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
-// AttemptWithRemember attempts to authenticate a user with the given credentials and remember option
-func (f *AuthFacade) AttemptWithRemember(credentials map[string]string, remember bool) bool {
-	return f.manager.AttemptWithRemember(credentials, remember)
+// Guest middleware checks if user is a guest
+func (m *Middleware) Guest(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if m.authManager.Check() {
+			http.Redirect(w, r, "/dashboard", http.StatusFound)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
-// Guard returns the specified guard
-func (f *AuthFacade) Guard(name string) Guard {
-	return f.manager.Guard(name)
+// Guard middleware checks authentication for a specific guard
+func (m *Middleware) Guard(guardName string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			guard := m.authManager.Guard(guardName)
+			if guard == nil || !guard.Check() {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
-// DefaultGuard returns the default guard
-func (f *AuthFacade) DefaultGuard() Guard {
-	return f.manager.DefaultGuard()
+// ExtractTokenFromRequest extracts JWT token from request
+func ExtractTokenFromRequest(r *http.Request) string {
+	// Check Authorization header
+	authHeader := r.Header.Get("Authorization")
+	if authHeader != "" {
+		parts := strings.Split(authHeader, " ")
+		if len(parts) == 2 && parts[0] == "Bearer" {
+			return parts[1]
+		}
+	}
+
+	// Check query parameter
+	return r.URL.Query().Get("token")
 }
 
-// SetupAuth configures the authentication system
-func SetupAuth(db *gorm.DB, sessionStore SessionStore) *AuthManager {
-	manager := NewAuthManager()
+// HashPassword hashes a password
+func HashPassword(password string) (string, error) {
+	hasher := &PasswordHasher{}
+	return hasher.Hash(password)
+}
 
-	// Register user provider
-	userProvider := NewDatabaseUserProvider(db)
-	manager.RegisterProvider("users", userProvider)
+// CheckPassword checks a password against a hash
+func CheckPassword(password, hash string) bool {
+	hasher := &PasswordHasher{}
+	return hasher.Check(password, hash)
+}
 
-	// Register web guard
-	webGuard := NewSessionGuard("web", userProvider, sessionStore)
-	manager.RegisterGuard("web", webGuard)
-
-	// Register api guard (for API authentication)
-	apiGuard := NewSessionGuard("api", userProvider, sessionStore)
-	manager.RegisterGuard("api", apiGuard)
-
-	// Set default guard
-	manager.SetDefaultGuard("web")
-
-	return manager
+// GenerateRememberToken generates a remember token
+func GenerateRememberToken() string {
+	hasher := &PasswordHasher{}
+	return hasher.GenerateRememberToken()
 }
