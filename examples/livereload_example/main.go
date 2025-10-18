@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mrhoseah/dolphin/internal/livereload"
+	"dolphin/internal/livereload"
 	"go.uber.org/zap"
 )
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mrhoseah/dolphin/internal/config"
+	"dolphin/internal/config"
 	raptor "github.com/mrhoseah/raptor/core"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"

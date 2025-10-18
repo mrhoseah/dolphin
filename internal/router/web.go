@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/mrhoseah/dolphin/internal/auth"
-	dolphinMiddleware "github.com/mrhoseah/dolphin/internal/middleware"
-	"github.com/mrhoseah/dolphin/internal/time"
-	"github.com/mrhoseah/dolphin/internal/version"
+	"dolphin/internal/auth"
+	dolphinMiddleware "dolphin/internal/middleware"
+	"dolphin/internal/time"
+	"dolphin/internal/version"
 )
 
 // render joins base layout with header/footer partials and the page body.

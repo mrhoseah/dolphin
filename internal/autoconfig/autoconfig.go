@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/mrhoseah/dolphin/internal/container"
+	"dolphin/internal/container"
 )
 
 // AutoConfiguration defines the interface for auto-configuration

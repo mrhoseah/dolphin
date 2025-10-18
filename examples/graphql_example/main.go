@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mrhoseah/dolphin/internal/graphql"
+	"dolphin/internal/graphql"
 	"go.uber.org/zap"
 )
 

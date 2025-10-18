@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/mrhoseah/dolphin/app/http/controllers"
-	"github.com/mrhoseah/dolphin/internal/auth"
-	dolphinMiddleware "github.com/mrhoseah/dolphin/internal/middleware"
+	"dolphin/app/http/controllers"
+	"dolphin/internal/auth"
+	dolphinMiddleware "dolphin/internal/middleware"
 )
 
 // setupAPIRoutes configures API routes

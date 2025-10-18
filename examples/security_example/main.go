@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/gorilla/sessions"
-	"github.com/mrhoseah/dolphin/internal/auth"
-	"github.com/mrhoseah/dolphin/internal/security"
+	"dolphin/internal/auth"
+	"dolphin/internal/security"
 	"go.uber.org/zap"
 )
 

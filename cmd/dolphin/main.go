@@ -161,7 +161,7 @@ func createNewProject(cmd *cobra.Command, args []string) {
 	fmt.Printf("  cd %s\n", projectName)
 	fmt.Printf("  go mod tidy\n")
 	fmt.Printf("  dolphin serve\n")
-	fmt.Printf("\n📚 Documentation: https://github.com/mrhoseah/dolphin\n")
+	fmt.Printf("\n📚 Documentation: https://dolphin\n")
 }
 
 func createProjectStructure(projectName string) {
@@ -204,7 +204,7 @@ func createProjectStructure(projectName string) {
 go 1.21
 
 require (
-	github.com/mrhoseah/dolphin v1.0.0
+	dolphin v1.0.0
 )`, projectName)
 
 	if err := os.WriteFile(filepath.Join(projectName, "go.mod"), []byte(goModContent), 0644); err != nil {
@@ -247,11 +247,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mrhoseah/dolphin/internal/app"
-	"github.com/mrhoseah/dolphin/internal/config"
-	"github.com/mrhoseah/dolphin/internal/database"
-	"github.com/mrhoseah/dolphin/internal/logger"
-	"github.com/mrhoseah/dolphin/internal/router"
+	"dolphin/internal/app"
+	"dolphin/internal/config"
+	"dolphin/internal/database"
+	"dolphin/internal/logger"
+	"dolphin/internal/router"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -609,7 +609,7 @@ A Dolphin Framework application.
 
 ## Documentation
 
-Visit https://github.com/mrhoseah/dolphin for complete documentation.
+Visit https://dolphin for complete documentation.
 `, projectName)
 
 	if err := os.WriteFile(filepath.Join(projectName, "README.md"), []byte(readmeContent), 0644); err != nil {
@@ -666,7 +666,7 @@ func listCommands(cmd *cobra.Command, args []string) {
 	fmt.Println("🔑 Security:")
 	fmt.Println("  dolphin key:generate          Generate application key")
 	fmt.Println()
-	fmt.Println("For more information, visit: https://github.com/mrhoseah/dolphin")
+	fmt.Println("For more information, visit: https://dolphin")
 }
 
 func startServer(cmd *cobra.Command, args []string) {
@@ -757,7 +757,7 @@ func startServer(cmd *cobra.Command, args []string) {
                 <div class="flex items-center space-x-6">
                     <a href="/api/health" class="text-gray-600 hover:text-dolphin-primary text-sm font-medium transition duration-150">Health</a>
                     <a href="/api/status" class="text-gray-600 hover:text-dolphin-primary text-sm font-medium transition duration-150">Status</a>
-                    <a href="https://github.com/mrhoseah/dolphin" class="text-gray-600 hover:text-dolphin-primary text-sm font-medium transition duration-150">Docs</a>
+                    <a href="https://dolphin" class="text-gray-600 hover:text-dolphin-primary text-sm font-medium transition duration-150">Docs</a>
                     <button class="bg-dolphin-primary hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md transition duration-200">
                         Get Started
                     </button>
@@ -776,7 +776,7 @@ func startServer(cmd *cobra.Command, args []string) {
                 Your Dolphin application has been successfully initialized and is ready to sail.
             </p>
             <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <a href="https://github.com/mrhoseah/dolphin" class="bg-dolphin-primary hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition duration-200 shadow-xl shadow-teal-500/30">
+                <a href="https://dolphin" class="bg-dolphin-primary hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition duration-200 shadow-xl shadow-teal-500/30">
                     View Comprehensive Docs
                 </a>
                 <a href="/api/status" class="bg-white border-2 border-dolphin-secondary text-dolphin-secondary hover:bg-dolphin-secondary/10 px-8 py-3 rounded-xl font-semibold transition duration-200 shadow-lg">
@@ -983,7 +983,7 @@ func runMigrations(cmd *cobra.Command, args []string) {
 func showVersion(cmd *cobra.Command, args []string) {
 	fmt.Printf("🐬 Dolphin Framework CLI v%s\n", version)
 	fmt.Println("Built with ❤️  using Go")
-	fmt.Println("https://github.com/mrhoseah/dolphin")
+	fmt.Println("https://dolphin")
 }
 
 func updateCLI(cmd *cobra.Command, args []string) {
@@ -1056,13 +1056,13 @@ func updateCLI(cmd *cobra.Command, args []string) {
 	fmt.Printf("🔄 Force updating to version: %s\n", targetVersion)
 
 	// Install from GitHub
-	installCmd := exec.Command("go", "install", fmt.Sprintf("github.com/mrhoseah/dolphin/cmd/dolphin@%s", targetVersion))
+	installCmd := exec.Command("go", "install", fmt.Sprintf("dolphin/cmd/dolphin@%s", targetVersion))
 	installCmd.Stdout = os.Stdout
 	installCmd.Stderr = os.Stderr
 
 	if err := installCmd.Run(); err != nil {
 		fmt.Printf("❌ Failed to update CLI: %v\n", err)
-		fmt.Printf("💡 Try running: go install github.com/mrhoseah/dolphin/cmd/dolphin@latest\n")
+		fmt.Printf("💡 Try running: go install dolphin/cmd/dolphin@latest\n")
 		return
 	}
 
@@ -1089,6 +1089,11 @@ func makeAuth(cmd *cobra.Command, args []string) {
 		"app/http/middleware",
 		"database/migrations",
 		"internal/auth",
+		"resources/views/auth",
+		"resources/views/layouts",
+		"resources/views/components",
+		"public/css",
+		"public/js",
 	}
 
 	for _, dir := range dirs {
@@ -1398,9 +1403,508 @@ type User struct {
 			fmt.Printf("❌ Failed to create auth service: %v\n", err)
 			return
 		}
-		fmt.Printf("✅ Created auth service: %s\n", authServicePath)
+	fmt.Printf("✅ Created auth service: %s\n", authServicePath)
 	}
+	
+	// Create Fin Templates
+	
+	// Create main layout
+	mainLayout := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@yield('title', 'Dolphin App')</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    @stack('styles')
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold text-gray-900">
+                        <i class="fas fa-dolphin text-blue-600 mr-2"></i>
+                        Dolphin App
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    @auth
+                        <span class="text-gray-700">Welcome, {{ auth()->user()->name }}!</span>
+                        <a href="/profile" class="text-gray-600 hover:text-gray-900">Profile</a>
+                        <form method="POST" action="/logout" class="inline">
+                            @csrf
+                            <button type="submit" class="text-gray-600 hover:text-gray-900">Logout</button>
+                        </form>
+                    @else
+                        <a href="/login" class="text-gray-600 hover:text-gray-900">Login</a>
+                        <a href="/register" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Register</a>
+                    @endauth
+                </div>
+            </div>
+        </div>
+    </nav>
 
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        @if(session('success'))
+            <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {{ session('error') }}
+            </div>
+        @endif
+
+        @if($errors->any())
+            <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                <ul class="list-disc list-inside">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        @yield('content')
+    </main>
+
+    @stack('scripts')
+</body>
+</html>`
+	
+	mainLayoutPath := "resources/views/layouts/app.fin"
+	if _, err := os.Stat(mainLayoutPath); err == nil && !force {
+		fmt.Printf("⚠️  Main layout already exists. Use --force to overwrite\n")
+	} else {
+		if err := os.WriteFile(mainLayoutPath, []byte(mainLayout), 0644); err != nil {
+			fmt.Printf("❌ Failed to create main layout: %v\n", err)
+			return
+		}
+		fmt.Printf("✅ Created main layout: %s\n", mainLayoutPath)
+	}
+	
+	// Create login view
+	loginView := `@extends('layouts.app')
+
+@section('title', 'Login')
+
+@section('content')
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
+                <i class="fas fa-dolphin text-blue-600 text-xl"></i>
+            </div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Sign in to your account
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Or
+                <a href="/register" class="font-medium text-blue-600 hover:text-blue-500">
+                    create a new account
+                </a>
+            </p>
+        </div>
+        <form class="mt-8 space-y-6" method="POST" action="/login">
+            @csrf
+            <div class="rounded-md shadow-sm -space-y-px">
+                <div>
+                    <label for="email" class="sr-only">Email address</label>
+                    <input id="email" name="email" type="email" autocomplete="email" required 
+                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                           placeholder="Email address" value="{{ old('email') }}">
+                </div>
+                <div>
+                    <label for="password" class="sr-only">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required 
+                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                           placeholder="Password">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <input id="remember-me" name="remember" type="checkbox" 
+                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="remember-me" class="ml-2 block text-sm text-gray-900">
+                        Remember me
+                    </label>
+                </div>
+
+                <div class="text-sm">
+                    <a href="/forgot-password" class="font-medium text-blue-600 hover:text-blue-500">
+                        Forgot your password?
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" 
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <i class="fas fa-lock text-blue-500 group-hover:text-blue-400"></i>
+                    </span>
+                    Sign in
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endsection`
+	
+	loginViewPath := "resources/views/auth/login.fin"
+	if _, err := os.Stat(loginViewPath); err == nil && !force {
+		fmt.Printf("⚠️  Login view already exists. Use --force to overwrite\n")
+	} else {
+		if err := os.WriteFile(loginViewPath, []byte(loginView), 0644); err != nil {
+			fmt.Printf("❌ Failed to create login view: %v\n", err)
+			return
+		}
+		fmt.Printf("✅ Created login view: %s\n", loginViewPath)
+	}
+	
+	// Create register view
+	registerView := `@extends('layouts.app')
+
+@section('title', 'Register')
+
+@section('content')
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
+                <i class="fas fa-dolphin text-blue-600 text-xl"></i>
+            </div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Create your account
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Or
+                <a href="/login" class="font-medium text-blue-600 hover:text-blue-500">
+                    sign in to your existing account
+                </a>
+            </p>
+        </div>
+        <form class="mt-8 space-y-6" method="POST" action="/register">
+            @csrf
+            <div class="space-y-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                    <input id="name" name="name" type="text" autocomplete="name" required 
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" 
+                           placeholder="Enter your full name" value="{{ old('name') }}">
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                    <input id="email" name="email" type="email" autocomplete="email" required 
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" 
+                           placeholder="Enter your email" value="{{ old('email') }}">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="new-password" required 
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" 
+                           placeholder="Enter your password">
+                </div>
+                <div>
+                    <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                    <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" required 
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" 
+                           placeholder="Confirm your password">
+                </div>
+            </div>
+
+            <div class="flex items-center">
+                <input id="terms" name="terms" type="checkbox" required
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                <label for="terms" class="ml-2 block text-sm text-gray-900">
+                    I agree to the <a href="/terms" class="text-blue-600 hover:text-blue-500">Terms of Service</a> and <a href="/privacy" class="text-blue-600 hover:text-blue-500">Privacy Policy</a>
+                </label>
+            </div>
+
+            <div>
+                <button type="submit" 
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <i class="fas fa-user-plus text-blue-500 group-hover:text-blue-400"></i>
+                    </span>
+                    Create Account
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endsection`
+	
+	registerViewPath := "resources/views/auth/register.fin"
+	if _, err := os.Stat(registerViewPath); err == nil && !force {
+		fmt.Printf("⚠️  Register view already exists. Use --force to overwrite\n")
+	} else {
+		if err := os.WriteFile(registerViewPath, []byte(registerView), 0644); err != nil {
+			fmt.Printf("❌ Failed to create register view: %v\n", err)
+			return
+		}
+		fmt.Printf("✅ Created register view: %s\n", registerViewPath)
+	}
+	
+	// Create profile view
+	profileView := `@extends('layouts.app')
+
+@section('title', 'Profile')
+
+@section('content')
+<div class="max-w-3xl mx-auto">
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-6">Profile Information</h3>
+            
+            <form method="POST" action="/profile" class="space-y-6">
+                @csrf
+                @method('PUT')
+                
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                        <input type="text" name="name" id="name" value="{{ auth()->user()->name }}" 
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                        <input type="email" name="email" id="email" value="{{ auth()->user()->email }}" 
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                </div>
+                
+                <div class="flex justify-end">
+                    <button type="submit" 
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Update Profile
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Change Password Section -->
+    <div class="bg-white shadow rounded-lg mt-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-6">Change Password</h3>
+            
+            <form method="POST" action="/password" class="space-y-6">
+                @csrf
+                @method('PUT')
+                
+                <div>
+                    <label for="current_password" class="block text-sm font-medium text-gray-700">Current Password</label>
+                    <input type="password" name="current_password" id="current_password" 
+                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">New Password</label>
+                    <input type="password" name="password" id="password" 
+                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                
+                <div>
+                    <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Confirm New Password</label>
+                    <input type="password" name="password_confirmation" id="password_confirmation" 
+                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                
+                <div class="flex justify-end">
+                    <button type="submit" 
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Update Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection`
+	
+	profileViewPath := "resources/views/auth/profile.fin"
+	if _, err := os.Stat(profileViewPath); err == nil && !force {
+		fmt.Printf("⚠️  Profile view already exists. Use --force to overwrite\n")
+	} else {
+		if err := os.WriteFile(profileViewPath, []byte(profileView), 0644); err != nil {
+			fmt.Printf("❌ Failed to create profile view: %v\n", err)
+			return
+		}
+		fmt.Printf("✅ Created profile view: %s\n", profileViewPath)
+	}
+	
+	// Create forgot password view
+	forgotPasswordView := `@extends('layouts.app')
+
+@section('title', 'Forgot Password')
+
+@section('content')
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
+                <i class="fas fa-key text-blue-600 text-xl"></i>
+            </div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Forgot your password?
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                No problem. Just let us know your email address and we will email you a password reset link.
+            </p>
+        </div>
+        <form class="mt-8 space-y-6" method="POST" action="/forgot-password">
+            @csrf
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                <input id="email" name="email" type="email" autocomplete="email" required 
+                       class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" 
+                       placeholder="Enter your email address" value="{{ old('email') }}">
+            </div>
+
+            <div>
+                <button type="submit" 
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <i class="fas fa-paper-plane text-blue-500 group-hover:text-blue-400"></i>
+                    </span>
+                    Send Reset Link
+                </button>
+            </div>
+            
+            <div class="text-center">
+                <a href="/login" class="font-medium text-blue-600 hover:text-blue-500">
+                    Back to Login
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+@endsection`
+	
+	forgotPasswordViewPath := "resources/views/auth/forgot-password.fin"
+	if _, err := os.Stat(forgotPasswordViewPath); err == nil && !force {
+		fmt.Printf("⚠️  Forgot password view already exists. Use --force to overwrite\n")
+	} else {
+		if err := os.WriteFile(forgotPasswordViewPath, []byte(forgotPasswordView), 0644); err != nil {
+			fmt.Printf("❌ Failed to create forgot password view: %v\n", err)
+			return
+		}
+		fmt.Printf("✅ Created forgot password view: %s\n", forgotPasswordViewPath)
+	}
+	
+	// Update existing navigation files
+	fmt.Printf("\n🔄 Updating navigation files...\n")
+	
+	// Check for common navigation files and update them
+	navFiles := []string{
+		"resources/views/components/navbar.fin",
+		"resources/views/partials/navbar.fin", 
+		"resources/views/layouts/navbar.fin",
+		"resources/views/includes/navbar.fin",
+	}
+	
+	navbarContent := `<!-- Authentication Navigation -->
+<div class="flex items-center space-x-4">
+    @auth
+        <span class="text-gray-700">Welcome, {{ auth()->user()->name }}!</span>
+        <a href="/profile" class="text-gray-600 hover:text-gray-900 transition duration-150">
+            <i class="fas fa-user mr-1"></i>Profile
+        </a>
+        <form method="POST" action="/logout" class="inline">
+            @csrf
+            <button type="submit" class="text-gray-600 hover:text-gray-900 transition duration-150">
+                <i class="fas fa-sign-out-alt mr-1"></i>Logout
+            </button>
+        </form>
+    @else
+        <a href="/login" class="text-gray-600 hover:text-gray-900 transition duration-150">
+            <i class="fas fa-sign-in-alt mr-1"></i>Login
+        </a>
+        <a href="/register" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-150">
+            <i class="fas fa-user-plus mr-1"></i>Register
+        </a>
+    @endauth
+</div>`
+	
+	navbarUpdated := false
+	for _, navFile := range navFiles {
+		if _, err := os.Stat(navFile); err == nil {
+			// Read existing content
+			content, err := os.ReadFile(navFile)
+			if err != nil {
+				fmt.Printf("⚠️  Could not read %s: %v\n", navFile, err)
+				continue
+			}
+			
+			// Check if auth content already exists
+			if strings.Contains(string(content), "@auth") {
+				fmt.Printf("✅ %s already contains authentication links\n", navFile)
+				continue
+			}
+			
+			// Add auth content to the end
+			newContent := string(content) + "\n" + navbarContent
+			
+			if err := os.WriteFile(navFile, []byte(newContent), 0644); err != nil {
+				fmt.Printf("❌ Failed to update %s: %v\n", navFile, err)
+				continue
+			}
+			
+			fmt.Printf("✅ Updated navigation: %s\n", navFile)
+			navbarUpdated = true
+		}
+	}
+	
+	// If no existing navbar files found, create a reusable component
+	if !navbarUpdated {
+		navbarComponentPath := "resources/views/components/auth-nav.fin"
+		if err := os.WriteFile(navbarComponentPath, []byte(navbarContent), 0644); err != nil {
+			fmt.Printf("❌ Failed to create auth navigation component: %v\n", err)
+		} else {
+			fmt.Printf("✅ Created auth navigation component: %s\n", navbarComponentPath)
+			fmt.Printf("💡 Include it in your layouts with: @include('components.auth-nav')\n")
+		}
+	}
+	
+	// Create a sample routes file
+	routesContent := `// Authentication Routes
+// Add these to your routes file
+
+// Public routes
+router.GET("/login", authController.ShowLoginForm)
+router.POST("/login", authController.Login)
+router.GET("/register", authController.ShowRegisterForm)
+router.POST("/register", authController.Register)
+router.GET("/forgot-password", authController.ShowForgotPasswordForm)
+router.POST("/forgot-password", authController.SendResetLink)
+
+// Protected routes (require authentication)
+router.Use(authMiddleware.AuthMiddleware())
+router.GET("/profile", authController.Profile)
+router.PUT("/profile", authController.UpdateProfile)
+router.PUT("/password", authController.UpdatePassword)
+router.POST("/logout", authController.Logout)
+
+// Example of protecting specific routes
+router.GET("/dashboard", dashboardController.Index) // This will require auth
+router.GET("/settings", settingsController.Index) // This will require auth`
+	
+	routesPath := "routes/auth.example.go"
+	if err := os.WriteFile(routesPath, []byte(routesContent), 0644); err != nil {
+		fmt.Printf("❌ Failed to create routes example: %v\n", err)
+	} else {
+		fmt.Printf("✅ Created routes example: %s\n", routesPath)
+	}
+	
 	fmt.Printf("\n🎉 Authentication scaffolding completed!\n")
 	fmt.Printf("\n📋 Next steps:\n")
 	fmt.Printf("1. Run 'dolphin migrate' to create the users table\n")
@@ -1409,9 +1913,22 @@ type User struct {
 	fmt.Printf("4. Add routes for login, register, logout, and profile\n")
 	fmt.Printf("5. Test your authentication endpoints\n")
 	fmt.Printf("\n💡 Files created:\n")
+	fmt.Printf("   📁 Backend Files:\n")
 	fmt.Printf("   - app/models/user.go (User model)\n")
 	fmt.Printf("   - app/http/controllers/auth_controller.go (Auth controller)\n")
 	fmt.Printf("   - app/http/middleware/auth.go (Auth middleware)\n")
 	fmt.Printf("   - database/migrations/create_users_table.go (Users migration)\n")
 	fmt.Printf("   - internal/auth/service.go (Auth service)\n")
+	fmt.Printf("   - routes/auth.example.go (Routes example)\n")
+	fmt.Printf("\n   🎨 Frontend Files (Fin Templates):\n")
+	fmt.Printf("   - resources/views/layouts/app.fin (Main layout)\n")
+	fmt.Printf("   - resources/views/auth/login.fin (Login page)\n")
+	fmt.Printf("   - resources/views/auth/register.fin (Register page)\n")
+	fmt.Printf("   - resources/views/auth/profile.fin (Profile page)\n")
+	fmt.Printf("   - resources/views/auth/forgot-password.fin (Forgot password)\n")
+	fmt.Printf("   - resources/views/components/auth-nav.fin (Auth navigation)\n")
+	fmt.Printf("\n   🔗 Navigation Updated:\n")
+	fmt.Printf("   - Automatically detects and updates existing navbar files\n")
+	fmt.Printf("   - Creates reusable auth navigation component\n")
+	fmt.Printf("   - Includes login/logout/profile links with icons\n")
 }

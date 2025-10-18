@@ -268,7 +268,7 @@ func (g *Generator) generateRepositoryContent(name string) string {
 	return fmt.Sprintf(`package repositories
 
 import (
-    "github.com/mrhoseah/dolphin/app/models"
+    "dolphin/app/models"
     "gorm.io/gorm"
 )
 
@@ -331,8 +331,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	"github.com/mrhoseah/dolphin/app/models"
-	"github.com/mrhoseah/dolphin/app/repositories"
+	"dolphin/app/models"
+	"dolphin/app/repositories"
 	"gorm.io/gorm"
 )
 
@@ -495,7 +495,7 @@ func (g *Generator) generateProviderContent(name, providerType string, priority 
 	return `package providers
 
 import (
-	"github.com/mrhoseah/dolphin/internal/providers"
+	"dolphin/internal/providers"
 )
 
 // ` + name + `Provider implements ` + providerType + ` functionality

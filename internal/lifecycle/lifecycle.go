@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mrhoseah/dolphin/internal/container"
+	"dolphin/internal/container"
 )
 
 // ApplicationContext manages the application lifecycle

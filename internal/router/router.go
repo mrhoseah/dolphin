@@ -8,11 +8,11 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
-	"github.com/mrhoseah/dolphin/internal/app"
-	"github.com/mrhoseah/dolphin/internal/auth"
-	"github.com/mrhoseah/dolphin/internal/maintenance"
-	loggingMiddleware "github.com/mrhoseah/dolphin/internal/middleware/logging"
-	recoveryMiddleware "github.com/mrhoseah/dolphin/internal/middleware/recovery"
+	"dolphin/internal/app"
+	"dolphin/internal/auth"
+	"dolphin/internal/maintenance"
+	loggingMiddleware "dolphin/internal/middleware/logging"
+	recoveryMiddleware "dolphin/internal/middleware/recovery"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 

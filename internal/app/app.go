@@ -3,8 +3,8 @@ package app
 import (
 	"database/sql"
 
-	"github.com/mrhoseah/dolphin/internal/config"
-	"github.com/mrhoseah/dolphin/internal/database"
+	"dolphin/internal/config"
+	"dolphin/internal/database"
 	"go.uber.org/zap"
 )
 

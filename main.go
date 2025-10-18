@@ -30,11 +30,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mrhoseah/dolphin/internal/app"
-	"github.com/mrhoseah/dolphin/internal/config"
-	"github.com/mrhoseah/dolphin/internal/database"
-	"github.com/mrhoseah/dolphin/internal/logger"
-	"github.com/mrhoseah/dolphin/internal/router"
+	"dolphin/internal/app"
+	"dolphin/internal/config"
+	"dolphin/internal/database"
+	"dolphin/internal/logger"
+	"dolphin/internal/router"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )

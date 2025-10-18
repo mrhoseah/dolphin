@@ -5,11 +5,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/mrhoseah/dolphin/internal/factories"
-	"github.com/mrhoseah/dolphin/internal/fakes"
-	"github.com/mrhoseah/dolphin/internal/httpclient"
-	"github.com/mrhoseah/dolphin/internal/seeders"
-	"github.com/mrhoseah/dolphin/internal/validation"
+	"dolphin/internal/factories"
+	"dolphin/internal/fakes"
+	"dolphin/internal/httpclient"
+	"dolphin/internal/seeders"
+	"dolphin/internal/validation"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )

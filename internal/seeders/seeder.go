@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/mrhoseah/dolphin/internal/factories"
+	"dolphin/internal/factories"
 	"gorm.io/gorm"
 )
 
