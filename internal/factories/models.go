@@ -16,7 +16,7 @@ type UserFactory struct {
 func NewUserFactory(db *gorm.DB) *UserFactory {
 	user := &User{} // Assuming User model exists
 	baseFactory := NewFactory(user, db)
-	
+
 	return &UserFactory{
 		BaseFactory: baseFactory,
 		fake:        NewFakeData(),
@@ -25,23 +25,23 @@ func NewUserFactory(db *gorm.DB) *UserFactory {
 
 // User represents a user model (example)
 type User struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email" gorm:"uniqueIndex"`
-	Username  string    `json:"username" gorm:"uniqueIndex"`
-	Password  string    `json:"-"`
-	Phone     string    `json:"phone"`
-	Address   string    `json:"address"`
-	City      string    `json:"city"`
-	Country   string    `json:"country"`
-	Company   string    `json:"company"`
-	JobTitle  string    `json:"job_title"`
-	Bio       string    `json:"bio"`
-	Avatar    string    `json:"avatar"`
-	IsActive  bool      `json:"is_active"`
-	IsAdmin   bool      `json:"is_admin"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uint           `gorm:"primaryKey" json:"id"`
+	Name      string         `json:"name"`
+	Email     string         `json:"email" gorm:"uniqueIndex"`
+	Username  string         `json:"username" gorm:"uniqueIndex"`
+	Password  string         `json:"-"`
+	Phone     string         `json:"phone"`
+	Address   string         `json:"address"`
+	City      string         `json:"city"`
+	Country   string         `json:"country"`
+	Company   string         `json:"company"`
+	JobTitle  string         `json:"job_title"`
+	Bio       string         `json:"bio"`
+	Avatar    string         `json:"avatar"`
+	IsActive  bool           `json:"is_active"`
+	IsAdmin   bool           `json:"is_admin"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
 
@@ -67,30 +67,33 @@ func (uf *UserFactory) getDefaultAttributes() map[string]interface{} {
 
 // Admin creates an admin user
 func (uf *UserFactory) Admin() *UserFactory {
-	return uf.State("admin", func(instance interface{}) {
+	uf.State("admin", func(instance interface{}) {
 		if user, ok := instance.(*User); ok {
 			user.IsAdmin = true
 			user.IsActive = true
 		}
 	})
+	return uf
 }
 
 // Inactive creates an inactive user
 func (uf *UserFactory) Inactive() *UserFactory {
-	return uf.State("inactive", func(instance interface{}) {
+	uf.State("inactive", func(instance interface{}) {
 		if user, ok := instance.(*User); ok {
 			user.IsActive = false
 		}
 	})
+	return uf
 }
 
 // Verified creates a verified user
 func (uf *UserFactory) Verified() *UserFactory {
-	return uf.State("verified", func(instance interface{}) {
+	uf.State("verified", func(instance interface{}) {
 		if user, ok := instance.(*User); ok {
 			user.IsActive = true
 		}
 	})
+	return uf
 }
 
 // PostFactory creates Post model instances
@@ -103,7 +106,7 @@ type PostFactory struct {
 func NewPostFactory(db *gorm.DB) *PostFactory {
 	post := &Post{}
 	baseFactory := NewFactory(post, db)
-	
+
 	return &PostFactory{
 		BaseFactory: baseFactory,
 		fake:        NewFakeData(),
@@ -112,63 +115,65 @@ func NewPostFactory(db *gorm.DB) *PostFactory {
 
 // Post represents a post model (example)
 type Post struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	Excerpt   string    `json:"excerpt"`
-	Slug      string    `json:"slug" gorm:"uniqueIndex"`
-	AuthorID  uint      `json:"author_id"`
-	Author    *User     `json:"author" gorm:"foreignKey:AuthorID"`
-	Status    string    `json:"status"` // draft, published, archived
-	Views     int       `json:"views"`
-	Likes     int       `json:"likes"`
-	Featured  bool      `json:"featured"`
-	PublishedAt *time.Time `json:"published_at"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	Title       string         `json:"title"`
+	Content     string         `json:"content"`
+	Excerpt     string         `json:"excerpt"`
+	Slug        string         `json:"slug" gorm:"uniqueIndex"`
+	AuthorID    uint           `json:"author_id"`
+	Author      *User          `json:"author" gorm:"foreignKey:AuthorID"`
+	Status      string         `json:"status"` // draft, published, archived
+	Views       int            `json:"views"`
+	Likes       int            `json:"likes"`
+	Featured    bool           `json:"featured"`
+	PublishedAt *time.Time     `json:"published_at"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 // getDefaultAttributes returns default post attributes
 func (pf *PostFactory) getDefaultAttributes() map[string]interface{} {
 	title := pf.fake.Sentence()
 	return map[string]interface{}{
-		"Title":     title,
-		"Content":   pf.fake.Paragraph(),
-		"Excerpt":   pf.fake.Sentence(),
-		"Slug":      pf.fake.Username(), // Simplified slug generation
-		"Status":    "published",
-		"Views":     pf.fake.Number(0, 1000),
-		"Likes":     pf.fake.Number(0, 100),
-		"Featured":  false,
+		"Title":       title,
+		"Content":     pf.fake.Paragraph(),
+		"Excerpt":     pf.fake.Sentence(),
+		"Slug":        pf.fake.Username(), // Simplified slug generation
+		"Status":      "published",
+		"Views":       pf.fake.Number(0, 1000),
+		"Likes":       pf.fake.Number(0, 100),
+		"Featured":    false,
 		"PublishedAt": time.Now(),
 	}
 }
 
 // Draft creates a draft post
 func (pf *PostFactory) Draft() *PostFactory {
-	return pf.State("draft", func(instance interface{}) {
+	pf.State("draft", func(instance interface{}) {
 		if post, ok := instance.(*Post); ok {
 			post.Status = "draft"
 			post.PublishedAt = nil
 		}
 	})
+	return pf
 }
 
 // Published creates a published post
 func (pf *PostFactory) Published() *PostFactory {
-	return pf.State("published", func(instance interface{}) {
+	pf.State("published", func(instance interface{}) {
 		if post, ok := instance.(*Post); ok {
 			post.Status = "published"
 			now := time.Now()
 			post.PublishedAt = &now
 		}
 	})
+	return pf
 }
 
 // Featured creates a featured post
 func (pf *PostFactory) Featured() *PostFactory {
-	return pf.State("featured", func(instance interface{}) {
+	pf.State("featured", func(instance interface{}) {
 		if post, ok := instance.(*Post); ok {
 			post.Featured = true
 			post.Status = "published"
@@ -176,16 +181,18 @@ func (pf *PostFactory) Featured() *PostFactory {
 			post.PublishedAt = &now
 		}
 	})
+	return pf
 }
 
 // WithAuthor creates a post with a specific author
 func (pf *PostFactory) WithAuthor(author *User) *PostFactory {
-	return pf.State("with_author", func(instance interface{}) {
+	pf.State("with_author", func(instance interface{}) {
 		if post, ok := instance.(*Post); ok {
 			post.AuthorID = author.ID
 			post.Author = author
 		}
 	})
+	return pf
 }
 
 // ProductFactory creates Product model instances
@@ -198,7 +205,7 @@ type ProductFactory struct {
 func NewProductFactory(db *gorm.DB) *ProductFactory {
 	product := &Product{}
 	baseFactory := NewFactory(product, db)
-	
+
 	return &ProductFactory{
 		BaseFactory: baseFactory,
 		fake:        NewFakeData(),
@@ -207,24 +214,24 @@ func NewProductFactory(db *gorm.DB) *ProductFactory {
 
 // Product represents a product model (example)
 type Product struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	SKU         string    `json:"sku" gorm:"uniqueIndex"`
-	Price       float64   `json:"price"`
-	Cost        float64   `json:"cost"`
-	Stock       int       `json:"stock"`
-	Category    string    `json:"category"`
-	Brand       string    `json:"brand"`
-	Image       string    `json:"image"`
-	Weight      float64   `json:"weight"`
-	Dimensions  string    `json:"dimensions"`
-	IsActive    bool      `json:"is_active"`
-	IsFeatured  bool      `json:"is_featured"`
-	Rating      float64   `json:"rating"`
-	Reviews     int       `json:"reviews"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	SKU         string         `json:"sku" gorm:"uniqueIndex"`
+	Price       float64        `json:"price"`
+	Cost        float64        `json:"cost"`
+	Stock       int            `json:"stock"`
+	Category    string         `json:"category"`
+	Brand       string         `json:"brand"`
+	Image       string         `json:"image"`
+	Weight      float64        `json:"weight"`
+	Dimensions  string         `json:"dimensions"`
+	IsActive    bool           `json:"is_active"`
+	IsFeatured  bool           `json:"is_featured"`
+	Rating      float64        `json:"rating"`
+	Reviews     int            `json:"reviews"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
 
@@ -251,32 +258,35 @@ func (pf *ProductFactory) getDefaultAttributes() map[string]interface{} {
 
 // Featured creates a featured product
 func (pf *ProductFactory) Featured() *ProductFactory {
-	return pf.State("featured", func(instance interface{}) {
+	pf.State("featured", func(instance interface{}) {
 		if product, ok := instance.(*Product); ok {
 			product.IsFeatured = true
 			product.IsActive = true
 		}
 	})
+	return pf
 }
 
 // OutOfStock creates an out of stock product
 func (pf *ProductFactory) OutOfStock() *ProductFactory {
-	return pf.State("out_of_stock", func(instance interface{}) {
+	pf.State("out_of_stock", func(instance interface{}) {
 		if product, ok := instance.(*Product); ok {
 			product.Stock = 0
 			product.IsActive = false
 		}
 	})
+	return pf
 }
 
 // HighRated creates a high-rated product
 func (pf *ProductFactory) HighRated() *ProductFactory {
-	return pf.State("high_rated", func(instance interface{}) {
+	pf.State("high_rated", func(instance interface{}) {
 		if product, ok := instance.(*Product); ok {
 			product.Rating = pf.fake.Float(4.0, 5.0)
 			product.Reviews = pf.fake.Number(100, 1000)
 		}
 	})
+	return pf
 }
 
 // OrderFactory creates Order model instances
@@ -289,7 +299,7 @@ type OrderFactory struct {
 func NewOrderFactory(db *gorm.DB) *OrderFactory {
 	order := &Order{}
 	baseFactory := NewFactory(order, db)
-	
+
 	return &OrderFactory{
 		BaseFactory: baseFactory,
 		fake:        NewFakeData(),
@@ -298,26 +308,26 @@ func NewOrderFactory(db *gorm.DB) *OrderFactory {
 
 // Order represents an order model (example)
 type Order struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
-	OrderNumber string   `json:"order_number" gorm:"uniqueIndex"`
-	CustomerID  uint      `json:"customer_id"`
-	Customer    *User     `json:"customer" gorm:"foreignKey:CustomerID"`
-	Status      string    `json:"status"` // pending, processing, shipped, delivered, cancelled
-	Total       float64   `json:"total"`
-	Subtotal    float64   `json:"subtotal"`
-	Tax         float64   `json:"tax"`
-	Shipping    float64   `json:"shipping"`
-	Discount    float64   `json:"discount"`
-	Currency    string    `json:"currency"`
-	PaymentMethod string  `json:"payment_method"`
-	ShippingAddress string `json:"shipping_address"`
-	BillingAddress  string `json:"billing_address"`
-	Notes       string    `json:"notes"`
-	ShippedAt   *time.Time `json:"shipped_at"`
-	DeliveredAt *time.Time `json:"delivered_at"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	ID              uint           `gorm:"primaryKey" json:"id"`
+	OrderNumber     string         `json:"order_number" gorm:"uniqueIndex"`
+	CustomerID      uint           `json:"customer_id"`
+	Customer        *User          `json:"customer" gorm:"foreignKey:CustomerID"`
+	Status          string         `json:"status"` // pending, processing, shipped, delivered, cancelled
+	Total           float64        `json:"total"`
+	Subtotal        float64        `json:"subtotal"`
+	Tax             float64        `json:"tax"`
+	Shipping        float64        `json:"shipping"`
+	Discount        float64        `json:"discount"`
+	Currency        string         `json:"currency"`
+	PaymentMethod   string         `json:"payment_method"`
+	ShippingAddress string         `json:"shipping_address"`
+	BillingAddress  string         `json:"billing_address"`
+	Notes           string         `json:"notes"`
+	ShippedAt       *time.Time     `json:"shipped_at"`
+	DeliveredAt     *time.Time     `json:"delivered_at"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+	DeletedAt       gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 // getDefaultAttributes returns default order attributes
@@ -326,7 +336,7 @@ func (of *OrderFactory) getDefaultAttributes() map[string]interface{} {
 	tax := subtotal * 0.1
 	shipping := of.fake.Price(5.0, 25.0)
 	total := subtotal + tax + shipping
-	
+
 	return map[string]interface{}{
 		"OrderNumber":     of.fake.UUID(),
 		"Status":          "pending",
@@ -345,7 +355,7 @@ func (of *OrderFactory) getDefaultAttributes() map[string]interface{} {
 
 // Completed creates a completed order
 func (of *OrderFactory) Completed() *OrderFactory {
-	return of.State("completed", func(instance interface{}) {
+	of.State("completed", func(instance interface{}) {
 		if order, ok := instance.(*Order); ok {
 			order.Status = "delivered"
 			now := time.Now()
@@ -354,23 +364,26 @@ func (of *OrderFactory) Completed() *OrderFactory {
 			order.ShippedAt = &shippedAt
 		}
 	})
+	return of
 }
 
 // Cancelled creates a cancelled order
 func (of *OrderFactory) Cancelled() *OrderFactory {
-	return of.State("cancelled", func(instance interface{}) {
+	of.State("cancelled", func(instance interface{}) {
 		if order, ok := instance.(*Order); ok {
 			order.Status = "cancelled"
 		}
 	})
+	return of
 }
 
 // WithCustomer creates an order with a specific customer
 func (of *OrderFactory) WithCustomer(customer *User) *OrderFactory {
-	return of.State("with_customer", func(instance interface{}) {
+	of.State("with_customer", func(instance interface{}) {
 		if order, ok := instance.(*Order); ok {
 			order.CustomerID = customer.ID
 			order.Customer = customer
 		}
 	})
+	return of
 }

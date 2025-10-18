@@ -12,8 +12,7 @@ import (
 // setupAPIRoutes configures API routes
 func (r *Router) setupAPIRoutes(router chi.Router) {
 	// Setup Dolphin-style authentication
-	sessionStore := auth.NewMemorySessionStore()
-	authManager := auth.SetupAuth(r.app.DB().GetDB(), sessionStore)
+	authManager := auth.NewAuthManager()
 
 	// Initialize Dolphin-style auth middleware
 	dolphinAuthMiddleware := dolphinMiddleware.NewAuthMiddleware(authManager, r.app.Logger())

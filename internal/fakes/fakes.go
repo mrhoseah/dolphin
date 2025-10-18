@@ -1,7 +1,6 @@
 package fakes
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -11,10 +10,10 @@ import (
 type Fakeable interface {
 	// Fake replaces the real implementation with a fake
 	Fake()
-	
+
 	// Restore restores the real implementation
 	Restore()
-	
+
 	// IsFaked returns whether the service is currently faked
 	IsFaked() bool
 }
@@ -44,11 +43,11 @@ func (fm *FakeManager) Fake(name string) error {
 	fm.mu.RLock()
 	fakeable, exists := fm.fakes[name]
 	fm.mu.RUnlock()
-	
+
 	if !exists {
 		return fmt.Errorf("service '%s' not found", name)
 	}
-	
+
 	fakeable.Fake()
 	return nil
 }
@@ -58,11 +57,11 @@ func (fm *FakeManager) Restore(name string) error {
 	fm.mu.RLock()
 	fakeable, exists := fm.fakes[name]
 	fm.mu.RUnlock()
-	
+
 	if !exists {
 		return fmt.Errorf("service '%s' not found", name)
 	}
-	
+
 	fakeable.Restore()
 	return nil
 }
@@ -71,7 +70,7 @@ func (fm *FakeManager) Restore(name string) error {
 func (fm *FakeManager) FakeAll() {
 	fm.mu.RLock()
 	defer fm.mu.RUnlock()
-	
+
 	for _, fakeable := range fm.fakes {
 		fakeable.Fake()
 	}
@@ -81,7 +80,7 @@ func (fm *FakeManager) FakeAll() {
 func (fm *FakeManager) RestoreAll() {
 	fm.mu.RLock()
 	defer fm.mu.RUnlock()
-	
+
 	for _, fakeable := range fm.fakes {
 		fakeable.Restore()
 	}
@@ -91,12 +90,12 @@ func (fm *FakeManager) RestoreAll() {
 func (fm *FakeManager) IsFaked(name string) bool {
 	fm.mu.RLock()
 	defer fm.mu.RUnlock()
-	
+
 	fakeable, exists := fm.fakes[name]
 	if !exists {
 		return false
 	}
-	
+
 	return fakeable.IsFaked()
 }
 
@@ -104,14 +103,14 @@ func (fm *FakeManager) IsFaked(name string) bool {
 func (fm *FakeManager) GetFakedServices() []string {
 	fm.mu.RLock()
 	defer fm.mu.RUnlock()
-	
+
 	var faked []string
 	for name, fakeable := range fm.fakes {
 		if fakeable.IsFaked() {
 			faked = append(faked, name)
 		}
 	}
-	
+
 	return faked
 }
 
@@ -159,18 +158,18 @@ func (fc *FakeCache) IsFaked() bool {
 func (fc *FakeCache) Get(key string) (interface{}, bool) {
 	fc.mu.RLock()
 	defer fc.mu.RUnlock()
-	
+
 	if !fc.isFaked {
 		return nil, false
 	}
-	
+
 	// Check TTL
 	if ttl, exists := fc.ttl[key]; exists && time.Now().After(ttl) {
 		delete(fc.data, key)
 		delete(fc.ttl, key)
 		return nil, false
 	}
-	
+
 	value, exists := fc.data[key]
 	return value, exists
 }
@@ -179,11 +178,11 @@ func (fc *FakeCache) Get(key string) (interface{}, bool) {
 func (fc *FakeCache) Set(key string, value interface{}, ttl time.Duration) {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
-	
+
 	if !fc.isFaked {
 		return
 	}
-	
+
 	fc.data[key] = value
 	if ttl > 0 {
 		fc.ttl[key] = time.Now().Add(ttl)
@@ -194,11 +193,11 @@ func (fc *FakeCache) Set(key string, value interface{}, ttl time.Duration) {
 func (fc *FakeCache) Delete(key string) {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
-	
+
 	if !fc.isFaked {
 		return
 	}
-	
+
 	delete(fc.data, key)
 	delete(fc.ttl, key)
 }
@@ -207,11 +206,11 @@ func (fc *FakeCache) Delete(key string) {
 func (fc *FakeCache) Clear() {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
-	
+
 	if !fc.isFaked {
 		return
 	}
-	
+
 	fc.data = make(map[string]interface{})
 	fc.ttl = make(map[string]time.Time)
 }
@@ -220,27 +219,27 @@ func (fc *FakeCache) Clear() {
 func (fc *FakeCache) Has(key string) bool {
 	fc.mu.RLock()
 	defer fc.mu.RUnlock()
-	
+
 	if !fc.isFaked {
 		return false
 	}
-	
+
 	// Check TTL
 	if ttl, exists := fc.ttl[key]; exists && time.Now().After(ttl) {
 		delete(fc.data, key)
 		delete(fc.ttl, key)
 		return false
 	}
-	
+
 	_, exists := fc.data[key]
 	return exists
 }
 
 // FakeFileStorage implements a fake file storage service
 type FakeFileStorage struct {
-	files     map[string][]byte
-	mu        sync.RWMutex
-	isFaked   bool
+	files       map[string][]byte
+	mu          sync.RWMutex
+	isFaked     bool
 	realStorage interface{} // Store reference to real storage
 }
 
@@ -277,11 +276,11 @@ func (ffs *FakeFileStorage) IsFaked() bool {
 func (ffs *FakeFileStorage) Put(path string, content []byte) error {
 	ffs.mu.Lock()
 	defer ffs.mu.Unlock()
-	
+
 	if !ffs.isFaked {
 		return fmt.Errorf("storage is not faked")
 	}
-	
+
 	ffs.files[path] = content
 	return nil
 }
@@ -290,16 +289,16 @@ func (ffs *FakeFileStorage) Put(path string, content []byte) error {
 func (ffs *FakeFileStorage) Get(path string) ([]byte, error) {
 	ffs.mu.RLock()
 	defer ffs.mu.RUnlock()
-	
+
 	if !ffs.isFaked {
 		return nil, fmt.Errorf("storage is not faked")
 	}
-	
+
 	content, exists := ffs.files[path]
 	if !exists {
 		return nil, fmt.Errorf("file not found: %s", path)
 	}
-	
+
 	return content, nil
 }
 
@@ -307,11 +306,11 @@ func (ffs *FakeFileStorage) Get(path string) ([]byte, error) {
 func (ffs *FakeFileStorage) Delete(path string) error {
 	ffs.mu.Lock()
 	defer ffs.mu.Unlock()
-	
+
 	if !ffs.isFaked {
 		return fmt.Errorf("storage is not faked")
 	}
-	
+
 	delete(ffs.files, path)
 	return nil
 }
@@ -320,11 +319,11 @@ func (ffs *FakeFileStorage) Delete(path string) error {
 func (ffs *FakeFileStorage) Exists(path string) bool {
 	ffs.mu.RLock()
 	defer ffs.mu.RUnlock()
-	
+
 	if !ffs.isFaked {
 		return false
 	}
-	
+
 	_, exists := ffs.files[path]
 	return exists
 }
@@ -333,27 +332,27 @@ func (ffs *FakeFileStorage) Exists(path string) bool {
 func (ffs *FakeFileStorage) List(prefix string) []string {
 	ffs.mu.RLock()
 	defer ffs.mu.RUnlock()
-	
+
 	if !ffs.isFaked {
 		return nil
 	}
-	
+
 	var files []string
 	for path := range ffs.files {
 		if prefix == "" || len(path) >= len(prefix) && path[:len(prefix)] == prefix {
 			files = append(files, path)
 		}
 	}
-	
+
 	return files
 }
 
 // FakeEventDispatcher implements a fake event dispatcher
 type FakeEventDispatcher struct {
-	events    []Event
-	listeners map[string][]func(Event)
-	mu        sync.RWMutex
-	isFaked   bool
+	events         []Event
+	listeners      map[string][]func(Event)
+	mu             sync.RWMutex
+	isFaked        bool
 	realDispatcher interface{} // Store reference to real dispatcher
 }
 
@@ -399,19 +398,19 @@ func (fed *FakeEventDispatcher) IsFaked() bool {
 func (fed *FakeEventDispatcher) Dispatch(name string, payload interface{}) {
 	fed.mu.Lock()
 	defer fed.mu.Unlock()
-	
+
 	if !fed.isFaked {
 		return
 	}
-	
+
 	event := Event{
 		Name:      name,
 		Payload:   payload,
 		Timestamp: time.Now(),
 	}
-	
+
 	fed.events = append(fed.events, event)
-	
+
 	// Call listeners
 	if listeners, exists := fed.listeners[name]; exists {
 		for _, listener := range listeners {
@@ -424,11 +423,11 @@ func (fed *FakeEventDispatcher) Dispatch(name string, payload interface{}) {
 func (fed *FakeEventDispatcher) Listen(name string, listener func(Event)) {
 	fed.mu.Lock()
 	defer fed.mu.Unlock()
-	
+
 	if !fed.isFaked {
 		return
 	}
-	
+
 	if fed.listeners[name] == nil {
 		fed.listeners[name] = make([]func(Event), 0)
 	}
@@ -439,11 +438,11 @@ func (fed *FakeEventDispatcher) Listen(name string, listener func(Event)) {
 func (fed *FakeEventDispatcher) GetEvents() []Event {
 	fed.mu.RLock()
 	defer fed.mu.RUnlock()
-	
+
 	if !fed.isFaked {
 		return nil
 	}
-	
+
 	// Return a copy
 	events := make([]Event, len(fed.events))
 	copy(events, fed.events)
@@ -454,18 +453,18 @@ func (fed *FakeEventDispatcher) GetEvents() []Event {
 func (fed *FakeEventDispatcher) GetEventsByName(name string) []Event {
 	fed.mu.RLock()
 	defer fed.mu.RUnlock()
-	
+
 	if !fed.isFaked {
 		return nil
 	}
-	
+
 	var events []Event
 	for _, event := range fed.events {
 		if event.Name == name {
 			events = append(events, event)
 		}
 	}
-	
+
 	return events
 }
 
@@ -473,19 +472,19 @@ func (fed *FakeEventDispatcher) GetEventsByName(name string) []Event {
 func (fed *FakeEventDispatcher) ClearEvents() {
 	fed.mu.Lock()
 	defer fed.mu.Unlock()
-	
+
 	if !fed.isFaked {
 		return
 	}
-	
+
 	fed.events = make([]Event, 0)
 }
 
 // FakeMailer implements a fake mailer service
 type FakeMailer struct {
-	sentMails []Mail
-	mu        sync.RWMutex
-	isFaked   bool
+	sentMails  []Mail
+	mu         sync.RWMutex
+	isFaked    bool
 	realMailer interface{} // Store reference to real mailer
 }
 
@@ -531,11 +530,11 @@ func (fm *FakeMailer) IsFaked() bool {
 func (fm *FakeMailer) Send(to []string, subject, body, html string) error {
 	fm.mu.Lock()
 	defer fm.mu.Unlock()
-	
+
 	if !fm.isFaked {
 		return fmt.Errorf("mailer is not faked")
 	}
-	
+
 	mail := Mail{
 		To:      to,
 		Subject: subject,
@@ -543,7 +542,7 @@ func (fm *FakeMailer) Send(to []string, subject, body, html string) error {
 		HTML:    html,
 		SentAt:  time.Now(),
 	}
-	
+
 	fm.sentMails = append(fm.sentMails, mail)
 	return nil
 }
@@ -552,11 +551,11 @@ func (fm *FakeMailer) Send(to []string, subject, body, html string) error {
 func (fm *FakeMailer) GetSentMails() []Mail {
 	fm.mu.RLock()
 	defer fm.mu.RUnlock()
-	
+
 	if !fm.isFaked {
 		return nil
 	}
-	
+
 	// Return a copy
 	mails := make([]Mail, len(fm.sentMails))
 	copy(mails, fm.sentMails)
@@ -567,11 +566,11 @@ func (fm *FakeMailer) GetSentMails() []Mail {
 func (fm *FakeMailer) ClearSentMails() {
 	fm.mu.Lock()
 	defer fm.mu.Unlock()
-	
+
 	if !fm.isFaked {
 		return
 	}
-	
+
 	fm.sentMails = make([]Mail, 0)
 }
 
@@ -624,18 +623,18 @@ func (fq *FakeQueue) IsFaked() bool {
 func (fq *FakeQueue) Push(name string, payload interface{}) error {
 	fq.mu.Lock()
 	defer fq.mu.Unlock()
-	
+
 	if !fq.isFaked {
 		return fmt.Errorf("queue is not faked")
 	}
-	
+
 	job := Job{
 		Name:      name,
 		Payload:   payload,
 		Attempts:  0,
 		CreatedAt: time.Now(),
 	}
-	
+
 	fq.jobs = append(fq.jobs, job)
 	return nil
 }
@@ -644,11 +643,11 @@ func (fq *FakeQueue) Push(name string, payload interface{}) error {
 func (fq *FakeQueue) GetJobs() []Job {
 	fq.mu.RLock()
 	defer fq.mu.RUnlock()
-	
+
 	if !fq.isFaked {
 		return nil
 	}
-	
+
 	// Return a copy
 	jobs := make([]Job, len(fq.jobs))
 	copy(jobs, fq.jobs)
@@ -659,18 +658,18 @@ func (fq *FakeQueue) GetJobs() []Job {
 func (fq *FakeQueue) GetJobsByName(name string) []Job {
 	fq.mu.RLock()
 	defer fq.mu.RUnlock()
-	
+
 	if !fq.isFaked {
 		return nil
 	}
-	
+
 	var jobs []Job
 	for _, job := range fq.jobs {
 		if job.Name == name {
 			jobs = append(jobs, job)
 		}
 	}
-	
+
 	return jobs
 }
 
@@ -678,10 +677,10 @@ func (fq *FakeQueue) GetJobsByName(name string) []Job {
 func (fq *FakeQueue) ClearJobs() {
 	fq.mu.Lock()
 	defer fq.mu.Unlock()
-	
+
 	if !fq.isFaked {
 		return
 	}
-	
+
 	fq.jobs = make([]Job, 0)
 }

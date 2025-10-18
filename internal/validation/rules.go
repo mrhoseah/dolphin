@@ -55,8 +55,8 @@ func NewRequiredRule(field, message string) *RequiredRule {
 
 	return &RequiredRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 	}
 }
@@ -64,21 +64,21 @@ func NewRequiredRule(field, message string) *RequiredRule {
 // Validate validates that the value is not empty
 func (rr *RequiredRule) Validate(value interface{}) error {
 	if value == nil {
-		return fmt.Errorf(rr.message)
+		return fmt.Errorf(rr.Message)
 	}
 
 	switch v := value.(type) {
 	case string:
 		if strings.TrimSpace(v) == "" {
-			return fmt.Errorf(rr.message)
+			return fmt.Errorf(rr.Message)
 		}
 	case []interface{}:
 		if len(v) == 0 {
-			return fmt.Errorf(rr.message)
+			return fmt.Errorf(rr.Message)
 		}
 	case map[string]interface{}:
 		if len(v) == 0 {
-			return fmt.Errorf(rr.message)
+			return fmt.Errorf(rr.Message)
 		}
 	}
 
@@ -100,8 +100,8 @@ func NewStringRule(field, message string, minLength, maxLength int) *StringRule 
 
 	return &StringRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 		minLength: minLength,
 		maxLength: maxLength,
@@ -112,15 +112,15 @@ func NewStringRule(field, message string, minLength, maxLength int) *StringRule 
 func (sr *StringRule) Validate(value interface{}) error {
 	str, ok := value.(string)
 	if !ok {
-		return fmt.Errorf(sr.message)
+		return fmt.Errorf(sr.Message)
 	}
 
 	if sr.minLength > 0 && len(str) < sr.minLength {
-		return fmt.Errorf("The %s field must be at least %d characters", sr.field, sr.minLength)
+		return fmt.Errorf("The %s field must be at least %d characters", sr.Field, sr.minLength)
 	}
 
 	if sr.maxLength > 0 && len(str) > sr.maxLength {
-		return fmt.Errorf("The %s field must not exceed %d characters", sr.field, sr.maxLength)
+		return fmt.Errorf("The %s field must not exceed %d characters", sr.Field, sr.maxLength)
 	}
 
 	return nil
@@ -142,8 +142,8 @@ func NewEmailRule(field, message string) *EmailRule {
 
 	return &EmailRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 		pattern: pattern,
 	}
@@ -153,11 +153,11 @@ func NewEmailRule(field, message string) *EmailRule {
 func (er *EmailRule) Validate(value interface{}) error {
 	str, ok := value.(string)
 	if !ok {
-		return fmt.Errorf(er.message)
+		return fmt.Errorf(er.Message)
 	}
 
 	if !er.pattern.MatchString(str) {
-		return fmt.Errorf(er.message)
+		return fmt.Errorf(er.Message)
 	}
 
 	return nil
@@ -178,8 +178,8 @@ func NewNumericRule(field, message string, min, max float64) *NumericRule {
 
 	return &NumericRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 		min: min,
 		max: max,
@@ -203,18 +203,18 @@ func (nr *NumericRule) Validate(value interface{}) error {
 		var err error
 		num, err = strconv.ParseFloat(v, 64)
 		if err != nil {
-			return fmt.Errorf(nr.message)
+			return fmt.Errorf(nr.Message)
 		}
 	default:
-		return fmt.Errorf(nr.message)
+		return fmt.Errorf(nr.Message)
 	}
 
 	if nr.min != 0 && num < nr.min {
-		return fmt.Errorf("The %s field must be at least %g", nr.field, nr.min)
+		return fmt.Errorf("The %s field must be at least %g", nr.Field, nr.min)
 	}
 
 	if nr.max != 0 && num > nr.max {
-		return fmt.Errorf("The %s field must not exceed %g", nr.field, nr.max)
+		return fmt.Errorf("The %s field must not exceed %g", nr.Field, nr.max)
 	}
 
 	return nil
@@ -235,8 +235,8 @@ func NewIntegerRule(field, message string, min, max int64) *IntegerRule {
 
 	return &IntegerRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 		min: min,
 		max: max,
@@ -256,18 +256,18 @@ func (ir *IntegerRule) Validate(value interface{}) error {
 		var err error
 		num, err = strconv.ParseInt(v, 10, 64)
 		if err != nil {
-			return fmt.Errorf(ir.message)
+			return fmt.Errorf(ir.Message)
 		}
 	default:
-		return fmt.Errorf(ir.message)
+		return fmt.Errorf(ir.Message)
 	}
 
 	if ir.min != 0 && num < ir.min {
-		return fmt.Errorf("The %s field must be at least %d", ir.field, ir.min)
+		return fmt.Errorf("The %s field must be at least %d", ir.Field, ir.min)
 	}
 
 	if ir.max != 0 && num > ir.max {
-		return fmt.Errorf("The %s field must not exceed %d", ir.field, ir.max)
+		return fmt.Errorf("The %s field must not exceed %d", ir.Field, ir.max)
 	}
 
 	return nil
@@ -286,8 +286,8 @@ func NewBooleanRule(field, message string) *BooleanRule {
 
 	return &BooleanRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 	}
 }
@@ -304,7 +304,7 @@ func (br *BooleanRule) Validate(value interface{}) error {
 		}
 	}
 
-	return fmt.Errorf(br.message)
+	return fmt.Errorf(br.Message)
 }
 
 // DateRule validates that a field is a valid date
@@ -325,8 +325,8 @@ func NewDateRule(field, message, format string) *DateRule {
 
 	return &DateRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 		format: format,
 	}
@@ -342,12 +342,12 @@ func (dr *DateRule) Validate(value interface{}) error {
 	case time.Time:
 		return nil // Already a valid time
 	default:
-		return fmt.Errorf(dr.message)
+		return fmt.Errorf(dr.Message)
 	}
 
 	_, err := time.Parse(dr.format, str)
 	if err != nil {
-		return fmt.Errorf(dr.message)
+		return fmt.Errorf(dr.Message)
 	}
 
 	return nil
@@ -367,8 +367,8 @@ func NewInRule(field, message string, allowed []interface{}) *InRule {
 
 	return &InRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 		allowed: allowed,
 	}
@@ -382,7 +382,7 @@ func (ir *InRule) Validate(value interface{}) error {
 		}
 	}
 
-	return fmt.Errorf(ir.message)
+	return fmt.Errorf(ir.Message)
 }
 
 // NotInRule validates that a field value is not in a list of disallowed values
@@ -399,8 +399,8 @@ func NewNotInRule(field, message string, disallowed []interface{}) *NotInRule {
 
 	return &NotInRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 		disallowed: disallowed,
 	}
@@ -410,7 +410,7 @@ func NewNotInRule(field, message string, disallowed []interface{}) *NotInRule {
 func (nir *NotInRule) Validate(value interface{}) error {
 	for _, disallowed := range nir.disallowed {
 		if reflect.DeepEqual(value, disallowed) {
-			return fmt.Errorf(nir.message)
+			return fmt.Errorf(nir.Message)
 		}
 	}
 
@@ -431,8 +431,8 @@ func NewMinRule(field, message string, min interface{}) *MinRule {
 
 	return &MinRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 		min: min,
 	}
@@ -459,8 +459,8 @@ func NewMaxRule(field, message string, max interface{}) *MaxRule {
 
 	return &MaxRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 		max: max,
 	}
@@ -489,8 +489,8 @@ func NewRegexRule(field, message, pattern string) *RegexRule {
 
 	return &RegexRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 		pattern: regex,
 	}
@@ -500,11 +500,11 @@ func NewRegexRule(field, message, pattern string) *RegexRule {
 func (rr *RegexRule) Validate(value interface{}) error {
 	str, ok := value.(string)
 	if !ok {
-		return fmt.Errorf(rr.message)
+		return fmt.Errorf(rr.Message)
 	}
 
 	if !rr.pattern.MatchString(str) {
-		return fmt.Errorf(rr.message)
+		return fmt.Errorf(rr.Message)
 	}
 
 	return nil
@@ -523,8 +523,8 @@ func NewURLRule(field, message string) *URLRule {
 
 	return &URLRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 	}
 }
@@ -533,12 +533,12 @@ func NewURLRule(field, message string) *URLRule {
 func (ur *URLRule) Validate(value interface{}) error {
 	str, ok := value.(string)
 	if !ok {
-		return fmt.Errorf(ur.message)
+		return fmt.Errorf(ur.Message)
 	}
 
 	// Simple URL validation
 	if !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
-		return fmt.Errorf(ur.message)
+		return fmt.Errorf(ur.Message)
 	}
 
 	return nil
@@ -560,8 +560,8 @@ func NewUUIDRule(field, message string) *UUIDRule {
 
 	return &UUIDRule{
 		BaseRule: &BaseRule{
-			field:   field,
-			message: message,
+			Field:   field,
+			Message: message,
 		},
 		pattern: pattern,
 	}
@@ -571,11 +571,11 @@ func NewUUIDRule(field, message string) *UUIDRule {
 func (ur *UUIDRule) Validate(value interface{}) error {
 	str, ok := value.(string)
 	if !ok {
-		return fmt.Errorf(ur.message)
+		return fmt.Errorf(ur.Message)
 	}
 
 	if !ur.pattern.MatchString(strings.ToLower(str)) {
-		return fmt.Errorf(ur.message)
+		return fmt.Errorf(ur.Message)
 	}
 
 	return nil

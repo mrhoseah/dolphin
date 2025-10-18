@@ -2,7 +2,6 @@ package factories
 
 import (
 	"fmt"
-	"math/rand"
 	"reflect"
 	"time"
 
@@ -14,16 +13,16 @@ import (
 type Factory interface {
 	// Create creates a single instance of the model
 	Create(attributes ...map[string]interface{}) interface{}
-	
+
 	// CreateMany creates multiple instances of the model
 	CreateMany(count int, attributes ...map[string]interface{}) []interface{}
-	
+
 	// Make creates an instance without persisting to database
 	Make(attributes ...map[string]interface{}) interface{}
-	
+
 	// MakeMany creates multiple instances without persisting
 	MakeMany(count int, attributes ...map[string]interface{}) []interface{}
-	
+
 	// GetModel returns the model type
 	GetModel() interface{}
 }
@@ -49,54 +48,54 @@ func NewFactory(model interface{}, db *gorm.DB) *BaseFactory {
 // Create creates a single instance and persists to database
 func (f *BaseFactory) Create(attributes ...map[string]interface{}) interface{} {
 	instance := f.Make(attributes...)
-	
+
 	// Apply callbacks
 	for _, callback := range f.callbacks {
 		callback(instance)
 	}
-	
+
 	// Persist to database
 	if err := f.db.Create(instance).Error; err != nil {
 		panic(fmt.Sprintf("Failed to create model: %v", err))
 	}
-	
+
 	return instance
 }
 
 // CreateMany creates multiple instances and persists to database
 func (f *BaseFactory) CreateMany(count int, attributes ...map[string]interface{}) []interface{} {
 	instances := make([]interface{}, count)
-	
+
 	for i := 0; i < count; i++ {
 		instances[i] = f.Create(attributes...)
 	}
-	
+
 	return instances
 }
 
 // Make creates an instance without persisting
 func (f *BaseFactory) Make(attributes ...map[string]interface{}) interface{} {
 	instance := f.createInstance()
-	
+
 	// Apply default attributes
 	f.applyAttributes(instance, f.getDefaultAttributes())
-	
+
 	// Apply provided attributes
 	if len(attributes) > 0 {
 		f.applyAttributes(instance, attributes[0])
 	}
-	
+
 	return instance
 }
 
 // MakeMany creates multiple instances without persisting
 func (f *BaseFactory) MakeMany(count int, attributes ...map[string]interface{}) []interface{} {
 	instances := make([]interface{}, count)
-	
+
 	for i := 0; i < count; i++ {
 		instances[i] = f.Make(attributes...)
 	}
-	
+
 	return instances
 }
 
@@ -126,7 +125,7 @@ func (f *BaseFactory) createInstance() interface{} {
 	if modelType.Kind() == reflect.Ptr {
 		modelType = modelType.Elem()
 	}
-	
+
 	return reflect.New(modelType).Interface()
 }
 
@@ -136,7 +135,7 @@ func (f *BaseFactory) applyAttributes(instance interface{}, attributes map[strin
 	if instanceValue.Kind() == reflect.Ptr {
 		instanceValue = instanceValue.Elem()
 	}
-	
+
 	for key, value := range attributes {
 		field := instanceValue.FieldByName(key)
 		if field.IsValid() && field.CanSet() {
@@ -333,7 +332,7 @@ func (fd *FakeData) UUID() string {
 
 // Lorem generates lorem ipsum text
 func (fd *FakeData) Lorem(wordCount int) string {
-	return fd.faker.LoremIpsumWord(wordCount)
+	return fd.faker.LoremIpsumWord()
 }
 
 // RandomElement selects a random element from a slice

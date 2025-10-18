@@ -118,7 +118,7 @@ func (m *AuthMiddleware) RoleMiddleware(roles ...string) func(http.Handler) http
 
 			if !hasRole {
 				m.logger.Warn("Insufficient permissions",
-					zap.Uint("user_id", user.GetID()),
+					zap.String("user_id", user.(string)), // Cast to string or appropriate type
 					zap.Strings("required_roles", roles))
 				render.Status(r, http.StatusForbidden)
 				render.JSON(w, r, map[string]string{
@@ -156,7 +156,7 @@ func (m *AuthMiddleware) PermissionMiddleware(permissions ...string) func(http.H
 
 			if !hasPermission {
 				m.logger.Warn("Insufficient permissions",
-					zap.Uint("user_id", user.GetID()),
+					zap.String("user_id", user.(string)), // Cast to string or appropriate type
 					zap.Strings("required_permissions", permissions))
 				render.Status(r, http.StatusForbidden)
 				render.JSON(w, r, map[string]string{
@@ -171,13 +171,13 @@ func (m *AuthMiddleware) PermissionMiddleware(permissions ...string) func(http.H
 }
 
 // hasRole checks if user has the required role
-func (m *AuthMiddleware) hasRole(user auth.Authenticatable, role string) bool {
+func (m *AuthMiddleware) hasRole(user interface{}, role string) bool {
 	// Simplified role checking
 	// In a real implementation, you'd have a roles table or user roles
 	switch role {
 	case "admin":
 		// For now, admin role is hardcoded based on email
-		return user.GetAuthIdentifier() == "admin@example.com"
+		return user.(string) == "admin@example.com" // Cast to string
 	case "user":
 		return true // All authenticated users have user role
 	default:
@@ -186,16 +186,16 @@ func (m *AuthMiddleware) hasRole(user auth.Authenticatable, role string) bool {
 }
 
 // hasPermission checks if user has the required permission
-func (m *AuthMiddleware) hasPermission(user auth.Authenticatable, permission string) bool {
+func (m *AuthMiddleware) hasPermission(user interface{}, permission string) bool {
 	// Simplified permission checking
 	// In a real implementation, you'd have a permissions table
 	switch permission {
 	case "read":
 		return true // All authenticated users can read
 	case "write":
-		return user.GetAuthIdentifier() == "admin@example.com"
+		return user.(string) == "admin@example.com" // Cast to string
 	case "delete":
-		return user.GetAuthIdentifier() == "admin@example.com"
+		return user.(string) == "admin@example.com" // Cast to string
 	default:
 		return false
 	}

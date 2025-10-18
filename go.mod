@@ -3,6 +3,7 @@ module github.com/mrhoseah/dolphin
 go 1.25.1
 
 require (
+	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/casbin/casbin/v2 v2.128.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-chi/chi/v5 v5.0.10

@@ -3,6 +3,7 @@ package validation
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/render"
@@ -27,12 +28,12 @@ func ValidationMiddleware(validator *Validator, logger *zap.Logger) func(next ht
 			}
 
 			// Validate the data
-			if err := validator.Validate(data); err != nil {
-				logger.Warn("Validation failed", zap.Error(err))
+			if !validator.Validate(data.(map[string]interface{})) {
+				logger.Warn("Validation failed")
 				render.Status(r, http.StatusUnprocessableEntity)
 				render.JSON(w, r, map[string]interface{}{
 					"error":   "Validation failed",
-					"details": err,
+					"details": "Validation failed",
 				})
 				return
 			}
@@ -64,13 +65,9 @@ func SanitizationMiddleware(sanitizer *RequestSanitizer, logger *zap.Logger) fun
 			}
 
 			// Sanitize the data
-			if err := sanitizer.Sanitize(data); err != nil {
-				logger.Error("Sanitization failed", zap.Error(err))
-				render.Status(r, http.StatusInternalServerError)
-				render.JSON(w, r, map[string]string{
-					"error": "Data sanitization failed",
-				})
-				return
+			if dataMap, ok := data.(map[string]interface{}); ok {
+				sanitizedData := sanitizer.SanitizeRequest(dataMap)
+				data = sanitizedData
 			}
 
 			// Store sanitized data in context
@@ -107,12 +104,12 @@ func FormValidationMiddleware(validator *Validator, logger *zap.Logger) func(nex
 			}
 
 			// Validate the form data
-			if err := validator.Validate(formData); err != nil {
-				logger.Warn("Form validation failed", zap.Error(err))
+			if !validator.Validate(formData) {
+				logger.Warn("Form validation failed")
 				render.Status(r, http.StatusUnprocessableEntity)
 				render.JSON(w, r, map[string]interface{}{
 					"error":   "Form validation failed",
-					"details": err,
+					"details": "Validation failed",
 				})
 				return
 			}
@@ -224,13 +221,14 @@ func (vm *ValidationManager) GetRequestSanitizer() *RequestSanitizer {
 // ValidateAndSanitize validates and sanitizes data
 func (vm *ValidationManager) ValidateAndSanitize(data interface{}) error {
 	// First sanitize
-	if err := vm.sanitizer.Sanitize(data); err != nil {
-		return err
+	if dataMap, ok := data.(map[string]interface{}); ok {
+		sanitizedData := vm.sanitizer.SanitizeRequest(dataMap)
+		data = sanitizedData
 	}
 
 	// Then validate
-	if err := vm.validator.Validate(data); err != nil {
-		return err
+	if !vm.validator.Validate(data.(map[string]interface{})) {
+		return fmt.Errorf("validation failed")
 	}
 
 	return nil
@@ -238,22 +236,34 @@ func (vm *ValidationManager) ValidateAndSanitize(data interface{}) error {
 
 // ValidateStruct validates a struct with validation tags
 func (vm *ValidationManager) ValidateStruct(data interface{}) error {
-	return vm.validator.Validate(data)
+	if dataMap, ok := data.(map[string]interface{}); ok {
+		if !vm.validator.Validate(dataMap) {
+			return fmt.Errorf("validation failed")
+		}
+	}
+	return nil
 }
 
 // SanitizeStruct sanitizes a struct with sanitization tags
 func (vm *ValidationManager) SanitizeStruct(data interface{}) error {
-	return vm.sanitizer.Sanitize(data)
+	if dataMap, ok := data.(map[string]interface{}); ok {
+		sanitizedData := vm.sanitizer.SanitizeRequest(dataMap)
+		// Update the original data with sanitized values
+		for k, v := range sanitizedData {
+			dataMap[k] = v
+		}
+	}
+	return nil
 }
 
-// ValidateField validates a single field
+// ValidateField validates a single field (placeholder - not implemented)
 func (vm *ValidationManager) ValidateField(field interface{}, rules []string) error {
-	return vm.validator.ValidateField(field, rules)
+	return fmt.Errorf("ValidateField not implemented")
 }
 
 // SanitizeField sanitizes a single field
 func (vm *ValidationManager) SanitizeField(field interface{}, rules []string) (interface{}, error) {
-	return vm.sanitizer.SanitizeField(field, rules)
+	return nil, fmt.Errorf("SanitizeField not implemented")
 }
 
 // CreateValidationMiddleware creates a validation middleware

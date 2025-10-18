@@ -70,7 +70,7 @@ func render(w http.ResponseWriter, pagePath string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
 	return tmpl.Execute(w, data)
@@ -146,7 +146,8 @@ func (r *Router) handleLoginSubmit(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.authManager.LoginWithCredentials(map[string]string{"email": email, "password": password}); err != nil {
+	success, err := r.authManager.Attempt(map[string]string{"email": email, "password": password})
+	if err != nil || !success {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte(`<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">Invalid credentials.</div>`))
 		return
@@ -183,7 +184,7 @@ func (r *Router) handleRegisterSubmit(w http.ResponseWriter, req *http.Request) 
 
 	// Minimal user create (plaintext password placeholder)
 	db := r.app.DB().GetDB()
-	u := auth.User{Email: email, Password: password, FirstName: first, LastName: last}
+	u := auth.User{Email: email, Password: password}
 	if err := db.Create(&u).Error; err != nil {
 		w.WriteHeader(http.StatusConflict)
 		w.Write([]byte(`<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">` + err.Error() + `</div>`))

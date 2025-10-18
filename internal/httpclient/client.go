@@ -23,11 +23,11 @@ type Client struct {
 
 // Config represents client configuration
 type Config struct {
-	BaseURL    string
-	Timeout    time.Duration
-	Retries    int
-	Headers    map[string]string
-	Transport  http.RoundTripper
+	BaseURL   string
+	Timeout   time.Duration
+	Retries   int
+	Headers   map[string]string
+	Transport http.RoundTripper
 }
 
 // DefaultConfig returns the default client configuration
@@ -47,12 +47,12 @@ func NewClient(config *Config) *Client {
 	if config == nil {
 		config = DefaultConfig()
 	}
-	
+
 	httpClient := &http.Client{
-		Timeout: config.Timeout,
+		Timeout:   config.Timeout,
 		Transport: config.Transport,
 	}
-	
+
 	return &Client{
 		baseURL:    config.BaseURL,
 		httpClient: httpClient,
@@ -108,38 +108,38 @@ func (c *Client) Delete(url string, options ...RequestOption) (*Response, error)
 // Request performs an HTTP request with retries
 func (c *Client) Request(method, url string, options ...RequestOption) (*Response, error) {
 	req := &Request{
-		Method: method,
-		URL:    url,
+		Method:  method,
+		URL:     url,
 		Headers: make(map[string]string),
 		Timeout: c.timeout,
 	}
-	
+
 	// Apply options
 	for _, option := range options {
 		option(req)
 	}
-	
+
 	// Build full URL
 	fullURL := c.buildURL(url)
-	
+
 	// Add query parameters
 	if len(req.Query) > 0 {
 		fullURL = c.addQueryParams(fullURL, req.Query)
 	}
-	
+
 	// Create HTTP request
 	httpReq, err := c.createHTTPRequest(method, fullURL, req.Body)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Set headers
 	c.setHeaders(httpReq, req.Headers)
-	
+
 	// Perform request with retries
 	var resp *http.Response
 	var lastErr error
-	
+
 	for attempt := 0; attempt <= c.retries; attempt++ {
 		ctx := context.Background()
 		if req.Timeout > 0 {
@@ -147,28 +147,28 @@ func (c *Client) Request(method, url string, options ...RequestOption) (*Respons
 			ctx, cancel = context.WithTimeout(ctx, req.Timeout)
 			defer cancel()
 		}
-		
+
 		resp, lastErr = c.httpClient.Do(httpReq.WithContext(ctx))
 		if lastErr == nil {
 			break
 		}
-		
+
 		if attempt < c.retries {
 			time.Sleep(time.Duration(attempt+1) * time.Second)
 		}
 	}
-	
+
 	if lastErr != nil {
 		return nil, fmt.Errorf("request failed after %d retries: %w", c.retries, lastErr)
 	}
 	defer resp.Body.Close()
-	
+
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
-	
+
 	return &Response{
 		StatusCode: resp.StatusCode,
 		Headers:    resp.Header,
@@ -182,29 +182,29 @@ func (c *Client) buildURL(url string) string {
 	if c.baseURL == "" {
 		return url
 	}
-	
+
 	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
 		return url
 	}
-	
+
 	baseURL := strings.TrimSuffix(c.baseURL, "/")
 	url = strings.TrimPrefix(url, "/")
-	
+
 	return fmt.Sprintf("%s/%s", baseURL, url)
 }
 
 // addQueryParams adds query parameters to URL
-func (c *Client) addQueryParams(url string, params map[string]string) string {
-	u, err := url.Parse(url)
+func (c *Client) addQueryParams(urlStr string, params map[string]string) string {
+	u, err := url.Parse(urlStr)
 	if err != nil {
-		return url
+		return urlStr
 	}
-	
+
 	q := u.Query()
 	for key, value := range params {
 		q.Set(key, value)
 	}
-	
+
 	u.RawQuery = q.Encode()
 	return u.String()
 }
@@ -212,7 +212,7 @@ func (c *Client) addQueryParams(url string, params map[string]string) string {
 // createHTTPRequest creates an HTTP request
 func (c *Client) createHTTPRequest(method, url string, body interface{}) (*http.Request, error) {
 	var bodyReader io.Reader
-	
+
 	if body != nil {
 		switch v := body.(type) {
 		case string:
@@ -229,7 +229,7 @@ func (c *Client) createHTTPRequest(method, url string, body interface{}) (*http.
 			bodyReader = bytes.NewReader(jsonData)
 		}
 	}
-	
+
 	return http.NewRequest(method, url, bodyReader)
 }
 
@@ -239,12 +239,12 @@ func (c *Client) setHeaders(req *http.Request, requestHeaders map[string]string)
 	for key, value := range c.headers {
 		req.Header.Set(key, value)
 	}
-	
+
 	// Set request-specific headers
 	for key, value := range requestHeaders {
 		req.Header.Set(key, value)
 	}
-	
+
 	// Set Content-Type for JSON if body is present and not already set
 	if req.Body != nil && req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")
@@ -355,7 +355,7 @@ func (r *Response) CheckResponse() error {
 	if r.IsSuccess() {
 		return nil
 	}
-	
+
 	return &Error{
 		StatusCode: r.StatusCode,
 		Message:    fmt.Sprintf("Request failed with status %d", r.StatusCode),
@@ -435,7 +435,7 @@ func (b *Builder) Timeout(timeout time.Duration) *Builder {
 
 // Send sends the request
 func (b *Builder) Send() (*Response, error) {
-	return b.client.Request(b.req.Method, b.req.URL, 
+	return b.client.Request(b.req.Method, b.req.URL,
 		WithHeaders(b.req.Headers),
 		WithBody(b.req.Body),
 		WithQuery(b.req.Query),

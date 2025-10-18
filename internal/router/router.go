@@ -33,8 +33,7 @@ func New(app *app.App) *Router {
 	}
 
 	// Initialize web auth manager (session-based)
-	sessionStore := auth.NewMemorySessionStore()
-	r.authManager = auth.SetupAuth(r.app.DB().GetDB(), sessionStore)
+	r.authManager = auth.NewAuthManager()
 
 	r.setupMiddleware()
 	r.setupRoutes()
