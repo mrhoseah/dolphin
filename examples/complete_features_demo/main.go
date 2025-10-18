@@ -56,10 +56,10 @@ func main() {
 
 	fmt.Println("")
 
-	// 6. Warden CLI Demo
-	fmt.Println("⚡ 6. Warden CLI Commands")
+	// 6. Dolphin CLI Demo
+	fmt.Println("⚡ 6. Dolphin CLI Commands")
 	fmt.Println("--------------------------")
-	demoWardenCLI()
+	demoDolphinCLI()
 
 	fmt.Println("")
 
@@ -84,7 +84,7 @@ func main() {
 	fmt.Println("  ✅ Multi-guard authentication (web, API, JWT)")
 	fmt.Println("  ✅ Mail system with SMTP, Mailgun, SendGrid drivers")
 	fmt.Println("  ✅ Queue system with job classes and workers")
-	fmt.Println("  ✅ Artisan CLI with generators and commands")
+	fmt.Println("  ✅ Dolphin CLI with generators and commands")
 	fmt.Println("  ✅ Localization with file-based translations")
 	fmt.Println("  ✅ Form helpers with fluent API and validation")
 	fmt.Println("")
@@ -419,14 +419,14 @@ func demoQueueSystem() {
 	fmt.Println("🎯 Features: Job classes, Workers, Failed job handling, Fluent API")
 }
 
-func demoWardenCLI() {
-	// Create Warden CLI
-	// warden := warden.NewWarden("dolphin", "1.0.0")
+func demoDolphinCLI() {
+	// Create Dolphin CLI
+	// dolphin := dolphin.NewDolphin("dolphin", "1.0.0")
 
 	// Register default commands
-	// warden.RegisterDefaultCommands(warden)
+	// dolphin.RegisterDefaultCommands(dolphin)
 
-	fmt.Println("✅ Warden CLI working")
+	fmt.Println("✅ Dolphin CLI working")
 
 	// Demo command registration
 	fmt.Println("📋 Available commands:")
@@ -448,7 +448,7 @@ func demoWardenCLI() {
 	}
 
 	// Demo generator
-	// generator := warden.NewGenerator()
+	// generator := dolphin.NewGenerator()
 
 	// Register controller template
 	// controllerTemplate := `package controllers

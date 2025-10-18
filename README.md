@@ -64,7 +64,7 @@ The comprehensive documentation includes:
 - **🔐 Multi-Guard Auth**: Session, JWT, and API authentication with providers
 - **📧 Mail System**: SMTP, Mailgun, SendGrid drivers with mailable classes
 - **🔄 Queue System**: Background job processing with workers and failed job handling
-- **⚡ Warden CLI**: Laravel-inspired CLI with generators and commands
+- **⚡ Dolphin CLI**: Laravel-inspired CLI with generators and commands
 - **🌍 Localization**: Multi-locale support with file-based translations
 - **📝 Form Helpers**: Fluent form builder with validation integration
 
@@ -85,14 +85,14 @@ VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/mrhoseah/dolphin/mai
 Then:
 ```bash
 # Create a new project
-warden new my-app
+dolphin new my-app
 cd my-app
 
 # Install dependencies
 go mod tidy
 
 # Start the development server
-warden serve
+dolphin serve
 ```
 
 ### Telemetry System
@@ -492,7 +492,7 @@ dolphin make:module Post
 
 2) Run the server with debug tools
 ```bash
-warden serve
+dolphin serve
 # visit http://localhost:8080/debug for dashboard (when app.debug=true)
 ```
 
@@ -537,12 +537,12 @@ dolphin new my-awesome-app
 
 ```bash
 # Start development server
-warden serve
-warden serve --port 3000 --host 0.0.0.0
+dolphin serve
+dolphin serve --port 3000 --host 0.0.0.0
 
 # Create new project
-warden new my-app
-warden new my-app --auth  # Include auth scaffolding
+dolphin new my-app
+dolphin new my-app --auth  # Include auth scaffolding
 
 # Update CLI to latest version
 dolphin update
@@ -580,8 +580,8 @@ dolphin db:wipe
 
 ```bash
 # Controllers
-warden make:controller UserController
-warden make:controller UserController --resource --api
+dolphin make:controller UserController
+dolphin make:controller UserController --resource --api
 
 # Models
 dolphin make:model User
@@ -2974,9 +2974,9 @@ dolphin static:serve
 
 | Framework CLI | Dolphin CLI | Description |
 |----------------|-------------|-------------|
-| `php artisan serve` | `warden serve` | Start development server |
+| `php artisan serve` | `dolphin serve` | Start development server |
 | `php artisan migrate` | `dolphin migrate` | Run database migrations |
-| `php artisan make:controller` | `warden make:controller` | Create controller |
+| `php artisan make:controller` | `dolphin make:controller` | Create controller |
 | `php artisan make:model` | `dolphin make:model` | Create model |
 | `php artisan make:migration` | `dolphin make:migration` | Create migration |
 | `php artisan make:middleware` | `dolphin make:middleware` | Create middleware |
@@ -3182,7 +3182,7 @@ emailJob := &SendEmailJob{
 queueManager.DispatchToDefault(emailJob)
 ```
 
-### ⚡ Warden CLI
+### ⚡ Dolphin CLI
 
 Laravel-inspired command-line interface with generators and commands:
 
@@ -3190,7 +3190,7 @@ Laravel-inspired command-line interface with generators and commands:
 
 ```bash
 # Code generation
-warden make:controller UserController --resource
+dolphin make:controller UserController --resource
 dolphin make:model User --migration --factory --seeder
 dolphin make:migration create_users_table
 
@@ -3205,7 +3205,7 @@ dolphin config:cache
 dolphin route:cache
 
 # Development
-warden serve --host=0.0.0.0 --port=8080
+dolphin serve --host=0.0.0.0 --port=8080
 dolphin tinker
 ```
 
@@ -3404,9 +3404,9 @@ Dolphin comes with beautiful, responsive templates out of the box:
 #### **Authentication Flow**
 ```bash
 # Create project with auth scaffolding
-warden new my-app --auth
+dolphin new my-app --auth
 cd my-app
-warden serve
+dolphin serve
 
 # Visit authentication pages
 open http://localhost:8080/auth/login
@@ -4176,7 +4176,7 @@ cd my-awesome-app
 dolphin make:module Product
 
 # Start developing
-warden serve
+dolphin serve
 
 # Visit your app
 open http://localhost:8080
