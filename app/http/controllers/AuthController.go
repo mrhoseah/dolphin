@@ -8,6 +8,20 @@ import (
 	"go.uber.org/zap"
 )
 
+// LoginRequest represents login request data
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// RegisterRequest represents registration request data
+type RegisterRequest struct {
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
 // AuthController handles authentication requests
 type AuthController struct {
 	authService *auth.AuthManager
@@ -34,7 +48,7 @@ func NewAuthController(authService *auth.AuthManager, logger *zap.Logger) *AuthC
 // @Failure 401 {object} map[string]string
 // @Router /auth/login [post]
 func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
-	var req auth.LoginRequestDto
+	var req LoginRequest
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
 		c.logger.Error("Failed to decode login request", zap.Error(err))
 		render.Status(r, http.StatusBadRequest)
@@ -50,11 +64,11 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Authenticate user
-	err := c.authService.LoginWithCredentials(map[string]string{
+	success, err := c.authService.Attempt(map[string]string{
 		"email":    req.Email,
 		"password": req.Password,
 	})
-	if err != nil {
+	if err != nil || !success {
 		c.logger.Warn("Login failed", zap.String("email", req.Email), zap.Error(err))
 		render.Status(r, http.StatusUnauthorized)
 		render.JSON(w, r, map[string]string{"error": "Invalid credentials"})
@@ -88,7 +102,7 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 // @Failure 409 {object} map[string]string
 // @Router /auth/register [post]
 func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
-	var req auth.RegisterRequestDto
+	var req RegisterRequest
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
 		c.logger.Error("Failed to decode registration request", zap.Error(err))
 		render.Status(r, http.StatusBadRequest)
@@ -137,21 +151,9 @@ func (c *AuthController) Logout(w http.ResponseWriter, r *http.Request) {
 	// Logout user
 	c.authService.Logout()
 
-	c.logger.Info("User logged out successfully", zap.Uint("user_id", user.GetID()))
+	c.logger.Info("User logged out successfully", zap.Uint("user_id", user.(uint)))
 	render.JSON(w, r, map[string]string{"message": "Logged out successfully"})
 }
-
-// RefreshToken handles token refresh
-// @Summary Refresh access token
-// @Description Generate new access token using refresh token
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param refresh_token body map[string]string true "Refresh token"
-// @Success 200 {object} auth.AuthResponse
-// @Failure 400 {object} map[string]string
-// @Failure 401 {object} map[string]string
-// @Router /auth/refresh [post]
 func (c *AuthController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
