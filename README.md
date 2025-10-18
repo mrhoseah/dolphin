@@ -16,6 +16,7 @@ Dolphin Framework is a modern, enterprise-grade web framework written in Go, tak
 - **🛡️ Middleware System**: Comprehensive middleware for auth, CORS, logging, and more
 - **📱 Frontend Integration**: Built-in support for Vue.js, React.js, and Tailwind CSS
 - **📚 API Documentation**: Automatic Swagger/OpenAPI documentation with SwagGo
+- **📊 Telemetry System**: Opt-in telemetry with privacy-first design
 - **⚡ High Performance**: Built on Go's concurrency and performance
 - **🔧 CLI Tools**: Powerful command-line interface for development
 - **📦 Dependency Injection**: Service container for clean architecture
@@ -69,6 +70,66 @@ go mod tidy
 # Start the development server
 dolphin serve
 ```
+
+### Telemetry System
+
+Dolphin Framework includes a comprehensive telemetry system designed to help improve the framework while respecting user privacy. The system is **opt-in by default** and provides complete control over data collection.
+
+#### Key Features
+
+- **🔒 Privacy-First**: Opt-in by default, no personal data collected
+- **🎯 Observer Pattern**: Clean, extensible architecture
+- **📈 Multiple Collectors**: System, performance, error, and feature tracking
+- **⚙️ Configurable**: Customizable collection settings and endpoints
+- **🛡️ Secure**: HTTPS-only transmission, hashed identifiers
+- **📋 CLI Control**: Easy enable/disable via command line
+
+#### Quick Start
+
+```bash
+# Enable telemetry (opt-in)
+dolphin telemetry enable
+
+# Check status
+dolphin telemetry status
+
+# Disable telemetry
+dolphin telemetry disable
+
+# Show privacy information
+dolphin telemetry privacy
+```
+
+#### What Data Is Collected
+
+✅ **Collected (Anonymous Only):**
+- Framework version and Go version
+- Operating system and architecture  
+- Feature usage statistics
+- Performance metrics (memory, CPU)
+- Error information (anonymized)
+- CLI command usage frequency
+
+❌ **NOT Collected:**
+- Personal information
+- Application data or content
+- Source code
+- User credentials
+- IP addresses (only hashed)
+
+#### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `dolphin telemetry enable` | Enable telemetry collection |
+| `dolphin telemetry disable` | Disable telemetry collection |
+| `dolphin telemetry status` | Show current status |
+| `dolphin telemetry config` | Show detailed configuration |
+| `dolphin telemetry test` | Send test event |
+| `dolphin telemetry privacy` | Show privacy information |
+| `dolphin telemetry reset` | Reset to defaults |
+
+📚 **[Complete Telemetry Guide](TELEMETRY_GUIDE.md)** - Comprehensive telemetry documentation
 
 ### Testing
 

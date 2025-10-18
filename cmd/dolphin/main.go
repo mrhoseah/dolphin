@@ -26,6 +26,7 @@ import (
 	"github.com/mrhoseah/dolphin/internal/maintenance"
 	"github.com/mrhoseah/dolphin/internal/router"
 	"github.com/mrhoseah/dolphin/internal/security"
+	"github.com/mrhoseah/dolphin/internal/telemetry"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -120,6 +121,72 @@ Examples:
 	testCmd.Flags().Bool("with-db", false, "Run tests with database")
 	testCmd.Flags().Int("parallel", 0, "Number of parallel test processes")
 	testCmd.Flags().String("timeout", "30s", "Test timeout duration")
+
+	// Telemetry command
+	var telemetryCmd = &cobra.Command{
+		Use:   "telemetry",
+		Short: "Telemetry management",
+		Long:  "Manage telemetry collection and privacy settings.",
+	}
+
+	// Telemetry subcommands
+	var telemetryEnableCmd = &cobra.Command{
+		Use:   "enable",
+		Short: "Enable telemetry collection",
+		Long:  "Enable telemetry collection to help improve Dolphin Framework.",
+		Run:   runTelemetryEnable,
+	}
+
+	var telemetryDisableCmd = &cobra.Command{
+		Use:   "disable",
+		Short: "Disable telemetry collection",
+		Long:  "Disable telemetry collection for privacy.",
+		Run:   runTelemetryDisable,
+	}
+
+	var telemetryStatusCmd = &cobra.Command{
+		Use:   "status",
+		Short: "Show telemetry status",
+		Long:  "Show current telemetry configuration and status.",
+		Run:   runTelemetryStatus,
+	}
+
+	var telemetryConfigCmd = &cobra.Command{
+		Use:   "config",
+		Short: "Show telemetry configuration",
+		Long:  "Show detailed telemetry configuration.",
+		Run:   runTelemetryConfig,
+	}
+
+	var telemetryResetCmd = &cobra.Command{
+		Use:   "reset",
+		Short: "Reset telemetry configuration",
+		Long:  "Reset telemetry configuration to defaults.",
+		Run:   runTelemetryReset,
+	}
+
+	var telemetryTestCmd = &cobra.Command{
+		Use:   "test",
+		Short: "Send test telemetry event",
+		Long:  "Send a test telemetry event to verify configuration.",
+		Run:   runTelemetryTest,
+	}
+
+	var telemetryPrivacyCmd = &cobra.Command{
+		Use:   "privacy",
+		Short: "Show privacy information",
+		Long:  "Show information about what data is collected and privacy policies.",
+		Run:   runTelemetryPrivacy,
+	}
+
+	// Add telemetry subcommands
+	telemetryCmd.AddCommand(telemetryEnableCmd)
+	telemetryCmd.AddCommand(telemetryDisableCmd)
+	telemetryCmd.AddCommand(telemetryStatusCmd)
+	telemetryCmd.AddCommand(telemetryConfigCmd)
+	telemetryCmd.AddCommand(telemetryResetCmd)
+	telemetryCmd.AddCommand(telemetryTestCmd)
+	telemetryCmd.AddCommand(telemetryPrivacyCmd)
 
 	// Update command
 	var updateCmd = &cobra.Command{
@@ -736,6 +803,7 @@ Examples:
 	// Add commands to root
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(testCmd)
+	rootCmd.AddCommand(telemetryCmd)
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newCmd)
@@ -5136,4 +5204,97 @@ func runTests(cmd *cobra.Command, args []string) {
 	fmt.Println("  • Use 'dolphin test ./app/controllers' to test specific packages")
 	fmt.Println("")
 	fmt.Println("📚 Documentation: https://github.com/mrhoseah/dolphin/blob/main/TESTING_GUIDE.md")
+}
+
+// Telemetry command handlers
+
+func runTelemetryEnable(cmd *cobra.Command, args []string) {
+	// Initialize telemetry manager
+	storage := telemetry.NewFileStorage(telemetry.GetConfigPath())
+	sender := telemetry.NewHTTPSender("https://telemetry.dolphin-framework.dev/api/v1/events")
+	manager := telemetry.NewTelemetryManager(storage, sender)
+	cli := telemetry.NewCLI(manager)
+	
+	if err := cli.Enable(); err != nil {
+		fmt.Printf("❌ Failed to enable telemetry: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runTelemetryDisable(cmd *cobra.Command, args []string) {
+	// Initialize telemetry manager
+	storage := telemetry.NewFileStorage(telemetry.GetConfigPath())
+	sender := telemetry.NewHTTPSender("https://telemetry.dolphin-framework.dev/api/v1/events")
+	manager := telemetry.NewTelemetryManager(storage, sender)
+	cli := telemetry.NewCLI(manager)
+	
+	if err := cli.Disable(); err != nil {
+		fmt.Printf("❌ Failed to disable telemetry: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runTelemetryStatus(cmd *cobra.Command, args []string) {
+	// Initialize telemetry manager
+	storage := telemetry.NewFileStorage(telemetry.GetConfigPath())
+	sender := telemetry.NewHTTPSender("https://telemetry.dolphin-framework.dev/api/v1/events")
+	manager := telemetry.NewTelemetryManager(storage, sender)
+	cli := telemetry.NewCLI(manager)
+	
+	if err := cli.Status(); err != nil {
+		fmt.Printf("❌ Failed to get telemetry status: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runTelemetryConfig(cmd *cobra.Command, args []string) {
+	// Initialize telemetry manager
+	storage := telemetry.NewFileStorage(telemetry.GetConfigPath())
+	sender := telemetry.NewHTTPSender("https://telemetry.dolphin-framework.dev/api/v1/events")
+	manager := telemetry.NewTelemetryManager(storage, sender)
+	cli := telemetry.NewCLI(manager)
+	
+	if err := cli.Config(); err != nil {
+		fmt.Printf("❌ Failed to get telemetry config: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runTelemetryReset(cmd *cobra.Command, args []string) {
+	// Initialize telemetry manager
+	storage := telemetry.NewFileStorage(telemetry.GetConfigPath())
+	sender := telemetry.NewHTTPSender("https://telemetry.dolphin-framework.dev/api/v1/events")
+	manager := telemetry.NewTelemetryManager(storage, sender)
+	cli := telemetry.NewCLI(manager)
+	
+	if err := cli.Reset(); err != nil {
+		fmt.Printf("❌ Failed to reset telemetry config: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runTelemetryTest(cmd *cobra.Command, args []string) {
+	// Initialize telemetry manager
+	storage := telemetry.NewFileStorage(telemetry.GetConfigPath())
+	sender := telemetry.NewHTTPSender("https://telemetry.dolphin-framework.dev/api/v1/events")
+	manager := telemetry.NewTelemetryManager(storage, sender)
+	cli := telemetry.NewCLI(manager)
+	
+	if err := cli.Test(); err != nil {
+		fmt.Printf("❌ Failed to send test telemetry: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runTelemetryPrivacy(cmd *cobra.Command, args []string) {
+	// Initialize telemetry manager
+	storage := telemetry.NewFileStorage(telemetry.GetConfigPath())
+	sender := telemetry.NewHTTPSender("https://telemetry.dolphin-framework.dev/api/v1/events")
+	manager := telemetry.NewTelemetryManager(storage, sender)
+	cli := telemetry.NewCLI(manager)
+	
+	if err := cli.Privacy(); err != nil {
+		fmt.Printf("❌ Failed to show privacy info: %v\n", err)
+		os.Exit(1)
+	}
 }
