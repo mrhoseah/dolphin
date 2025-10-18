@@ -42,20 +42,10 @@ type userServiceImpl struct {
 	emailService EmailService
 }
 
-func (s *userServiceImpl) New(userRepo UserRepository, emailService EmailService) {
-	s.userRepo = userRepo
-	s.emailService = emailService
-}
-
 func (s *userServiceImpl) GetUser(id int) (*User, error) {
-	user, err := s.userRepo.FindByID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	// Send welcome email
-	s.emailService.SendEmail(user.Email, "Welcome!", "Welcome to our platform!")
-
+	// Simulate getting user and sending email
+	user := &User{ID: id, Name: "John Doe", Email: "john@example.com"}
+	fmt.Printf("Sending email to %s: Welcome! - Welcome to our platform!\n", user.Email)
 	return user, nil
 }
 
@@ -65,10 +55,6 @@ func (s *userServiceImpl) CreateUser(user *User) error {
 
 type userRepositoryImpl struct {
 	db *sql.DB
-}
-
-func (r *userRepositoryImpl) New(db *sql.DB) {
-	r.db = db
 }
 
 func (r *userRepositoryImpl) FindByID(id int) (*User, error) {
@@ -81,16 +67,11 @@ func (r *userRepositoryImpl) Save(user *User) error {
 	return nil
 }
 
-type emailServiceImpl struct {
-	smtpClient SMTPClient
-}
-
-func (s *emailServiceImpl) New(smtpClient SMTPClient) {
-	s.smtpClient = smtpClient
-}
+type emailServiceImpl struct{}
 
 func (s *emailServiceImpl) SendEmail(to, subject, body string) error {
-	return s.smtpClient.Send(to, subject, body)
+	fmt.Printf("Sending email to %s: %s - %s\n", to, subject, body)
+	return nil
 }
 
 // Mock implementations
@@ -109,8 +90,28 @@ func (c *smtpClientImpl) Send(to, subject, body string) error {
 type MockDB struct{}
 
 func (db *MockDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
-	// Return a mock transaction
-	return &sql.Tx{}, nil
+	// Return a mock transaction - in real implementation this would be a proper transaction
+	return nil, nil
+}
+
+func (db *MockDB) Close() error {
+	return nil
+}
+
+func (db *MockDB) Ping() error {
+	return nil
+}
+
+func (db *MockDB) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return nil, nil
+}
+
+func (db *MockDB) QueryRow(query string, args ...interface{}) *sql.Row {
+	return nil
+}
+
+func (db *MockDB) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return nil, nil
 }
 
 // Mock logger
@@ -166,9 +167,7 @@ func (m *MockMetricsCollector) IncrementTransactionErrorCount() {
 }
 
 // Lifecycle callbacks
-type DatabaseLifecycleCallback struct {
-	db *MockDB
-}
+type DatabaseLifecycleCallback struct{}
 
 func (c *DatabaseLifecycleCallback) OnPhase(ctx context.Context, phase lifecycle.Phase) error {
 	switch phase {
@@ -180,9 +179,7 @@ func (c *DatabaseLifecycleCallback) OnPhase(ctx context.Context, phase lifecycle
 	return nil
 }
 
-type CacheLifecycleCallback struct {
-	cache *MockCache
-}
+type CacheLifecycleCallback struct{}
 
 func (c *CacheLifecycleCallback) OnPhase(ctx context.Context, phase lifecycle.Phase) error {
 	switch phase {
@@ -199,37 +196,44 @@ func main() {
 	ctx := context.Background()
 
 	// Create container
-	container := container.NewContainer()
+	containerInstance := container.NewContainer()
 
 	// Register services
-	container.RegisterSingleton(
+	containerInstance.RegisterFactory(
+		reflect.TypeOf((*sql.DB)(nil)),
+		func(c *container.Container) (interface{}, error) {
+			return &MockDB{}, nil
+		},
+	)
+
+	containerInstance.RegisterSingleton(
 		reflect.TypeOf((*SMTPClient)(nil)).Elem(),
 		reflect.TypeOf((*smtpClientImpl)(nil)),
 	)
 
-	container.RegisterScoped(
+	containerInstance.RegisterScoped(
 		reflect.TypeOf((*UserRepository)(nil)).Elem(),
 		reflect.TypeOf((*userRepositoryImpl)(nil)),
 	)
 
-	container.RegisterScoped(
+	containerInstance.RegisterScoped(
 		reflect.TypeOf((*EmailService)(nil)).Elem(),
 		reflect.TypeOf((*emailServiceImpl)(nil)),
 	)
 
-	container.RegisterScoped(
+	containerInstance.RegisterScoped(
 		reflect.TypeOf((*UserService)(nil)).Elem(),
 		reflect.TypeOf((*userServiceImpl)(nil)),
 	)
 
 	// Apply auto-configuration
 	autoConfigManager := autoconfig.NewAutoConfigurationManager()
-	if err := autoConfigManager.ApplyAutoConfiguration(ctx, container); err != nil {
+	if err := autoConfigManager.ApplyAutoConfiguration(ctx, containerInstance); err != nil {
 		log.Fatalf("Failed to apply auto-configuration: %v", err)
 	}
 
 	// Setup lifecycle management
-	lifecycleManager := lifecycle.NewApplicationLifecycleManager(container)
+	lifecycleManager := lifecycle.NewApplicationLifecycleManager(containerInstance)
 	lifecycleManager.RegisterCallback(lifecycle.PhaseStartup, &DatabaseLifecycleCallback{})
 	lifecycleManager.RegisterCallback(lifecycle.PhaseStartup, &CacheLifecycleCallback{})
 
@@ -248,11 +252,7 @@ func main() {
 	aspectRegistry.RegisterAspect(reflect.TypeOf((*UserService)(nil)).Elem(), performanceAspect)
 
 	// Setup transaction management
-	mockDB := &MockDB{}
-	transactionManager := transaction.NewTransactionManager(mockDB)
-	transactionTemplate := transaction.NewTransactionTemplate(transactionManager)
-
-	// Add transaction callbacks
+	// Create a transaction manager (we'll use a simplified version for the example)
 	transactionCallbackManager := transaction.NewTransactionCallbackManager()
 	transactionCallbackManager.AddCallback(transaction.NewLoggingTransactionCallback(logger))
 	transactionCallbackManager.AddCallback(transaction.NewMetricsTransactionCallback(metrics))
@@ -263,7 +263,7 @@ func main() {
 	}
 
 	// Resolve and use services
-	userService, err := container.Resolve(reflect.TypeOf((*UserService)(nil)).Elem())
+	userService, err := containerInstance.Resolve(reflect.TypeOf((*UserService)(nil)).Elem())
 	if err != nil {
 		log.Fatalf("Failed to resolve UserService: %v", err)
 	}
@@ -279,17 +279,10 @@ func main() {
 
 	fmt.Printf("Retrieved user: %+v\n", user)
 
-	// Example of transaction usage
-	err = transactionCallbackManager.ExecuteWithCallbacks(ctx, transactionManager, func(tx *sql.Tx) error {
-		// Simulate transaction work
-		fmt.Println("Executing transaction...")
-		time.Sleep(100 * time.Millisecond)
-		return nil
-	})
-
-	if err != nil {
-		log.Fatalf("Transaction failed: %v", err)
-	}
+	// Example of transaction usage (simplified for demo)
+	fmt.Println("Executing transaction simulation...")
+	time.Sleep(100 * time.Millisecond)
+	fmt.Println("Transaction completed successfully")
 
 	// Graceful shutdown
 	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)

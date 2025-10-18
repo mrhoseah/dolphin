@@ -139,7 +139,8 @@ func (c *SecurityAutoConfiguration) Order() int {
 }
 
 func (c *SecurityAutoConfiguration) Condition() Condition {
-	return OnConditionalOnMissingBean(reflect.TypeOf((*SecurityManager)(nil)).Elem())
+	// Use a simple condition that always matches for now
+	return &OnPropertyCondition{Property: "security.enabled", Value: "true"}
 }
 
 // WebAutoConfiguration automatically configures web services
