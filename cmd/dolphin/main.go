@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -650,8 +655,104 @@ func startServer(cmd *cobra.Command, args []string) {
 		fmt.Printf("🐛 Debug mode enabled\n")
 	}
 	fmt.Printf("📚 API Documentation: http://%s:%s/swagger/index.html\n", host, port)
-	fmt.Printf("🛑 Press Ctrl+C to stop the server\n")
-	fmt.Printf("\n⚠️  Note: This is a placeholder implementation. Full server functionality coming soon!\n")
+	fmt.Printf("🛑 Press Ctrl+C to stop the server\n\n")
+
+	// Create a simple HTTP server
+	mux := http.NewServeMux()
+
+	// Basic routes
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, `<!DOCTYPE html>
+<html>
+<head>
+    <title>🐬 Dolphin Framework</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #4f46e5; }
+        .status { background: #10b981; color: white; padding: 10px; border-radius: 5px; margin: 20px 0; }
+        .links { margin: 20px 0; }
+        .links a { display: inline-block; margin: 10px 20px 10px 0; padding: 10px 20px; background: #4f46e5; color: white; text-decoration: none; border-radius: 5px; }
+        .links a:hover { background: #7c3aed; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐬 Dolphin Framework</h1>
+        <div class="status">✅ Server is running successfully!</div>
+        <p>Welcome to your Dolphin Framework application. The development server is up and running.</p>
+        
+        <div class="links">
+            <a href="/api/health">Health Check</a>
+            <a href="/api/status">API Status</a>
+            <a href="/swagger/index.html">API Docs</a>
+        </div>
+        
+        <h3>Available Endpoints:</h3>
+        <ul>
+            <li><code>GET /</code> - This welcome page</li>
+            <li><code>GET /api/health</code> - Health check endpoint</li>
+            <li><code>GET /api/status</code> - API status information</li>
+            <li><code>GET /swagger/index.html</code> - API documentation</li>
+        </ul>
+        
+        <p><strong>Server Info:</strong></p>
+        <ul>
+            <li>Host: %s</li>
+            <li>Port: %s</li>
+            <li>Debug Mode: %t</li>
+            <li>Started: %s</li>
+        </ul>
+    </div>
+</body>
+</html>`, host, port, debug, time.Now().Format("2006-01-02 15:04:05"))
+	})
+
+	mux.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"status":"healthy","timestamp":"%s","service":"dolphin-framework"}`, time.Now().Format(time.RFC3339))
+	})
+
+	mux.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"status":"running","version":"%s","uptime":"%s","debug":%t}`, version, time.Since(time.Now()).String(), debug)
+	})
+
+	// Create HTTP server
+	server := &http.Server{
+		Addr:         fmt.Sprintf("%s:%s", host, port),
+		Handler:      mux,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+
+	// Start server in goroutine
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("❌ Failed to start server: %v\n", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	fmt.Printf("\n🛑 Shutting down server...\n")
+
+	// Graceful shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		fmt.Printf("❌ Server forced to shutdown: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("✅ Server exited gracefully\n")
 }
 
 func makeController(cmd *cobra.Command, args []string) {
