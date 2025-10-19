@@ -13,6 +13,8 @@ import (
 	"dolphin/internal/maintenance"
 	loggingMiddleware "dolphin/internal/middleware/logging"
 	recoveryMiddleware "dolphin/internal/middleware/recovery"
+	"dolphin/internal/template"
+
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -22,6 +24,7 @@ type Router struct {
 	router             *chi.Mux
 	maintenanceManager *maintenance.Manager
 	authManager        *auth.AuthManager
+	finEngine          template.FinTemplateEngine
 }
 
 // New creates a new router instance
@@ -34,6 +37,16 @@ func New(app *app.App) *Router {
 
 	// Initialize web auth manager (session-based)
 	r.authManager = auth.NewAuthManager()
+
+	// Initialize Fin template engine
+	finConfig := &template.Config{
+		ViewsPath:    "ui/views",
+		CachePath:    "storage/cache/views",
+		CacheEnabled: true,
+		DebugMode:    app.Config().App.Debug,
+		Extensions:   []string{".fin.go", ".go.html"},
+	}
+	r.finEngine = template.NewFinEngine(finConfig)
 
 	r.setupMiddleware()
 	r.setupRoutes()

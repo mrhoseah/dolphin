@@ -8,7 +8,7 @@ import (
 	"dolphin/internal/template"
 )
 
-func main() {
+func runFinUsageExample() {
 	fmt.Println("🐬 Fin Template Engine Example")
 	fmt.Println("==============================")
 
@@ -143,4 +143,8 @@ func main() {
 
 	fmt.Println("\n🎉 Fin Template Engine is ready to use!")
 	fmt.Println("📚 Check the documentation for more examples and features.")
+}
+
+func main() {
+	runFinUsageExample()
 }

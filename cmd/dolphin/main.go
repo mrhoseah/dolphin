@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"dolphin/internal/template"
+
 	"github.com/spf13/cobra"
 )
 
@@ -125,6 +127,55 @@ Examples:
 	updateCmd.Flags().BoolP("force", "f", false, "Force update even if already on latest version")
 	updateCmd.Flags().StringP("version", "v", "latest", "Update to a specific version")
 
+	// Fin template commands
+	var finCmd = &cobra.Command{
+		Use:   "fin",
+		Short: "Fin template management commands",
+		Long:  `Manage Fin templates, components, and layouts for the Dolphin Framework.`,
+	}
+
+	var finMakeCmd = &cobra.Command{
+		Use:   "make [type] [name]",
+		Short: "Generate Fin templates, components, or layouts",
+		Long:  `Generate Fin templates, components, or layouts with proper structure and syntax.`,
+		Args:  cobra.ExactArgs(2),
+		Run:   runFinMake,
+	}
+
+	var finListCmd = &cobra.Command{
+		Use:   "list",
+		Short: "List all Fin templates",
+		Long:  `List all available Fin templates, components, and layouts.`,
+		Run:   runFinList,
+	}
+
+	var finValidateCmd = &cobra.Command{
+		Use:   "validate [template]",
+		Short: "Validate Fin template syntax",
+		Long:  `Validate Fin template syntax and check for errors.`,
+		Args:  cobra.ExactArgs(1),
+		Run:   runFinValidate,
+	}
+
+	var finCacheCmd = &cobra.Command{
+		Use:   "cache",
+		Short: "Manage Fin template cache",
+		Long:  `Clear or manage the Fin template cache.`,
+		Run:   runFinCache,
+	}
+
+	// Add fin subcommands
+	finCmd.AddCommand(finMakeCmd)
+	finCmd.AddCommand(finListCmd)
+	finCmd.AddCommand(finValidateCmd)
+	finCmd.AddCommand(finCacheCmd)
+
+	// Add flags
+	finMakeCmd.Flags().StringP("layout", "l", "app", "Layout to extend")
+	finMakeCmd.Flags().StringP("model", "m", "", "Model type for template")
+	finMakeCmd.Flags().BoolP("component", "c", false, "Generate as component")
+	finMakeCmd.Flags().BoolP("partial", "p", false, "Generate as partial")
+
 	rootCmd.AddCommand(newCmd)
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(makeControllerCmd)
@@ -134,6 +185,7 @@ Examples:
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(finCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -1403,11 +1455,11 @@ type User struct {
 			fmt.Printf("❌ Failed to create auth service: %v\n", err)
 			return
 		}
-	fmt.Printf("✅ Created auth service: %s\n", authServicePath)
+		fmt.Printf("✅ Created auth service: %s\n", authServicePath)
 	}
-	
+
 	// Create Fin Templates
-	
+
 	// Create main layout
 	mainLayout := `<!DOCTYPE html>
 <html lang="en">
@@ -1477,7 +1529,7 @@ type User struct {
     @stack('scripts')
 </body>
 </html>`
-	
+
 	mainLayoutPath := "resources/views/layouts/app.fin"
 	if _, err := os.Stat(mainLayoutPath); err == nil && !force {
 		fmt.Printf("⚠️  Main layout already exists. Use --force to overwrite\n")
@@ -1488,7 +1540,7 @@ type User struct {
 		}
 		fmt.Printf("✅ Created main layout: %s\n", mainLayoutPath)
 	}
-	
+
 	// Create login view
 	loginView := `@extends('layouts.app')
 
@@ -1557,7 +1609,7 @@ type User struct {
     </div>
 </div>
 @endsection`
-	
+
 	loginViewPath := "resources/views/auth/login.fin"
 	if _, err := os.Stat(loginViewPath); err == nil && !force {
 		fmt.Printf("⚠️  Login view already exists. Use --force to overwrite\n")
@@ -1568,7 +1620,7 @@ type User struct {
 		}
 		fmt.Printf("✅ Created login view: %s\n", loginViewPath)
 	}
-	
+
 	// Create register view
 	registerView := `@extends('layouts.app')
 
@@ -1641,7 +1693,7 @@ type User struct {
     </div>
 </div>
 @endsection`
-	
+
 	registerViewPath := "resources/views/auth/register.fin"
 	if _, err := os.Stat(registerViewPath); err == nil && !force {
 		fmt.Printf("⚠️  Register view already exists. Use --force to overwrite\n")
@@ -1652,7 +1704,7 @@ type User struct {
 		}
 		fmt.Printf("✅ Created register view: %s\n", registerViewPath)
 	}
-	
+
 	// Create profile view
 	profileView := `@extends('layouts.app')
 
@@ -1730,7 +1782,7 @@ type User struct {
     </div>
 </div>
 @endsection`
-	
+
 	profileViewPath := "resources/views/auth/profile.fin"
 	if _, err := os.Stat(profileViewPath); err == nil && !force {
 		fmt.Printf("⚠️  Profile view already exists. Use --force to overwrite\n")
@@ -1741,7 +1793,7 @@ type User struct {
 		}
 		fmt.Printf("✅ Created profile view: %s\n", profileViewPath)
 	}
-	
+
 	// Create forgot password view
 	forgotPasswordView := `@extends('layouts.app')
 
@@ -1789,7 +1841,7 @@ type User struct {
     </div>
 </div>
 @endsection`
-	
+
 	forgotPasswordViewPath := "resources/views/auth/forgot-password.fin"
 	if _, err := os.Stat(forgotPasswordViewPath); err == nil && !force {
 		fmt.Printf("⚠️  Forgot password view already exists. Use --force to overwrite\n")
@@ -1800,18 +1852,18 @@ type User struct {
 		}
 		fmt.Printf("✅ Created forgot password view: %s\n", forgotPasswordViewPath)
 	}
-	
+
 	// Update existing navigation files
 	fmt.Printf("\n🔄 Updating navigation files...\n")
-	
+
 	// Check for common navigation files and update them
 	navFiles := []string{
 		"resources/views/components/navbar.fin",
-		"resources/views/partials/navbar.fin", 
+		"resources/views/partials/navbar.fin",
 		"resources/views/layouts/navbar.fin",
 		"resources/views/includes/navbar.fin",
 	}
-	
+
 	navbarContent := `<!-- Authentication Navigation -->
 <div class="flex items-center space-x-4">
     @auth
@@ -1834,7 +1886,7 @@ type User struct {
         </a>
     @endauth
 </div>`
-	
+
 	navbarUpdated := false
 	for _, navFile := range navFiles {
 		if _, err := os.Stat(navFile); err == nil {
@@ -1844,26 +1896,26 @@ type User struct {
 				fmt.Printf("⚠️  Could not read %s: %v\n", navFile, err)
 				continue
 			}
-			
+
 			// Check if auth content already exists
 			if strings.Contains(string(content), "@auth") {
 				fmt.Printf("✅ %s already contains authentication links\n", navFile)
 				continue
 			}
-			
+
 			// Add auth content to the end
 			newContent := string(content) + "\n" + navbarContent
-			
+
 			if err := os.WriteFile(navFile, []byte(newContent), 0644); err != nil {
 				fmt.Printf("❌ Failed to update %s: %v\n", navFile, err)
 				continue
 			}
-			
+
 			fmt.Printf("✅ Updated navigation: %s\n", navFile)
 			navbarUpdated = true
 		}
 	}
-	
+
 	// If no existing navbar files found, create a reusable component
 	if !navbarUpdated {
 		navbarComponentPath := "resources/views/components/auth-nav.fin"
@@ -1874,7 +1926,7 @@ type User struct {
 			fmt.Printf("💡 Include it in your layouts with: @include('components.auth-nav')\n")
 		}
 	}
-	
+
 	// Create a sample routes file
 	routesContent := `// Authentication Routes
 // Add these to your routes file
@@ -1896,39 +1948,343 @@ router.POST("/logout", authController.Logout)
 
 // Example of protecting specific routes
 router.GET("/dashboard", dashboardController.Index) // This will require auth
-router.GET("/settings", settingsController.Index) // This will require auth`
-	
+router.GET("/settings", settingsController.Index) // This will require auth
+`
+
+	// Fin template command functions
 	routesPath := "routes/auth.example.go"
 	if err := os.WriteFile(routesPath, []byte(routesContent), 0644); err != nil {
 		fmt.Printf("❌ Failed to create routes example: %v\n", err)
 	} else {
 		fmt.Printf("✅ Created routes example: %s\n", routesPath)
 	}
-	
+
 	fmt.Printf("\n🎉 Authentication scaffolding completed!\n")
 	fmt.Printf("\n📋 Next steps:\n")
 	fmt.Printf("1. Run 'dolphin migrate' to create the users table\n")
 	fmt.Printf("2. Install dependencies: go get golang.org/x/crypto/bcrypt\n")
-	fmt.Printf("3. Implement JWT token generation and validation\n")
-	fmt.Printf("4. Add routes for login, register, logout, and profile\n")
-	fmt.Printf("5. Test your authentication endpoints\n")
-	fmt.Printf("\n💡 Files created:\n")
-	fmt.Printf("   📁 Backend Files:\n")
-	fmt.Printf("   - app/models/user.go (User model)\n")
-	fmt.Printf("   - app/http/controllers/auth_controller.go (Auth controller)\n")
-	fmt.Printf("   - app/http/middleware/auth.go (Auth middleware)\n")
-	fmt.Printf("   - database/migrations/create_users_table.go (Users migration)\n")
-	fmt.Printf("   - internal/auth/service.go (Auth service)\n")
-	fmt.Printf("   - routes/auth.example.go (Routes example)\n")
-	fmt.Printf("\n   🎨 Frontend Files (Fin Templates):\n")
-	fmt.Printf("   - resources/views/layouts/app.fin (Main layout)\n")
-	fmt.Printf("   - resources/views/auth/login.fin (Login page)\n")
-	fmt.Printf("   - resources/views/auth/register.fin (Register page)\n")
-	fmt.Printf("   - resources/views/auth/profile.fin (Profile page)\n")
-	fmt.Printf("   - resources/views/auth/forgot-password.fin (Forgot password)\n")
-	fmt.Printf("   - resources/views/components/auth-nav.fin (Auth navigation)\n")
-	fmt.Printf("\n   🔗 Navigation Updated:\n")
-	fmt.Printf("   - Automatically detects and updates existing navbar files\n")
-	fmt.Printf("   - Creates reusable auth navigation component\n")
-	fmt.Printf("   - Includes login/logout/profile links with icons\n")
+	fmt.Printf("3. Configure your database connection\n")
+	fmt.Printf("4. Update your routes to include the authentication routes\n")
+	fmt.Printf("5. Customize the generated views and components\n")
+}
+
+func runFinMake(cmd *cobra.Command, args []string) {
+	templateType := args[0]
+	name := args[1]
+	layout, _ := cmd.Flags().GetString("layout")
+	model, _ := cmd.Flags().GetString("model")
+
+	fmt.Printf("🐬 Generating Fin %s: %s\n", templateType, name)
+	fmt.Println("=====================================")
+
+	switch templateType {
+	case "template", "view", "page":
+		generateFinTemplate(name, layout, model)
+	case "component":
+		generateFinComponent(name)
+	case "layout":
+		generateFinLayout(name)
+	case "partial":
+		generateFinPartial(name)
+	default:
+		fmt.Printf("❌ Unknown template type: %s\n", templateType)
+		fmt.Println("Available types: template, component, layout, partial")
+		os.Exit(1)
+	}
+}
+
+func runFinList(cmd *cobra.Command, args []string) {
+	fmt.Println("🐬 Fin Templates")
+	fmt.Println("================")
+
+	// List templates
+	fmt.Println("\n📄 Templates:")
+	listTemplates("ui/views/pages", ".fin.go")
+
+	// List components
+	fmt.Println("\n🧩 Components:")
+	listTemplates("ui/views/components", ".fin.go")
+
+	// List layouts
+	fmt.Println("\n📐 Layouts:")
+	listTemplates("ui/views/layouts", ".fin.go")
+
+	// List partials
+	fmt.Println("\n🔧 Partials:")
+	listTemplates("ui/views/partials", ".fin.go")
+}
+
+func runFinValidate(cmd *cobra.Command, args []string) {
+	templateName := args[0]
+
+	fmt.Printf("🔍 Validating Fin template: %s\n", templateName)
+	fmt.Println("=====================================")
+
+	// Initialize Fin engine
+	config := &template.Config{
+		ViewsPath:    "ui/views",
+		CachePath:    "storage/cache/views",
+		CacheEnabled: false, // Disable cache for validation
+		DebugMode:    true,
+		Extensions:   []string{".fin.go", ".go.html"},
+	}
+
+	engine := template.NewFinEngine(config)
+
+	// Test data for validation
+	testData := map[string]interface{}{
+		"User": map[string]interface{}{
+			"Name":    "John Doe",
+			"Email":   "john@example.com",
+			"Role":    "Admin",
+			"IsAdmin": true,
+		},
+		"Posts": []map[string]interface{}{
+			{
+				"Title":   "Sample Post",
+				"Content": "This is a sample post content.",
+				"Author":  "John Doe",
+			},
+		},
+		"Version": "1.0.0",
+		"AppName": "Dolphin Framework",
+	}
+
+	// Try to render the template
+	_, err := engine.Render(templateName, testData)
+	if err != nil {
+		fmt.Printf("❌ Validation failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("✅ Template validation successful!")
+}
+
+func runFinCache(cmd *cobra.Command, args []string) {
+	fmt.Println("🗑️  Clearing Fin template cache...")
+
+	cacheDir := "storage/cache/views"
+	if err := os.RemoveAll(cacheDir); err != nil {
+		fmt.Printf("❌ Failed to clear cache: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Recreate cache directory
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		fmt.Printf("❌ Failed to recreate cache directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("✅ Cache cleared successfully!")
+}
+
+func generateFinTemplate(name, layout, model string) {
+	// Create directory if it doesn't exist
+	dir := "ui/views/pages"
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Printf("❌ Failed to create directory: %v\n", err)
+		return
+	}
+
+	// Generate template content
+	content := generateTemplateContent(name, layout, model)
+
+	// Write template file
+	filename := filepath.Join(dir, strings.ToLower(name)+".fin.go")
+	if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
+		fmt.Printf("❌ Failed to write template: %v\n", err)
+		return
+	}
+
+	fmt.Printf("✅ Created template: %s\n", filename)
+}
+
+func generateFinComponent(name string) {
+	// Create directory if it doesn't exist
+	dir := "ui/views/components"
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Printf("❌ Failed to create directory: %v\n", err)
+		return
+	}
+
+	// Generate component content
+	content := generateComponentContent(name)
+
+	// Write component file
+	filename := filepath.Join(dir, strings.ToLower(name)+".fin.go")
+	if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
+		fmt.Printf("❌ Failed to write component: %v\n", err)
+		return
+	}
+
+	fmt.Printf("✅ Created component: %s\n", filename)
+}
+
+func generateFinLayout(name string) {
+	// Create directory if it doesn't exist
+	dir := "ui/views/layouts"
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Printf("❌ Failed to create directory: %v\n", err)
+		return
+	}
+
+	// Generate layout content
+	content := generateLayoutContent(name)
+
+	// Write layout file
+	filename := filepath.Join(dir, strings.ToLower(name)+".fin.go")
+	if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
+		fmt.Printf("❌ Failed to write layout: %v\n", err)
+		return
+	}
+
+	fmt.Printf("✅ Created layout: %s\n", filename)
+}
+
+func generateFinPartial(name string) {
+	// Create directory if it doesn't exist
+	dir := "ui/views/partials"
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Printf("❌ Failed to create directory: %v\n", err)
+		return
+	}
+
+	// Generate partial content
+	content := generatePartialContent(name)
+
+	// Write partial file
+	filename := filepath.Join(dir, strings.ToLower(name)+".fin.go")
+	if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
+		fmt.Printf("❌ Failed to write partial: %v\n", err)
+		return
+	}
+
+	fmt.Printf("✅ Created partial: %s\n", filename)
+}
+
+func generateTemplateContent(name, layout, model string) string {
+	modelAnnotation := ""
+	if model != "" {
+		modelAnnotation = fmt.Sprintf("@model('%s', %s)\n", model, strings.ToLower(model))
+	}
+
+	template := "// ui/views/pages/" + strings.ToLower(name) + ".fin.go\n" +
+		"@extends('" + layout + "')\n" +
+		modelAnnotation +
+		"@section('title')\n" +
+		"    " + name + "\n" +
+		"@endsection\n\n" +
+		"@section('content')\n" +
+		"    <div class=\"" + strings.ToLower(name) + "-page\">\n" +
+		"        <h1>" + name + "</h1>\n" +
+		"        <p>Welcome to the " + name + " page!</p>\n" +
+		"        \n" +
+		"        <!-- Add your content here -->\n" +
+		"        <div class=\"content\">\n" +
+		"            <p>This is a generated Fin template.</p>\n" +
+		"        </div>\n" +
+		"    </div>\n" +
+		"@endsection\n"
+
+	return template
+}
+
+func generateComponentContent(name string) string {
+	template := "// ui/views/components/" + strings.ToLower(name) + ".fin.go\n" +
+		"@component('" + strings.ToLower(name) + "')\n" +
+		"    <div class=\"" + strings.ToLower(name) + "-component\">\n" +
+		"        @slot('content')\n" +
+		"            {{content}}\n" +
+		"        @endslot\n" +
+		"    </div>\n" +
+		"@endcomponent\n"
+
+	return template
+}
+
+func generateLayoutContent(name string) string {
+	template := "// ui/views/layouts/" + strings.ToLower(name) + ".fin.go\n" +
+		"<!DOCTYPE html>\n" +
+		"<html lang=\"en\">\n" +
+		"<head>\n" +
+		"    <meta charset=\"UTF-8\">\n" +
+		"    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+		"    <title>{{.Title}} - Dolphin Framework</title>\n" +
+		"    <script src=\"https://cdn.tailwindcss.com\"></script>\n" +
+		"    <script src=\"https://unpkg.com/htmx.org@1.9.10\"></script>\n" +
+		"    <style>\n" +
+		"        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }\n" +
+		"    </style>\n" +
+		"</head>\n" +
+		"<body>\n" +
+		"    <div class=\"min-h-screen bg-gray-100\">\n" +
+		"        <!-- Header -->\n" +
+		"        <header class=\"bg-white shadow\">\n" +
+		"            <div class=\"max-w-7xl mx-auto px-4\">\n" +
+		"                <div class=\"flex justify-between h-16\">\n" +
+		"                    <div class=\"flex items-center\">\n" +
+		"                        <h1 class=\"text-xl font-semibold\">🐬 Dolphin Framework</h1>\n" +
+		"                    </div>\n" +
+		"                    <nav class=\"flex items-center space-x-4\">\n" +
+		"                        <a href=\"/\" class=\"text-gray-500 hover:text-gray-700\">Home</a>\n" +
+		"                        <a href=\"/dashboard\" class=\"text-gray-500 hover:text-gray-700\">Dashboard</a>\n" +
+		"                    </nav>\n" +
+		"                </div>\n" +
+		"            </div>\n" +
+		"        </header>\n" +
+		"        \n" +
+		"        <!-- Main Content -->\n" +
+		"        <main class=\"max-w-7xl mx-auto py-6 px-4\">\n" +
+		"            {{template \"content\" .}}\n" +
+		"        </main>\n" +
+		"        \n" +
+		"        <!-- Footer -->\n" +
+		"        <footer class=\"bg-white border-t\">\n" +
+		"            <div class=\"max-w-7xl mx-auto py-4 px-4\">\n" +
+		"                <p class=\"text-center text-gray-500\">&copy; 2024 Dolphin Framework</p>\n" +
+		"            </div>\n" +
+		"        </footer>\n" +
+		"    </div>\n" +
+		"</body>\n" +
+		"</html>\n"
+
+	return template
+}
+
+func generatePartialContent(name string) string {
+	template := "// ui/views/partials/" + strings.ToLower(name) + ".fin.go\n" +
+		"<div class=\"" + strings.ToLower(name) + "-partial\">\n" +
+		"    <h3>" + name + " Partial</h3>\n" +
+		"    <p>This is a generated partial component.</p>\n" +
+		"    \n" +
+		"    <!-- Add your partial content here -->\n" +
+		"    <div class=\"partial-content\">\n" +
+		"        {{content}}\n" +
+		"    </div>\n" +
+		"</div>\n"
+
+	return template
+}
+
+func listTemplates(dir, ext string) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		fmt.Printf("  📁 Directory %s does not exist\n", dir)
+		return
+	}
+
+	files, err := filepath.Glob(filepath.Join(dir, "*"+ext))
+	if err != nil {
+		fmt.Printf("  ❌ Error reading directory: %v\n", err)
+		return
+	}
+
+	if len(files) == 0 {
+		fmt.Printf("  📁 No %s files found in %s\n", ext, dir)
+		return
+	}
+
+	for _, file := range files {
+		relPath, _ := filepath.Rel("ui/views", file)
+		fmt.Printf("  📄 %s\n", relPath)
+	}
 }

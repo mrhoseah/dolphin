@@ -24,7 +24,7 @@ func main() {
 	config.Extensions = []string{".html", ".blade.go"}
 
 	// Create template engine
-	engine := template.NewEngine(config)
+	engine := template.NewFinEngine(config)
 	fmt.Println("✅ Template engine created successfully")
 
 	// Example 2: Template Data Preparation

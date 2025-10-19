@@ -1,17 +1,31 @@
 package router
 
 import (
-	"html/template"
 	"net/http"
 	"os"
 	"strings"
+	"text/template"
 
-	"github.com/go-chi/chi/v5"
 	"dolphin/internal/auth"
 	dolphinMiddleware "dolphin/internal/middleware"
 	"dolphin/internal/time"
 	"dolphin/internal/version"
+
+	"github.com/go-chi/chi/v5"
 )
+
+// renderFin renders a Fin template with data
+func (r *Router) renderFin(w http.ResponseWriter, templateName string, data interface{}) error {
+	content, err := r.finEngine.Render(templateName, data)
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write([]byte(content))
+	return err
+}
 
 // render joins base layout with header/footer partials and the page body.
 func render(w http.ResponseWriter, pagePath string) error {
@@ -120,8 +134,17 @@ func (r *Router) setupWebRoutes(router chi.Router) {
 
 // handleHome renders the home page with HTMX integration
 func (r *Router) handleHome(w http.ResponseWriter, req *http.Request) {
-	if err := render(w, "ui/views/pages/home.html"); err != nil {
-		http.Error(w, "Home view not found", http.StatusInternalServerError)
+	// Try Fin template first, fallback to HTML
+	data := map[string]interface{}{
+		"Version": version.GetVersion(),
+		"AppName": "Dolphin Framework",
+	}
+
+	if err := r.renderFin(w, "pages/home", data); err != nil {
+		// Fallback to traditional HTML rendering
+		if err := render(w, "ui/views/pages/home.html"); err != nil {
+			http.Error(w, "Home view not found", http.StatusInternalServerError)
+		}
 	}
 }
 

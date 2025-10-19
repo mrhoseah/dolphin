@@ -101,7 +101,7 @@ func demoTemplateEngine() {
 		Extensions:   []string{".blade.go", ".go.html"},
 	}
 
-	engine := template.NewEngine(config)
+	engine := template.NewFinEngine(config)
 
 	// Register a layout
 	layoutTemplate := `

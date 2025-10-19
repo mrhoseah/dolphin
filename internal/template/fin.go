@@ -229,7 +229,7 @@ func (e *FinEngine) registerDefaultDirectives() {
 			return "", fmt.Errorf("@foreach requires collection and item variable")
 		}
 		collection := args[0]
-		itemVar := args[1]
+		_ = args[1] // itemVar - used for validation but not in template generation
 		return fmt.Sprintf("{{range %s}}%s{{end}}", collection, content), nil
 	})
 
