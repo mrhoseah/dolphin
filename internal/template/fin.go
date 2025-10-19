@@ -246,8 +246,8 @@ func (e *FinEngine) RegisterDirective(name string, fn DirectiveFunc) {
 	e.directives[name] = fn
 }
 
-// RegisterComponent registers a reusable component
-func (e *Engine) RegisterComponent(name string, template string) {
+// RegisterComponent registers a reusable Fin component
+func (e *FinEngine) RegisterComponent(name string, template string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.components[name] = &Component{
@@ -258,8 +258,8 @@ func (e *Engine) RegisterComponent(name string, template string) {
 	}
 }
 
-// RegisterLayout registers a template layout
-func (e *Engine) RegisterLayout(name string, template string) {
+// RegisterLayout registers a Fin template layout
+func (e *FinEngine) RegisterLayout(name string, template string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.layouts[name] = &Layout{
@@ -269,8 +269,8 @@ func (e *Engine) RegisterLayout(name string, template string) {
 	}
 }
 
-// Render renders a template with data
-func (e *Engine) Render(templateName string, data interface{}) (string, error) {
+// Render renders a Fin template with data
+func (e *FinEngine) Render(templateName string, data interface{}) (string, error) {
 	// Get template content
 	content, err := e.getTemplateContent(templateName)
 	if err != nil {
@@ -298,8 +298,8 @@ func (e *Engine) Render(templateName string, data interface{}) (string, error) {
 	return buf.String(), nil
 }
 
-// RenderToWriter renders a template to a writer
-func (e *Engine) RenderToWriter(w io.Writer, templateName string, data interface{}) error {
+// RenderToWriter renders a Fin template to a writer
+func (e *FinEngine) RenderToWriter(w io.Writer, templateName string, data interface{}) error {
 	content, err := e.Render(templateName, data)
 	if err != nil {
 		return err
@@ -310,7 +310,7 @@ func (e *Engine) RenderToWriter(w io.Writer, templateName string, data interface
 }
 
 // getTemplateContent retrieves template content from file or cache
-func (e *Engine) getTemplateContent(templateName string) (string, error) {
+func (e *FinEngine) getTemplateContent(templateName string) (string, error) {
 	// Check cache first
 	if e.cacheEnabled {
 		if cached := e.getCachedTemplate(templateName); cached != nil {
@@ -333,7 +333,7 @@ func (e *Engine) getTemplateContent(templateName string) (string, error) {
 }
 
 // findTemplateFile finds the template file
-func (e *Engine) findTemplateFile(templateName string) string {
+func (e *FinEngine) findTemplateFile(templateName string) string {
 	for _, ext := range e.extensions {
 		filePath := filepath.Join(e.viewsPath, templateName+ext)
 		if _, err := os.Stat(filePath); err == nil {
@@ -344,7 +344,7 @@ func (e *Engine) findTemplateFile(templateName string) string {
 }
 
 // compileTemplate compiles template content with directives
-func (e *Engine) compileTemplate(content string, data interface{}) (string, error) {
+func (e *FinEngine) compileTemplate(content string, data interface{}) (string, error) {
 	// Process directives
 	compiled := content
 
@@ -360,14 +360,14 @@ func (e *Engine) compileTemplate(content string, data interface{}) (string, erro
 	// Process other directives
 	compiled = e.processDirectives(compiled, data)
 
-	// Convert Blade syntax to Go template syntax
-	compiled = e.convertBladeToGo(compiled)
+	// Convert Fin syntax to Go template syntax
+	compiled = e.convertFinToGo(compiled)
 
 	return compiled, nil
 }
 
 // processExtendsDirective processes @extends directive
-func (e *Engine) processExtendsDirective(content string, data interface{}) string {
+func (e *FinEngine) processExtendsDirective(content string, data interface{}) string {
 	extendsRegex := regexp.MustCompile(`@extends\s*\(\s*['"]([^'"]+)['"]\s*\)`)
 	matches := extendsRegex.FindAllStringSubmatch(content, -1)
 
@@ -382,7 +382,7 @@ func (e *Engine) processExtendsDirective(content string, data interface{}) strin
 }
 
 // processSectionDirectives processes @section and @yield directives
-func (e *Engine) processSectionDirectives(content string, data interface{}) string {
+func (e *FinEngine) processSectionDirectives(content string, data interface{}) string {
 	// Process @section directives
 	sectionRegex := regexp.MustCompile(`@section\s*\(\s*['"]([^'"]+)['"]\s*\)\s*(.*?)\s*@endsection`)
 	content = sectionRegex.ReplaceAllStringFunc(content, func(match string) string {
@@ -410,7 +410,7 @@ func (e *Engine) processSectionDirectives(content string, data interface{}) stri
 }
 
 // processComponentDirectives processes @component and @slot directives
-func (e *Engine) processComponentDirectives(content string, data interface{}) string {
+func (e *FinEngine) processComponentDirectives(content string, data interface{}) string {
 	// Process @component directives
 	componentRegex := regexp.MustCompile(`@component\s*\(\s*['"]([^'"]+)['"]\s*\)\s*(.*?)\s*@endcomponent`)
 	content = componentRegex.ReplaceAllStringFunc(content, func(match string) string {
@@ -427,7 +427,7 @@ func (e *Engine) processComponentDirectives(content string, data interface{}) st
 }
 
 // processDirectives processes all other directives
-func (e *Engine) processDirectives(content string, data interface{}) string {
+func (e *FinEngine) processDirectives(content string, data interface{}) string {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
@@ -454,8 +454,8 @@ func (e *Engine) processDirectives(content string, data interface{}) string {
 	return content
 }
 
-// convertBladeToGo converts Blade syntax to Go template syntax
-func (e *Engine) convertBladeToGo(content string) string {
+// convertFinToGo converts Fin syntax to Go template syntax
+func (e *FinEngine) convertFinToGo(content string) string {
 	// Convert {{ $variable }} to {{.Variable}}
 	content = regexp.MustCompile(`\{\{\s*\$(\w+)\s*\}\}`).ReplaceAllString(content, "{{.$1}}")
 
@@ -487,7 +487,7 @@ func (e *Engine) convertBladeToGo(content string) string {
 }
 
 // parseDirectiveArgs parses directive arguments
-func (e *Engine) parseDirectiveArgs(argsStr string) []string {
+func (e *FinEngine) parseDirectiveArgs(argsStr string) []string {
 	argsStr = strings.TrimSpace(argsStr)
 	if argsStr == "" {
 		return []string{}
@@ -524,7 +524,7 @@ func (e *Engine) parseDirectiveArgs(argsStr string) []string {
 }
 
 // renderWithLayout renders content with a layout
-func (e *Engine) renderWithLayout(layoutName string, content string, data interface{}) (string, error) {
+func (e *FinEngine) renderWithLayout(layoutName string, content string, data interface{}) (string, error) {
 	e.mu.RLock()
 	layout, exists := e.layouts[layoutName]
 	e.mu.RUnlock()
@@ -564,7 +564,7 @@ func (e *Engine) renderWithLayout(layoutName string, content string, data interf
 }
 
 // renderComponent renders a component
-func (e *Engine) renderComponent(componentName string, content string, data interface{}) string {
+func (e *FinEngine) renderComponent(componentName string, content string, data interface{}) string {
 	e.mu.RLock()
 	component, exists := e.components[componentName]
 	e.mu.RUnlock()
@@ -597,7 +597,7 @@ func (e *Engine) renderComponent(componentName string, content string, data inte
 }
 
 // getCachedTemplate retrieves cached template
-func (e *Engine) getCachedTemplate(templateName string) *CompiledTemplate {
+func (e *FinEngine) getCachedTemplate(templateName string) *CompiledTemplate {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
@@ -612,7 +612,7 @@ func (e *Engine) getCachedTemplate(templateName string) *CompiledTemplate {
 }
 
 // setCachedTemplate caches compiled template
-func (e *Engine) setCachedTemplate(templateName string, compiled *CompiledTemplate) {
+func (e *FinEngine) setCachedTemplate(templateName string, compiled *CompiledTemplate) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -620,7 +620,7 @@ func (e *Engine) setCachedTemplate(templateName string, compiled *CompiledTempla
 }
 
 // ClearCache clears the template cache
-func (e *Engine) ClearCache() {
+func (e *FinEngine) ClearCache() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -634,7 +634,7 @@ func (e *Engine) ClearCache() {
 }
 
 // GetDirectives returns all registered directives
-func (e *Engine) GetDirectives() map[string]DirectiveFunc {
+func (e *FinEngine) GetDirectives() map[string]DirectiveFunc {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
@@ -647,7 +647,7 @@ func (e *Engine) GetDirectives() map[string]DirectiveFunc {
 }
 
 // GetComponents returns all registered components
-func (e *Engine) GetComponents() map[string]*Component {
+func (e *FinEngine) GetComponents() map[string]*Component {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
@@ -660,7 +660,7 @@ func (e *Engine) GetComponents() map[string]*Component {
 }
 
 // GetLayouts returns all registered layouts
-func (e *Engine) GetLayouts() map[string]*Layout {
+func (e *FinEngine) GetLayouts() map[string]*Layout {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 

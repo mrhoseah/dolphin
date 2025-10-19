@@ -1,0 +1,48 @@
+<!-- ui/views/pages/welcome.fin.go -->
+@extends('layouts.app')
+@model('User', user)
+
+@section('title')
+    Welcome
+@endsection
+
+@section('content')
+    <div class="hero">
+        <h1>Welcome to Dolphin Framework</h1>
+        <p>Hello, {{user.Name}}!</p>
+        
+        @if(user.IsAdmin)
+            <div class="admin-panel">
+                <p>Admin access granted</p>
+            </div>
+        @endif
+        
+        <div class="posts">
+            <h2>Recent Posts</h2>
+            @foreach(posts as post)
+                <div class="post-card">
+                    <h3>{{post.Title}}</h3>
+                    <p>{{post.Content}}</p>
+                    <small>By {{post.Author.Name}} on {{post.CreatedAt}}</small>
+                </div>
+            @endforeach
+        </div>
+        
+        <!-- Example of nested model usage -->
+        @if(user.Profile)
+            <div class="user-profile">
+                <h3>Profile Information</h3>
+                <p>Bio: {{user.Profile.Bio}}</p>
+                <p>Location: {{user.Profile.Location}}</p>
+                
+                @if(user.Profile.SocialLinks)
+                    <div class="social-links">
+                        @foreach(user.Profile.SocialLinks as link)
+                            <a href="{{link.URL}}" target="_blank">{{link.Platform}}</a>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        @endif
+    </div>
+@endsection
