@@ -512,19 +512,19 @@ func (p *monitoringProvider) Boot() error     { return nil }
 
 // EventProvider implementation
 type eventProvider struct {
-	eventBus      events.EventBus
-	eventFactory  events.EventFactory
+	eventBus        events.EventBus
+	eventFactory    events.EventFactory
 	eventSerializer events.EventSerializer
-	eventStore    events.EventStore
+	eventStore      events.EventStore
 }
 
 // NewEventProvider creates a new event provider
 func NewEventProvider() ServiceProvider {
 	return &eventProvider{
-		eventBus:       events.NewEventBus(),
-		eventFactory:   events.NewEventFactory(),
-		eventSerializer: events.NewEventSerializer(),
-		eventStore:     &memoryEventStore{events: make(map[string][]events.Event)},
+		eventBus:        events.NewEventBus(events.NewEventDispatcher(), events.NewInMemoryEventQueue()),
+		eventFactory:    nil, // Not implemented yet
+		eventSerializer: nil, // Not implemented yet
+		eventStore:      &memoryEventStore{events: make(map[string][]events.Event)},
 	}
 }
 
@@ -551,11 +551,11 @@ func (p *eventProvider) EventBus() events.EventBus {
 }
 
 func (p *eventProvider) EventFactory() events.EventFactory {
-	return p.eventFactory
+	return nil // Not implemented yet
 }
 
 func (p *eventProvider) EventSerializer() events.EventSerializer {
-	return p.eventSerializer
+	return nil // Not implemented yet
 }
 
 func (p *eventProvider) EventStore() events.EventStore {
