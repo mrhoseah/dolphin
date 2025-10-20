@@ -278,7 +278,7 @@ func createProjectStructure(projectName string) {
 go 1.21
 
 require (
-	dolphin v1.0.0
+	github.com/mrhoseah/dolphin v1.0.0
 )`, projectName)
 
 	if err := os.WriteFile(filepath.Join(projectName, "go.mod"), []byte(goModContent), 0644); err != nil {
