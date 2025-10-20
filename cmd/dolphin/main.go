@@ -48,6 +48,7 @@ Examples:
 		Run:   createNewProject,
 	}
 	newCmd.Flags().BoolP("force", "f", false, "Overwrite existing directory")
+	newCmd.Flags().Bool("auth", false, "Include authentication scaffolding")
 
 	// List available commands
 	var listCmd = &cobra.Command{
@@ -196,6 +197,7 @@ Examples:
 func createNewProject(cmd *cobra.Command, args []string) {
 	projectName := args[0]
 	force, _ := cmd.Flags().GetBool("force")
+	withAuth, _ := cmd.Flags().GetBool("auth")
 
 	// Check if directory exists
 	if _, err := os.Stat(projectName); err == nil && !force {
@@ -209,9 +211,29 @@ func createNewProject(cmd *cobra.Command, args []string) {
 	createProjectStructure(projectName)
 
 	fmt.Printf("✅ Dolphin application '%s' created successfully!\n", projectName)
+
+	// If --auth is set, run make:auth inside the new project
+	if withAuth {
+		fmt.Printf("\n🔐 Adding authentication scaffolding (--auth)...\n")
+		// Ensure routes directory exists to avoid write errors
+		if err := os.MkdirAll(filepath.Join(projectName, "routes"), 0755); err != nil {
+			fmt.Printf("⚠️  Failed to prepare routes directory: %v\n", err)
+		}
+		// Execute: dolphin make:auth in the new project directory
+		authCmd := exec.Command(os.Args[0], "make:auth")
+		authCmd.Dir = projectName
+		authCmd.Stdout = os.Stdout
+		authCmd.Stderr = os.Stderr
+		if err := authCmd.Run(); err != nil {
+			fmt.Printf("⚠️  make:auth failed during project creation: %v\n", err)
+		}
+	}
 	fmt.Printf("\n📋 Next steps:\n")
 	fmt.Printf("  cd %s\n", projectName)
 	fmt.Printf("  go mod tidy\n")
+	if withAuth {
+		fmt.Printf("  # Auth scaffolding added. Visit /auth/login, /auth/register, /dashboard\n")
+	}
 	fmt.Printf("  dolphin serve\n")
 	fmt.Printf("\n📚 Documentation: https://dolphin\n")
 }
