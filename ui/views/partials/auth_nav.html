@@ -1,0 +1,16 @@
+<nav class="links">
+    <a class="link" href="/">Home</a>
+    @auth
+        <a class="link" href="/dashboard">Dashboard</a>
+        <form method="POST" action="/auth/logout" style="display:inline">
+            @csrf
+            <button class="link" style="background:none;border:none;cursor:pointer" type="submit">Logout</button>
+        </form>
+    @endauth
+    @guest
+        <a class="link" href="/auth/login">Login</a>
+        <a class="link primary" href="/auth/register">Register</a>
+    @endguest
+</nav>
+
+
