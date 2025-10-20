@@ -1,4 +1,4 @@
-<!-- ui/views/pages/welcome.fin.go -->
+// ui/views/pages/welcome.fin
 @extends('layouts.app')
 @model('User', user)
 

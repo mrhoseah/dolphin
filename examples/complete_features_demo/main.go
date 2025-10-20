@@ -12,6 +12,7 @@ import (
 	"dolphin/internal/orm"
 	"dolphin/internal/queue"
 	"dolphin/internal/template"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -541,38 +542,41 @@ func demoFormHelpers() {
 	formBuilder := forms.NewBuilder()
 
 	// Build a complete form
-	form := formBuilder.
-		Method("POST").
-		Action("/users").
-		Attribute("class", "form-horizontal").
-		CSRFToken("csrf-token-123").
-		Text("name", "Full Name", "John Doe").
-		Required().
-		Placeholder("Enter your full name").
-		Email("email", "Email Address", "john@example.com").
-		Required().
-		Password("password", "Password").
-		Required().
-		Number("age", "Age", 25).
-		Textarea("bio", "Biography", "Tell us about yourself").
-		Help("Optional: Share some information about yourself").
-		Select("country", "Country", []forms.Option{
-			{Value: "us", Text: "United States", Selected: true},
-			{Value: "ca", Text: "Canada"},
-			{Value: "uk", Text: "United Kingdom"},
-		}, "us").
-		Checkbox("newsletter", "Subscribe to newsletter", true).
-		Date("birthday", "Birthday", "1990-01-01").
-		File("avatar", "Profile Picture").
-		FieldAttribute("accept", "image/*").
-		Hidden("source", "registration-form").
-		Build()
+	formBuilder.Method("POST").Action("/users").Attribute("class", "form-horizontal").CSRFToken("csrf-token-123")
+
+	nameField := formBuilder.Text("name", "Full Name", "John Doe").SetRequired(true).SetPlaceholder("Enter your full name")
+	emailField := formBuilder.Email("email", "Email Address", "john@example.com").SetRequired(true)
+	passwordField := formBuilder.Password("password", "Password").SetRequired(true)
+	ageField := formBuilder.Number("age", "Age", 25)
+	bioField := formBuilder.Textarea("bio", "Biography", "Tell us about yourself")
+	countryField := formBuilder.Select("country", "Country", []forms.Option{
+		{Value: "us", Text: "United States", Selected: true},
+		{Value: "ca", Text: "Canada"},
+		{Value: "uk", Text: "United Kingdom"},
+	}, "us")
+	newsletterField := formBuilder.Checkbox("newsletter", "Subscribe to newsletter", true)
+	birthdayField := formBuilder.Date("birthday", "Birthday", "1990-01-01")
+	avatarField := formBuilder.File("avatar", "Profile Picture")
+	sourceField := formBuilder.Hidden("source", "registration-form")
+
+	form := formBuilder.Build()
+
+	// Use the fields to avoid unused variable warnings
+	_ = nameField
+	_ = emailField
+	_ = passwordField
+	_ = ageField
+	_ = bioField
+	_ = countryField
+	_ = newsletterField
+	_ = birthdayField
+	_ = avatarField
+	_ = sourceField
 
 	fmt.Println("✅ Form helpers working")
 
-	// Render form
-	html := form.Render()
-	fmt.Printf("📝 Form rendered: %d characters\n", len(html))
+	// Render form (simplified for demo)
+	fmt.Printf("📝 Form has %d fields\n", len(form.Fields))
 
 	// Demo individual helpers
 	fmt.Println("🔧 Individual helpers:")
@@ -583,9 +587,9 @@ func demoFormHelpers() {
 
 	// Demo URL helpers
 	fmt.Println("🔗 URL helpers:")
-	fmt.Printf("  • URL with params: %s\n", forms.URL("/users", map[string]interface{}{"page": 1, "limit": 10}))
+	fmt.Printf("  • URL with params: %s\n", forms.URL("/users", map[string]string{"page": "1", "limit": "10"}))
 	fmt.Printf("  • Asset URL: %s\n", forms.Asset("css/app.css"))
-	fmt.Printf("  • Image: %s\n", forms.Image("logo.png", map[string]string{"alt": "Logo"}))
+	fmt.Printf("  • Image: %s\n", forms.Image("logo.png", "Logo"))
 
 	fmt.Println("🎯 Features: Fluent API, Validation integration, HTML generation, URL helpers")
 }

@@ -11,6 +11,8 @@ type Event interface {
 	GetPayload() interface{}
 	GetTimestamp() time.Time
 	GetID() string
+	IsPropagationStopped() bool
+	StopPropagation()
 }
 
 // Listener defines the interface for event listeners

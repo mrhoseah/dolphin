@@ -8,9 +8,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/gorilla/sessions"
 	"dolphin/internal/auth"
 	"dolphin/internal/security"
+
+	"github.com/gorilla/sessions"
 	"go.uber.org/zap"
 )
 
@@ -148,7 +149,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Add security headers middleware
-	securityMiddleware := security.SecurityHeadersMiddleware(headerManager)
+	_ = security.NewSecurityHeadersMiddleware(headerManager.GetHeaders())
 
 	// Add a test handler
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -156,7 +157,13 @@ func main() {
 	})
 
 	// Wrap with security middleware
-	handler := securityMiddleware(mux)
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Add security headers
+		for name, value := range headerManager.GetHeaders() {
+			w.Header().Set(name, value)
+		}
+		mux.ServeHTTP(w, r)
+	})
 
 	// Start server in goroutine
 	go func() {
@@ -188,15 +195,15 @@ func main() {
 
 	cspBuilder := security.NewCSPBuilder()
 	csp := cspBuilder.
-		SetDefaultSrc("'self'").
-		SetScriptSrc("'self'", "'unsafe-inline'").
-		SetStyleSrc("'self'", "'unsafe-inline'").
-		SetImgSrc("'self'", "data:", "https:").
-		SetFontSrc("'self'", "data:").
-		SetConnectSrc("'self'").
-		SetFrameAncestors("'none'").
-		SetBaseURI("'self'").
-		SetFormAction("'self'").
+		AddDirective("default-src", "'self'").
+		AddDirective("script-src", "'self'", "'unsafe-inline'").
+		AddDirective("style-src", "'self'", "'unsafe-inline'").
+		AddDirective("img-src", "'self'", "data:", "https:").
+		AddDirective("font-src", "'self'", "data:").
+		AddDirective("connect-src", "'self'").
+		AddDirective("frame-ancestors", "'none'").
+		AddDirective("base-uri", "'self'").
+		AddDirective("form-action", "'self'").
 		Build()
 
 	fmt.Printf("Generated CSP: %s\n", csp)
@@ -207,8 +214,8 @@ func main() {
 	presets := security.GetAvailablePresets()
 	fmt.Println("Available Security Presets:")
 	for _, preset := range presets {
-		info, _ := security.GetPresetInfo(preset)
-		fmt.Printf("  %s: %s\n", preset, info.Description)
+		info := security.GetPresetInfo(preset)
+		fmt.Printf("  %s: %s\n", preset, info["description"])
 	}
 
 	// Example 9: Environment Credential Manager
