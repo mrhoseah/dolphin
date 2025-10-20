@@ -149,7 +149,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Add security headers middleware
-	_ = security.NewSecurityHeadersMiddleware(headerManager.GetHeaders())
+	// Note: SecurityHeadersMiddleware not implemented yet
 
 	// Add a test handler
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

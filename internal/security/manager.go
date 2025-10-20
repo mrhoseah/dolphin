@@ -552,3 +552,99 @@ func (sm *SecurityMiddleware) SecurityHeaders(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+// GetAvailablePresets returns available security header presets
+func GetAvailablePresets() []string {
+	return []string{"strict", "moderate", "permissive"}
+}
+
+// GetPresetInfo returns basic information about a preset
+// Only fields required by examples are provided
+func GetPresetInfo(preset string) map[string]string {
+	switch preset {
+	case "strict":
+		return map[string]string{
+			"name":        "Strict Security",
+			"description": "Maximum security with all headers enabled",
+		}
+	case "moderate":
+		return map[string]string{
+			"name":        "Moderate Security",
+			"description": "Balanced security with essential headers",
+		}
+	case "permissive":
+		return map[string]string{
+			"name":        "Permissive Security",
+			"description": "Minimal security headers",
+		}
+	default:
+		return map[string]string{
+			"name":        preset,
+			"description": "Custom preset",
+		}
+	}
+}
+
+// SecurityHeaderManager provides preset-based security headers
+type SecurityHeaderManager struct {
+	preset string
+}
+
+// NewSecurityHeaderManager creates a header manager with a preset
+func NewSecurityHeaderManager(preset string) *SecurityHeaderManager {
+	return &SecurityHeaderManager{preset: preset}
+}
+
+// GetHeaders returns standard security headers based on preset
+func (shm *SecurityHeaderManager) GetHeaders() map[string]string {
+	headers := make(map[string]string)
+
+	switch shm.preset {
+	case "strict":
+		headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+		headers["X-Content-Type-Options"] = "nosniff"
+		headers["X-Frame-Options"] = "DENY"
+		headers["X-XSS-Protection"] = "1; mode=block"
+		headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+		headers["Content-Security-Policy"] = "default-src 'self'"
+	case "moderate":
+		headers["X-Content-Type-Options"] = "nosniff"
+		headers["X-Frame-Options"] = "SAMEORIGIN"
+		headers["X-XSS-Protection"] = "1; mode=block"
+	case "permissive":
+		headers["X-Content-Type-Options"] = "nosniff"
+	default:
+		headers["X-Content-Type-Options"] = "nosniff"
+	}
+
+	return headers
+}
+
+// CSPBuilder builds Content Security Policy headers
+type CSPBuilder struct {
+	directives map[string][]string
+}
+
+// NewCSPBuilder creates a new CSP builder
+func NewCSPBuilder() *CSPBuilder {
+	return &CSPBuilder{directives: make(map[string][]string)}
+}
+
+// AddDirective adds a directive and returns the builder for chaining
+func (c *CSPBuilder) AddDirective(name string, values ...string) *CSPBuilder {
+	c.directives[name] = values
+	return c
+}
+
+// Build generates the CSP header value
+func (c *CSPBuilder) Build() string {
+	parts := make([]string, 0, len(c.directives))
+	for name, values := range c.directives {
+		if len(values) > 0 {
+			parts = append(parts, name+" "+strings.Join(values, " "))
+		} else {
+			parts = append(parts, name)
+		}
+	}
+	return strings.Join(parts, "; ")
+}
