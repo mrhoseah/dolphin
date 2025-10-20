@@ -533,7 +533,7 @@ Dolphin provides a powerful CLI tool for development tasks. Install it globally 
 
 ```bash
 # Install CLI globally
-go install github.com/mrhoseah/dolphin/cmd/cli@latest
+go install github.com/mrhoseah/dolphin/cmd/dolphin@latest
 
 # Create new project
 dolphin new my-awesome-app

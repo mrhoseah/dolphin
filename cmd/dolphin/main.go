@@ -278,8 +278,10 @@ func createProjectStructure(projectName string) {
 go 1.21
 
 require (
-	github.com/mrhoseah/dolphin v1.0.0
-)`, projectName)
+	github.com/mrhoseah/dolphin v0.0.0-00010101000000-000000000000
+)
+
+replace github.com/mrhoseah/dolphin => ../dolphin`, projectName)
 
 	if err := os.WriteFile(filepath.Join(projectName, "go.mod"), []byte(goModContent), 0644); err != nil {
 		fmt.Printf("❌ Failed to create go.mod: %v\n", err)
