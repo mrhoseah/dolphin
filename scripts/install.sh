@@ -12,6 +12,52 @@ err()  { echo -e "\033[1;31m[ERR ]\033[0m $*" >&2; }
 
 VERSION="${VERSION:-main}"
 
+detect_os() {
+  case "$(uname -s)" in
+    Linux*)   echo linux ;;
+    Darwin*)  echo darwin ;;
+    CYGWIN*|MINGW*|MSYS*) echo windows ;;
+    *)        echo linux ;;
+  esac
+}
+
+detect_arch() {
+  case "$(uname -m)" in
+    x86_64|amd64) echo amd64 ;;
+    aarch64|arm64) echo arm64 ;;
+    armv7l|armv6l) echo arm ;;
+    *) echo amd64 ;;
+  esac
+}
+
+try_download_binary() {
+  OS="$(detect_os)"
+  ARCH="$(detect_arch)"
+  ASSET_NAME="dolphin_${OS}_${ARCH}.tar.gz"
+  URL="https://github.com/mrhoseah/dolphin/releases/latest/download/${ASSET_NAME}"
+
+  info "Checking for prebuilt binary (${OS}/${ARCH})..."
+  TMP_DIR="$(mktemp -d)"
+  TAR_PATH="$TMP_DIR/${ASSET_NAME}"
+
+  if curl -fsSL -o "$TAR_PATH" "$URL" ; then
+    info "Downloading prebuilt binary..."
+    mkdir -p "$TMP_DIR/bin"
+    tar -xzf "$TAR_PATH" -C "$TMP_DIR/bin" || { rm -rf "$TMP_DIR"; return 1; }
+    if [ -f "$TMP_DIR/bin/dolphin" ] || [ -f "$TMP_DIR/bin/dolphin.exe" ]; then
+      BIN_SRC="$TMP_DIR/bin/dolphin"
+      [ -f "$TMP_DIR/bin/dolphin.exe" ] && BIN_SRC="$TMP_DIR/bin/dolphin.exe"
+      mkdir -p "$GOBIN"
+      cp "$BIN_SRC" "$GOBIN/dolphin" || { rm -rf "$TMP_DIR"; return 1; }
+      rm -rf "$TMP_DIR"
+      return 0
+    fi
+  fi
+
+  rm -rf "$TMP_DIR"
+  return 1
+}
+
 command -v go >/dev/null 2>&1 || { err "Go is required. Install Go (1.21+) and re-run."; exit 1; }
 
 GOPATH="$(go env GOPATH)"
@@ -20,8 +66,39 @@ if [ -z "${GOBIN}" ]; then
   GOBIN="$GOPATH/bin"
 fi
 
-info "Installing Dolphin CLI ($VERSION) via go install..."
-GOPROXY=direct GOSUMDB=off go install "github.com/mrhoseah/dolphin/cmd/dolphin@${VERSION}"
+# 1) Try prebuilt binary first
+if try_download_binary ; then
+  info "Installed prebuilt binary to $GOBIN/dolphin"
+else
+  info "Installing Dolphin CLI ($VERSION) via go install..."
+
+  # 2) Try go install; if it fails, fall back to source build
+  set +e
+  GOPROXY=direct GOSUMDB=off go install "github.com/mrhoseah/dolphin/cmd/dolphin@${VERSION}"
+  INSTALL_STATUS=$?
+  set -e
+
+  if [ $INSTALL_STATUS -ne 0 ]; then
+    warn "go install failed. Falling back to source build (no extra steps needed)."
+    command -v git >/dev/null 2>&1 || { err "git is required for fallback install. Please install git and retry."; exit 1; }
+
+    TMP_DIR="$(mktemp -d)"
+    REPO_DIR="$TMP_DIR/dolphin"
+    info "Cloning source into $REPO_DIR ..."
+    git clone --depth=1 https://github.com/mrhoseah/dolphin "$REPO_DIR" >/dev/null 2>&1 || {
+      err "Failed to clone repository for fallback install."; rm -rf "$TMP_DIR"; exit 1;
+    }
+
+    info "Building Dolphin CLI from source..."
+    (
+      cd "$REPO_DIR"
+      go build -o "$GOBIN/dolphin" ./cmd/dolphin || { err "Source build failed."; rm -rf "$TMP_DIR"; exit 1; }
+    )
+
+    # Cleanup temp
+    rm -rf "$TMP_DIR"
+  fi
+fi
 
 BIN_SRC="$GOBIN/dolphin"
 if [ ! -f "$BIN_SRC" ]; then
