@@ -1,0 +1,35 @@
+// ui/views/pages/page.fin
+@extends('layouts.app')
+@model('Page', page)
+
+@section('title')
+    {{page.Title}}
+@endsection
+
+@section('content')
+    <div class="page-content">
+        <h1>{{page.Title}}</h1>
+        <div class="page-body">
+            {{page.Content}}
+        </div>
+        
+        @if(page.Meta)
+            <div class="page-meta">
+                <p><strong>Author:</strong> {{page.Meta.Author}}</p>
+                <p><strong>Created:</strong> {{page.Meta.CreatedAt}}</p>
+                @if(page.Meta.UpdatedAt)
+                    <p><strong>Updated:</strong> {{page.Meta.UpdatedAt}}</p>
+                @endif
+            </div>
+        @endif
+        
+        @if(page.Tags)
+            <div class="page-tags">
+                <h3>Tags</h3>
+                @foreach(page.Tags as tag)
+                    <span class="tag">{{tag}}</span>
+                @endforeach
+            </div>
+        @endif
+    </div>
+@endsection

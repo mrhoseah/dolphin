@@ -1149,7 +1149,8 @@ func updateCLI(cmd *cobra.Command, args []string) {
 func makeAuth(cmd *cobra.Command, args []string) {
 	force, _ := cmd.Flags().GetBool("force")
 
-	fmt.Printf("🔐 Scaffolding authentication system...\n")
+	fmt.Printf("🔐 Scaffolding Laravel Breeze-like authentication system...\n")
+	fmt.Printf("=======================================================\n")
 
 	// Check if we're in a Dolphin project
 	if _, err := os.Stat("go.mod"); err != nil {
@@ -1158,18 +1159,34 @@ func makeAuth(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// Create directories
+	// Create comprehensive directory structure
 	dirs := []string{
 		"app/models",
 		"app/http/controllers",
 		"app/http/middleware",
+		"app/http/requests",
+		"app/services",
+		"app/mail",
 		"database/migrations",
+		"database/seeders",
 		"internal/auth",
-		"resources/views/auth",
-		"resources/views/layouts",
-		"resources/views/components",
+		"internal/mail",
+		"internal/session",
+		"internal/cache",
+		"ui/views/auth",
+		"ui/views/layouts",
+		"ui/views/components",
+		"ui/views/emails",
+		"assets/css",
+		"assets/js",
 		"public/css",
 		"public/js",
+		"public/images",
+		"storage/logs",
+		"storage/cache",
+		"storage/sessions",
+		"config",
+		"routes",
 	}
 
 	for _, dir := range dirs {
@@ -1180,816 +1197,77 @@ func makeAuth(cmd *cobra.Command, args []string) {
 		fmt.Printf("📁 Created directory: %s\n", dir)
 	}
 
-	// Create User model
-	userModel := `package models
+	// 1. Create Enhanced User Model with Email Verification
+	createEnhancedUserModel(force)
 
-import (
-	"time"
-	"golang.org/x/crypto/bcrypt"
-)
+	// 2. Create Password Reset Model
+	createPasswordResetModel(force)
 
-type User struct {
-	ID        uint      ` + "`json:\"id\" gorm:\"primaryKey\"`" + `
-	Name      string    ` + "`json:\"name\" gorm:\"not null\"`" + `
-	Email     string    ` + "`json:\"email\" gorm:\"uniqueIndex;not null\"`" + `
-	Password  string    ` + "`json:\"-\" gorm:\"not null\"`" + `
-	CreatedAt time.Time ` + "`json:\"created_at\"`" + `
-	UpdatedAt time.Time ` + "`json:\"updated_at\"`" + `
-}
+	// 3. Create Auth Controller with all Breeze methods
+	createAuthController(force)
 
-// SetPassword hashes the password before storing
-func (u *User) SetPassword(password string) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	u.Password = string(hashedPassword)
-	return nil
-}
+	// 4. Create Auth Middleware
+	createAuthMiddleware(force)
 
-// CheckPassword verifies the password
-func (u *User) CheckPassword(password string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
-	return err == nil
-}
-`
+	// 5. Create Auth Service
+	createAuthService(force)
 
-	userModelPath := "app/models/user.go"
-	if _, err := os.Stat(userModelPath); err == nil && !force {
-		fmt.Printf("⚠️  User model already exists. Use --force to overwrite\n")
-	} else {
-		if err := os.WriteFile(userModelPath, []byte(userModel), 0644); err != nil {
-			fmt.Printf("❌ Failed to create user model: %v\n", err)
-			return
-		}
-		fmt.Printf("✅ Created user model: %s\n", userModelPath)
-	}
+	// 6. Create Mail Service for Email Verification
+	createMailService(force)
 
-	// Create Auth Controller
-	authController := `package controllers
+	// 7. Create Session Service
+	createSessionService(force)
 
-import (
-	"net/http"
-	"strconv"
-	"time"
-	
-	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
-)
+	// 8. Create Auth Request Validators
+	createAuthRequests(force)
 
-type AuthController struct{}
+	// 9. Create Database Migrations
+	createAuthMigrations(force)
 
-type LoginRequest struct {
-	Email    string ` + "`json:\"email\" binding:\"required,email\"`" + `
-	Password string ` + "`json:\"password\" binding:\"required\"`" + `
-}
+	// 10. Create Auth Routes
+	createAuthRoutes(force)
 
-type RegisterRequest struct {
-	Name     string ` + "`json:\"name\" binding:\"required\"`" + `
-	Email    string ` + "`json:\"email\" binding:\"required,email\"`" + `
-	Password string ` + "`json:\"password\" binding:\"required,min=6\"`" + `
-}
+	// 11. Create Tailwind CSS Build System
+	createTailwindBuildSystem(force)
 
-// Login handles user authentication
-func (ac *AuthController) Login(c *gin.Context) {
-	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	
-	// TODO: Implement user lookup and password verification
-	// This is a placeholder implementation
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Login endpoint ready",
-		"user":    req.Email,
-	})
-}
+	// 12. Create Auth Views (Login, Register, Forgot Password, Reset Password, Verify Email, Profile)
+	createAuthViews(force)
 
-// Register handles user registration
-func (ac *AuthController) Register(c *gin.Context) {
-	var req RegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	
-	// TODO: Implement user creation
-	// This is a placeholder implementation
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Registration endpoint ready",
-		"user":    req.Email,
-	})
-}
+	// 13. Create Email Templates
+	createEmailTemplates(force)
 
-// Logout handles user logout
-func (ac *AuthController) Logout(c *gin.Context) {
-	// TODO: Implement logout logic (token invalidation, etc.)
-	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
-}
+	// 14. Create Dashboard View
+	createDashboardView(force)
 
-// Profile returns user profile
-func (ac *AuthController) Profile(c *gin.Context) {
-	// TODO: Get user from context (set by auth middleware)
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Profile endpoint ready",
-		"user":    "authenticated_user",
-	})
-}
-`
+	// 15. Create Configuration Files
+	createAuthConfig(force)
 
-	authControllerPath := "app/http/controllers/auth_controller.go"
-	if _, err := os.Stat(authControllerPath); err == nil && !force {
-		fmt.Printf("⚠️  Auth controller already exists. Use --force to overwrite\n")
-	} else {
-		if err := os.WriteFile(authControllerPath, []byte(authController), 0644); err != nil {
-			fmt.Printf("❌ Failed to create auth controller: %v\n", err)
-			return
-		}
-		fmt.Printf("✅ Created auth controller: %s\n", authControllerPath)
-	}
+	// 16. Create Package.json with build scripts
+	createPackageJson(force)
 
-	// Create Auth Middleware
-	authMiddleware := `package middleware
-
-import (
-	"net/http"
-	"strings"
-	
-	"github.com/gin-gonic/gin"
-)
-
-// AuthMiddleware validates JWT tokens
-func AuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
-			c.Abort()
-			return
-		}
-		
-		// Check for Bearer token
-		tokenParts := strings.Split(authHeader, " ")
-		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
-			c.Abort()
-			return
-		}
-		
-		token := tokenParts[1]
-		
-		// TODO: Implement JWT token validation
-		// For now, just check if token exists
-		if token == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-			c.Abort()
-			return
-		}
-		
-		// TODO: Parse token and set user context
-		// c.Set("user", user)
-		
-		c.Next()
-	}
-}
-
-// GuestMiddleware redirects authenticated users
-func GuestMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// TODO: Check if user is authenticated
-		// If authenticated, redirect to dashboard
-		c.Next()
-	}
-}
-`
-
-	authMiddlewarePath := "app/http/middleware/auth.go"
-	if _, err := os.Stat(authMiddlewarePath); err == nil && !force {
-		fmt.Printf("⚠️  Auth middleware already exists. Use --force to overwrite\n")
-	} else {
-		if err := os.WriteFile(authMiddlewarePath, []byte(authMiddleware), 0644); err != nil {
-			fmt.Printf("❌ Failed to create auth middleware: %v\n", err)
-			return
-		}
-		fmt.Printf("✅ Created auth middleware: %s\n", authMiddlewarePath)
-	}
-
-	// Create migration for users table
-	migration := `package migrations
-
-import (
-	"gorm.io/gorm"
-)
-
-func CreateUsersTable(db *gorm.DB) error {
-	return db.Exec(` + "`" + `
-		CREATE TABLE IF NOT EXISTS users (
-			id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-			name VARCHAR(255) NOT NULL,
-			email VARCHAR(255) UNIQUE NOT NULL,
-			password VARCHAR(255) NOT NULL,
-			created_at TIMESTAMP NULL,
-			updated_at TIMESTAMP NULL
-		)
-	` + "`" + `).Error
-}
-
-func DropUsersTable(db *gorm.DB) error {
-	return db.Exec("DROP TABLE IF EXISTS users").Error
-}
-`
-
-	migrationPath := "database/migrations/create_users_table.go"
-	if _, err := os.Stat(migrationPath); err == nil && !force {
-		fmt.Printf("⚠️  Users migration already exists. Use --force to overwrite\n")
-	} else {
-		if err := os.WriteFile(migrationPath, []byte(migration), 0644); err != nil {
-			fmt.Printf("❌ Failed to create users migration: %v\n", err)
-			return
-		}
-		fmt.Printf("✅ Created users migration: %s\n", migrationPath)
-	}
-
-	// Create auth service
-	authService := `package auth
-
-import (
-	"errors"
-	"time"
-	
-	"golang.org/x/crypto/bcrypt"
-)
-
-type AuthService struct {
-	// Add dependencies like user repository, JWT service, etc.
-}
-
-type LoginCredentials struct {
-	Email    string
-	Password string
-}
-
-type RegisterData struct {
-	Name     string
-	Email    string
-	Password string
-}
-
-// Login authenticates a user
-func (as *AuthService) Login(credentials LoginCredentials) (string, error) {
-	// TODO: Implement user lookup and password verification
-	// Return JWT token on success
-	return "jwt_token_placeholder", nil
-}
-
-// Register creates a new user
-func (as *AuthService) Register(data RegisterData) (*User, error) {
-	// TODO: Implement user creation
-	// Hash password, save to database
-	return &User{}, nil
-}
-
-// ValidateToken validates a JWT token
-func (as *AuthService) ValidateToken(token string) (*User, error) {
-	// TODO: Implement JWT validation
-	return &User{}, nil
-}
-
-// Logout invalidates a token
-func (as *AuthService) Logout(token string) error {
-	// TODO: Implement token invalidation
-	return nil
-}
-
-type User struct {
-	ID        uint      ` + "`json:\"id\"`" + `
-	Name      string    ` + "`json:\"name\"`" + `
-	Email     string    ` + "`json:\"email\"`" + `
-	CreatedAt time.Time ` + "`json:\"created_at\"`" + `
-	UpdatedAt time.Time ` + "`json:\"updated_at\"`" + `
-}
-`
-
-	authServicePath := "internal/auth/service.go"
-	if _, err := os.Stat(authServicePath); err == nil && !force {
-		fmt.Printf("⚠️  Auth service already exists. Use --force to overwrite\n")
-	} else {
-		if err := os.WriteFile(authServicePath, []byte(authService), 0644); err != nil {
-			fmt.Printf("❌ Failed to create auth service: %v\n", err)
-			return
-		}
-		fmt.Printf("✅ Created auth service: %s\n", authServicePath)
-	}
-
-	// Create Fin Templates
-
-	// Create main layout
-	mainLayout := `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Dolphin App')</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    @stack('styles')
-</head>
-<body class="bg-gray-50 min-h-screen">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <a href="/" class="text-xl font-bold text-gray-900">
-                        <i class="fas fa-dolphin text-blue-600 mr-2"></i>
-                        Dolphin App
-                    </a>
-                </div>
-                <div class="flex items-center space-x-4">
-                    @auth
-                        <span class="text-gray-700">Welcome, {{ auth()->user()->name }}!</span>
-                        <a href="/profile" class="text-gray-600 hover:text-gray-900">Profile</a>
-                        <form method="POST" action="/logout" class="inline">
-                            @csrf
-                            <button type="submit" class="text-gray-600 hover:text-gray-900">Logout</button>
-                        </form>
-                    @else
-                        <a href="/login" class="text-gray-600 hover:text-gray-900">Login</a>
-                        <a href="/register" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Register</a>
-                    @endauth
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        @if(session('success'))
-            <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if(session('error'))
-            <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                {{ session('error') }}
-            </div>
-        @endif
-
-        @if($errors->any())
-            <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                <ul class="list-disc list-inside">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        @yield('content')
-    </main>
-
-    @stack('scripts')
-</body>
-</html>`
-
-	mainLayoutPath := "resources/views/layouts/app.fin"
-	if _, err := os.Stat(mainLayoutPath); err == nil && !force {
-		fmt.Printf("⚠️  Main layout already exists. Use --force to overwrite\n")
-	} else {
-		if err := os.WriteFile(mainLayoutPath, []byte(mainLayout), 0644); err != nil {
-			fmt.Printf("❌ Failed to create main layout: %v\n", err)
-			return
-		}
-		fmt.Printf("✅ Created main layout: %s\n", mainLayoutPath)
-	}
-
-	// Create login view
-	loginView := `@extends('layouts.app')
-
-@section('title', 'Login')
-
-@section('content')
-<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-        <div>
-            <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
-                <i class="fas fa-dolphin text-blue-600 text-xl"></i>
-            </div>
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                Sign in to your account
-            </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
-                Or
-                <a href="/register" class="font-medium text-blue-600 hover:text-blue-500">
-                    create a new account
-                </a>
-            </p>
-        </div>
-        <form class="mt-8 space-y-6" method="POST" action="/login">
-            @csrf
-            <div class="rounded-md shadow-sm -space-y-px">
-                <div>
-                    <label for="email" class="sr-only">Email address</label>
-                    <input id="email" name="email" type="email" autocomplete="email" required 
-                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
-                           placeholder="Email address" value="{{ old('email') }}">
-                </div>
-                <div>
-                    <label for="password" class="sr-only">Password</label>
-                    <input id="password" name="password" type="password" autocomplete="current-password" required 
-                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
-                           placeholder="Password">
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <input id="remember-me" name="remember" type="checkbox" 
-                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                    <label for="remember-me" class="ml-2 block text-sm text-gray-900">
-                        Remember me
-                    </label>
-                </div>
-
-                <div class="text-sm">
-                    <a href="/forgot-password" class="font-medium text-blue-600 hover:text-blue-500">
-                        Forgot your password?
-                    </a>
-                </div>
-            </div>
-
-            <div>
-                <button type="submit" 
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                        <i class="fas fa-lock text-blue-500 group-hover:text-blue-400"></i>
-                    </span>
-                    Sign in
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-@endsection`
-
-	loginViewPath := "resources/views/auth/login.fin"
-	if _, err := os.Stat(loginViewPath); err == nil && !force {
-		fmt.Printf("⚠️  Login view already exists. Use --force to overwrite\n")
-	} else {
-		if err := os.WriteFile(loginViewPath, []byte(loginView), 0644); err != nil {
-			fmt.Printf("❌ Failed to create login view: %v\n", err)
-			return
-		}
-		fmt.Printf("✅ Created login view: %s\n", loginViewPath)
-	}
-
-	// Create register view
-	registerView := `@extends('layouts.app')
-
-@section('title', 'Register')
-
-@section('content')
-<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-        <div>
-            <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
-                <i class="fas fa-dolphin text-blue-600 text-xl"></i>
-            </div>
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                Create your account
-            </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
-                Or
-                <a href="/login" class="font-medium text-blue-600 hover:text-blue-500">
-                    sign in to your existing account
-                </a>
-            </p>
-        </div>
-        <form class="mt-8 space-y-6" method="POST" action="/register">
-            @csrf
-            <div class="space-y-4">
-                <div>
-                    <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
-                    <input id="name" name="name" type="text" autocomplete="name" required 
-                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" 
-                           placeholder="Enter your full name" value="{{ old('name') }}">
-                </div>
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
-                    <input id="email" name="email" type="email" autocomplete="email" required 
-                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" 
-                           placeholder="Enter your email" value="{{ old('email') }}">
-                </div>
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                    <input id="password" name="password" type="password" autocomplete="new-password" required 
-                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" 
-                           placeholder="Enter your password">
-                </div>
-                <div>
-                    <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Confirm Password</label>
-                    <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" required 
-                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" 
-                           placeholder="Confirm your password">
-                </div>
-            </div>
-
-            <div class="flex items-center">
-                <input id="terms" name="terms" type="checkbox" required
-                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                <label for="terms" class="ml-2 block text-sm text-gray-900">
-                    I agree to the <a href="/terms" class="text-blue-600 hover:text-blue-500">Terms of Service</a> and <a href="/privacy" class="text-blue-600 hover:text-blue-500">Privacy Policy</a>
-                </label>
-            </div>
-
-            <div>
-                <button type="submit" 
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                        <i class="fas fa-user-plus text-blue-500 group-hover:text-blue-400"></i>
-                    </span>
-                    Create Account
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-@endsection`
-
-	registerViewPath := "resources/views/auth/register.fin"
-	if _, err := os.Stat(registerViewPath); err == nil && !force {
-		fmt.Printf("⚠️  Register view already exists. Use --force to overwrite\n")
-	} else {
-		if err := os.WriteFile(registerViewPath, []byte(registerView), 0644); err != nil {
-			fmt.Printf("❌ Failed to create register view: %v\n", err)
-			return
-		}
-		fmt.Printf("✅ Created register view: %s\n", registerViewPath)
-	}
-
-	// Create profile view
-	profileView := `@extends('layouts.app')
-
-@section('title', 'Profile')
-
-@section('content')
-<div class="max-w-3xl mx-auto">
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-6">Profile Information</h3>
-            
-            <form method="POST" action="/profile" class="space-y-6">
-                @csrf
-                @method('PUT')
-                
-                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                    <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
-                        <input type="text" name="name" id="name" value="{{ auth()->user()->name }}" 
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
-                    
-                    <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
-                        <input type="email" name="email" id="email" value="{{ auth()->user()->email }}" 
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
-                </div>
-                
-                <div class="flex justify-end">
-                    <button type="submit" 
-                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Update Profile
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Change Password Section -->
-    <div class="bg-white shadow rounded-lg mt-6">
-        <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-6">Change Password</h3>
-            
-            <form method="POST" action="/password" class="space-y-6">
-                @csrf
-                @method('PUT')
-                
-                <div>
-                    <label for="current_password" class="block text-sm font-medium text-gray-700">Current Password</label>
-                    <input type="password" name="current_password" id="current_password" 
-                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                </div>
-                
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700">New Password</label>
-                    <input type="password" name="password" id="password" 
-                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                </div>
-                
-                <div>
-                    <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Confirm New Password</label>
-                    <input type="password" name="password_confirmation" id="password_confirmation" 
-                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                </div>
-                
-                <div class="flex justify-end">
-                    <button type="submit" 
-                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Update Password
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endsection`
-
-	profileViewPath := "resources/views/auth/profile.fin"
-	if _, err := os.Stat(profileViewPath); err == nil && !force {
-		fmt.Printf("⚠️  Profile view already exists. Use --force to overwrite\n")
-	} else {
-		if err := os.WriteFile(profileViewPath, []byte(profileView), 0644); err != nil {
-			fmt.Printf("❌ Failed to create profile view: %v\n", err)
-			return
-		}
-		fmt.Printf("✅ Created profile view: %s\n", profileViewPath)
-	}
-
-	// Create forgot password view
-	forgotPasswordView := `@extends('layouts.app')
-
-@section('title', 'Forgot Password')
-
-@section('content')
-<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-        <div>
-            <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
-                <i class="fas fa-key text-blue-600 text-xl"></i>
-            </div>
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                Forgot your password?
-            </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
-                No problem. Just let us know your email address and we will email you a password reset link.
-            </p>
-        </div>
-        <form class="mt-8 space-y-6" method="POST" action="/forgot-password">
-            @csrf
-            <div>
-                <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
-                <input id="email" name="email" type="email" autocomplete="email" required 
-                       class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" 
-                       placeholder="Enter your email address" value="{{ old('email') }}">
-            </div>
-
-            <div>
-                <button type="submit" 
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                        <i class="fas fa-paper-plane text-blue-500 group-hover:text-blue-400"></i>
-                    </span>
-                    Send Reset Link
-                </button>
-            </div>
-            
-            <div class="text-center">
-                <a href="/login" class="font-medium text-blue-600 hover:text-blue-500">
-                    Back to Login
-                </a>
-            </div>
-        </form>
-    </div>
-</div>
-@endsection`
-
-	forgotPasswordViewPath := "resources/views/auth/forgot-password.fin"
-	if _, err := os.Stat(forgotPasswordViewPath); err == nil && !force {
-		fmt.Printf("⚠️  Forgot password view already exists. Use --force to overwrite\n")
-	} else {
-		if err := os.WriteFile(forgotPasswordViewPath, []byte(forgotPasswordView), 0644); err != nil {
-			fmt.Printf("❌ Failed to create forgot password view: %v\n", err)
-			return
-		}
-		fmt.Printf("✅ Created forgot password view: %s\n", forgotPasswordViewPath)
-	}
-
-	// Update existing navigation files
-	fmt.Printf("\n🔄 Updating navigation files...\n")
-
-	// Check for common navigation files and update them
-	navFiles := []string{
-		"resources/views/components/navbar.fin",
-		"resources/views/partials/navbar.fin",
-		"resources/views/layouts/navbar.fin",
-		"resources/views/includes/navbar.fin",
-	}
-
-	navbarContent := `<!-- Authentication Navigation -->
-<div class="flex items-center space-x-4">
-    @auth
-        <span class="text-gray-700">Welcome, {{ auth()->user()->name }}!</span>
-        <a href="/profile" class="text-gray-600 hover:text-gray-900 transition duration-150">
-            <i class="fas fa-user mr-1"></i>Profile
-        </a>
-        <form method="POST" action="/logout" class="inline">
-            @csrf
-            <button type="submit" class="text-gray-600 hover:text-gray-900 transition duration-150">
-                <i class="fas fa-sign-out-alt mr-1"></i>Logout
-            </button>
-        </form>
-    @else
-        <a href="/login" class="text-gray-600 hover:text-gray-900 transition duration-150">
-            <i class="fas fa-sign-in-alt mr-1"></i>Login
-        </a>
-        <a href="/register" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-150">
-            <i class="fas fa-user-plus mr-1"></i>Register
-        </a>
-    @endauth
-</div>`
-
-	navbarUpdated := false
-	for _, navFile := range navFiles {
-		if _, err := os.Stat(navFile); err == nil {
-			// Read existing content
-			content, err := os.ReadFile(navFile)
-			if err != nil {
-				fmt.Printf("⚠️  Could not read %s: %v\n", navFile, err)
-				continue
-			}
-
-			// Check if auth content already exists
-			if strings.Contains(string(content), "@auth") {
-				fmt.Printf("✅ %s already contains authentication links\n", navFile)
-				continue
-			}
-
-			// Add auth content to the end
-			newContent := string(content) + "\n" + navbarContent
-
-			if err := os.WriteFile(navFile, []byte(newContent), 0644); err != nil {
-				fmt.Printf("❌ Failed to update %s: %v\n", navFile, err)
-				continue
-			}
-
-			fmt.Printf("✅ Updated navigation: %s\n", navFile)
-			navbarUpdated = true
-		}
-	}
-
-	// If no existing navbar files found, create a reusable component
-	if !navbarUpdated {
-		navbarComponentPath := "resources/views/components/auth-nav.fin"
-		if err := os.WriteFile(navbarComponentPath, []byte(navbarContent), 0644); err != nil {
-			fmt.Printf("❌ Failed to create auth navigation component: %v\n", err)
-		} else {
-			fmt.Printf("✅ Created auth navigation component: %s\n", navbarComponentPath)
-			fmt.Printf("💡 Include it in your layouts with: @include('components.auth-nav')\n")
-		}
-	}
-
-	// Create a sample routes file
-	routesContent := `// Authentication Routes
-// Add these to your routes file
-
-// Public routes
-router.GET("/login", authController.ShowLoginForm)
-router.POST("/login", authController.Login)
-router.GET("/register", authController.ShowRegisterForm)
-router.POST("/register", authController.Register)
-router.GET("/forgot-password", authController.ShowForgotPasswordForm)
-router.POST("/forgot-password", authController.SendResetLink)
-
-// Protected routes (require authentication)
-router.Use(authMiddleware.AuthMiddleware())
-router.GET("/profile", authController.Profile)
-router.PUT("/profile", authController.UpdateProfile)
-router.PUT("/password", authController.UpdatePassword)
-router.POST("/logout", authController.Logout)
-
-// Example of protecting specific routes
-router.GET("/dashboard", dashboardController.Index) // This will require auth
-router.GET("/settings", settingsController.Index) // This will require auth
-`
-
-	// Fin template command functions
-	routesPath := "routes/auth.example.go"
-	if err := os.WriteFile(routesPath, []byte(routesContent), 0644); err != nil {
-		fmt.Printf("❌ Failed to create routes example: %v\n", err)
-	} else {
-		fmt.Printf("✅ Created routes example: %s\n", routesPath)
-	}
-
-	fmt.Printf("\n🎉 Authentication scaffolding completed!\n")
+	fmt.Printf("\n🎉 Laravel Breeze-like authentication system created successfully!\n")
 	fmt.Printf("\n📋 Next steps:\n")
-	fmt.Printf("1. Run 'dolphin migrate' to create the users table\n")
-	fmt.Printf("2. Install dependencies: go get golang.org/x/crypto/bcrypt\n")
-	fmt.Printf("3. Configure your database connection\n")
-	fmt.Printf("4. Update your routes to include the authentication routes\n")
-	fmt.Printf("5. Customize the generated views and components\n")
+	fmt.Printf("1. Run 'npm install' to install dependencies\n")
+	fmt.Printf("2. Run 'npm run build' to build CSS\n")
+	fmt.Printf("3. Run 'dolphin migrate' to create database tables\n")
+	fmt.Printf("4. Install Go dependencies: go get golang.org/x/crypto/bcrypt\n")
+	fmt.Printf("5. Configure your database and mail settings\n")
+	fmt.Printf("6. Start your server: dolphin serve\n")
+	fmt.Printf("\n🔗 Available routes:\n")
+	fmt.Printf("  GET  /login              - Login page\n")
+	fmt.Printf("  POST /login              - Login form submission\n")
+	fmt.Printf("  GET  /register           - Registration page\n")
+	fmt.Printf("  POST /register           - Registration form submission\n")
+	fmt.Printf("  GET  /forgot-password    - Forgot password page\n")
+	fmt.Printf("  POST /forgot-password    - Send reset link\n")
+	fmt.Printf("  GET  /reset-password     - Reset password page\n")
+	fmt.Printf("  POST /reset-password     - Reset password form\n")
+	fmt.Printf("  GET  /verify-email       - Email verification page\n")
+	fmt.Printf("  POST /verify-email       - Resend verification\n")
+	fmt.Printf("  GET  /dashboard          - User dashboard\n")
+	fmt.Printf("  GET  /profile            - User profile\n")
+	fmt.Printf("  POST /profile            - Update profile\n")
+	fmt.Printf("  POST /logout             - Logout\n")
 }
 
 func runFinMake(cmd *cobra.Command, args []string) {
