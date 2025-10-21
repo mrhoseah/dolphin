@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email</title>
+    <link href="/css/app.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-md mx-auto mt-8 bg-white rounded-lg shadow-md p-6">
+        <div class="text-center mb-6">
+            <i class="fas fa-dolphin text-dolphin-primary text-4xl mb-4"></i>
+            <h1 class="text-2xl font-bold text-gray-900">Verify Your Email</h1>
+        </div>
+        
+        <p class="text-gray-600 mb-6">
+            Hello {{ user.Name }},
+        </p>
+        
+        <p class="text-gray-600 mb-6">
+            Please click the button below to verify your email address and complete your registration.
+        </p>
+        
+        <div class="text-center">
+            <a href="{{ verification_url }}" class="btn-primary inline-block">
+                Verify Email Address
+            </a>
+        </div>
+        
+        <p class="text-sm text-gray-500 mt-6">
+            If you're having trouble clicking the button, copy and paste the URL below into your web browser:
+        </p>
+        <p class="text-sm text-gray-500 break-all">
+            {{ verification_url }}
+        </p>
+        
+        <hr class="my-6">
+        
+        <p class="text-xs text-gray-500">
+            If you did not create an account, please ignore this email.
+        </p>
+    </div>
+</body>
+</html>

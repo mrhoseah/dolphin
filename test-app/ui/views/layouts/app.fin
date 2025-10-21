@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@yield('title', 'Dolphin App')</title>
+    <link href="/css/app.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    @stack('styles')
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold text-gray-900">
+                        <i class="fas fa-dolphin text-dolphin-primary mr-2"></i>
+                        Dolphin App
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    @auth
+                        <span class="text-gray-700">Welcome, {{ auth()->user()->name }}!</span>
+                        <a href="/profile" class="nav-link">Profile</a>
+                        <form method="POST" action="/logout" class="inline">
+                            @csrf
+                            <button type="submit" class="nav-link">Logout</button>
+                        </form>
+                    @else
+                        <a href="/login" class="nav-link">Login</a>
+                        <a href="/register" class="btn-primary">Register</a>
+                    @endauth
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        @if(session('success'))
+            <div class="alert-success mb-4">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert-error mb-4">
+                {{ session('error') }}
+            </div>
+        @endif
+
+        @if($errors->any())
+            <div class="alert-error mb-4">
+                <ul class="list-disc list-inside">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        @yield('content')
+    </main>
+
+    @stack('scripts')
+</body>
+</html>
