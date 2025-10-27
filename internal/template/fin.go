@@ -212,7 +212,7 @@ func (e *FinEngine) registerDefaultDirectives() {
 		return "", nil
 	})
 
-	// @model directive for clean model annotations
+	// @model directive for clean model annotations (deprecated - use controller data instead)
 	e.RegisterDirective("model", func(args []string, content string, data interface{}) (string, error) {
 		if len(args) < 2 {
 			return "", fmt.Errorf("@model requires model type and variable name")
@@ -220,7 +220,8 @@ func (e *FinEngine) registerDefaultDirectives() {
 		modelType := args[0]
 		varName := args[1]
 		// Store model information for later use in template processing
-		return fmt.Sprintf("{{/* Model: %s as %s */}}", modelType, varName), nil
+		// Note: This is deprecated - controllers should provide data instead
+		return fmt.Sprintf("{{/* Model: %s as %s (deprecated - use controller data) */}}", modelType, varName), nil
 	})
 
 	// @foreach directive with improved syntax

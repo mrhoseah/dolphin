@@ -14,11 +14,11 @@ func RunFinTemplateExample() {
 
 	// Create Fin template engine configuration
 	config := &template.Config{
-		ViewsPath:    "ui/views",
+		ViewsPath:    "views",
 		CachePath:    "storage/cache/views",
 		CacheEnabled: true,
 		DebugMode:    true,
-		Extensions:   []string{".fin.go", ".go.html"},
+		Extensions:   []string{".fin.html", ".fin.go", ".go.html"},
 	}
 
 	// Initialize Fin template engine
@@ -120,7 +120,6 @@ func RunFinTemplateExample() {
 	// Example Fin template content
 	finTemplate := `
 @extends('admin')
-@model('Dashboard', dashboard)
 
 @section('title')
     Admin Dashboard
@@ -129,35 +128,34 @@ func RunFinTemplateExample() {
 @section('content')
     <h1>Admin Dashboard</h1>
     
-    <!-- User information with model annotation -->
-    @model('User', currentUser)
+    <!-- User information with controller data -->
     <div class="user-info">
-        <h2>Welcome, {{currentUser.Name}}!</h2>
-        <p>Email: {{currentUser.Email}}</p>
-        <p>Role: {{currentUser.Role}}</p>
-        <p>Last Login: {{currentUser.LastLoginAt}}</p>
+        <h2>Welcome, {{.CurrentUser.Name}}!</h2>
+        <p>Email: {{.CurrentUser.Email}}</p>
+        <p>Role: {{.CurrentUser.Role}}</p>
+        <p>Last Login: {{.CurrentUser.LastLoginAt}}</p>
     </div>
     
     <!-- Statistics cards -->
     <div class="stats-grid">
         <div class="stat-card">
             <h3>Total Users</h3>
-            <span class="stat-number">{{dashboard.Stats.TotalUsers}}</span>
+            <span class="stat-number">{{.Dashboard.Stats.TotalUsers}}</span>
         </div>
         <div class="stat-card">
             <h3>Active Sessions</h3>
-            <span class="stat-number">{{dashboard.Stats.ActiveSessions}}</span>
+            <span class="stat-number">{{.Dashboard.Stats.ActiveSessions}}</span>
         </div>
         <div class="stat-card">
             <h3>System Load</h3>
-            <span class="stat-number">{{dashboard.Stats.SystemLoad}}%</span>
+            <span class="stat-number">{{.Dashboard.Stats.SystemLoad}}%</span>
         </div>
     </div>
     
     <!-- Recent activities -->
     <div class="recent-activities">
         <h3>Recent Activities</h3>
-        @foreach(dashboard.RecentActivities as activity)
+        @foreach(.Dashboard.RecentActivities as activity)
             <div class="activity-item">
                 <div class="activity-icon">
                     @if(activity.Type == "login")

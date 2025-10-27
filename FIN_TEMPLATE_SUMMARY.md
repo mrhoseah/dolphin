@@ -10,7 +10,7 @@ The Fin template system has been fully implemented and integrated into the Dolph
 - **Renamed**: `blade.go` → `fin.go` (properly reflects Fin, not Blade)
 - **New Engine**: `FinEngine` with clean, modern API
 - **Interface**: `FinTemplateEngine` for better abstraction
-- **File Extensions**: `.fin.go` and `.go.html` support
+- **File Extensions**: `.fin.html` and `.go.html` support
 
 ### **2. Model Annotations**
 ```fin
@@ -73,8 +73,8 @@ dolphin fin cache
 - `/cmd/dolphin/commands/fin.go` - Complete CLI command set
 
 ### **Examples & Documentation**
-- `/ui/views/pages/welcome.fin.go` - Example template
-- `/examples/fin_template_example.fin.go` - Comprehensive example
+- `/views/pages/welcome.fin.html` - Example template
+- `/examples/fin_template_example.fin.html` - Comprehensive example
 - `/examples/fin_usage_example.go` - Go usage example
 - `/examples/fin_integration_example.go` - Integration example
 - `/docs/FIN_TEMPLATE_SYNTAX.md` - Complete documentation
@@ -191,7 +191,7 @@ dolphin fin cache
 
 The Fin template system is now fully integrated and ready for use! You can:
 
-1. **Start Using**: Begin creating `.fin.go` templates
+1. **Start Using**: Begin creating `.fin.html` templates
 2. **Generate Templates**: Use `dolphin fin make` commands
 3. **Customize**: Add your own directives and components
 4. **Extend**: Build upon the existing foundation

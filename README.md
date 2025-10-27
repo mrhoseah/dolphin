@@ -23,7 +23,7 @@ The comprehensive documentation includes:
 ## ✨ Key Features
 
 - **🚀 Rapid Development**: Built-in scaffolding and code generation
-- **🗄️ Database Migrations**: Integrated with [Raptor](https://github.com/mrhoseah/raptor) for database migrations
+- **🗄️ Database Migrations**: Built-in migration system with GORM integration
 - **🔄 Active Record ORM**: GORM-based ORM with repository pattern
 - **🛡️ Middleware System**: Comprehensive middleware for auth, CORS, logging, and more
 - **📱 Frontend Integration**: Built-in support for Vue.js, React.js, and Tailwind CSS
@@ -505,7 +505,7 @@ dolphin serve
 3) Build HTMX views and iterate
 ```bash
 dolphin make:view Post
-# edit templates in resources/views/post/
+# edit templates in views/post/
 ```
 
 4) Generate API resource and test
@@ -1786,12 +1786,12 @@ defer engine.Stop()
 ```yaml
 # config/template.yaml
 template:
-  layouts_dir: "ui/views/layouts"
-  partials_dir: "ui/views/partials"
-  pages_dir: "ui/views/pages"
-  components_dir: "ui/views/components"
-  emails_dir: "ui/views/emails"
-  extension: ".html"
+  layouts_dir: "views/layouts"
+  partials_dir: "views/partials"
+  pages_dir: "views/pages"
+  components_dir: "views/components"
+  emails_dir: "views/emails"
+  extension: ".fin.html"
   auto_reload: true
   cache_templates: true
   default_layout: "base"
@@ -2070,12 +2070,12 @@ dolphin template stats
 ```go
 // Production configuration
 prodConfig := &template.Config{
-    LayoutsDir:     "ui/views/layouts",
-    PartialsDir:    "ui/views/partials",
-    PagesDir:       "ui/views/pages",
-    ComponentsDir:  "ui/views/components",
-    EmailsDir:      "ui/views/emails",
-    Extension:      ".html",
+    LayoutsDir:     "views/layouts",
+    PartialsDir:    "views/partials",
+    PagesDir:       "views/pages",
+    ComponentsDir:  "views/components",
+    EmailsDir:      "views/emails",
+    Extension:      ".fin.html",
     AutoReload:     false,
     CacheTemplates: true,
     EnableHelpers:  true,
@@ -3022,8 +3022,8 @@ Advanced templating system inspired by Laravel's Blade with powerful directives 
 </body>
 </html>
 
-// Page template (pages/welcome.blade.go)
-@extends('layouts.app')
+// Page template (pages/welcome.fin.html)
+@extends('layouts/app.fin.html')
 
 @section('title')
     Welcome to Dolphin
@@ -3035,6 +3035,23 @@ Advanced templating system inspired by Laravel's Blade with powerful directives 
         <p>Admin access granted</p>
     @endif
 @endsection
+```
+
+```go
+// Controller example (app/http/controllers/welcome_controller.go)
+func (c *WelcomeController) Index(ctx *gin.Context) {
+    // Prepare data for the view
+    data := map[string]interface{}{
+        "User": map[string]interface{}{
+            "Name":    "John Doe",
+            "Email":   "john@example.com",
+            "IsAdmin": true,
+        },
+    }
+    
+    // Render template with data
+    ctx.HTML(http.StatusOK, "pages/welcome.fin.html", data)
+}
 ```
 
 ### 🗄️ Pod ORM
@@ -3358,13 +3375,13 @@ dolphin/
 │   ├── models/           # Data models
 │   ├── repositories/     # Data repositories
 │   └── providers/        # Custom service providers
-├── ui/                   # Frontend templates
-│   ├── views/            # HTMX views and layouts
-│   │   ├── layouts/      # Base layouts
-│   │   ├── partials/     # Reusable components
-│   │   ├── pages/        # Page templates
-│   │   └── auth/         # Authentication views
-│   └── static/           # Static page templates
+├── views/                   # Frontend templates
+│   ├── layouts/            # Base layouts (.fin.html)
+│   ├── partials/           # Reusable components
+│   ├── pages/              # Page templates
+│   ├── auth/               # Authentication views
+│   ├── emails/             # Email templates
+│   └── components/         # UI components
 ├── migrations/           # Database migrations
 ├── postman/              # Generated Postman collections
 ├── config/               # Configuration files
@@ -3386,7 +3403,7 @@ This generates:
 - **Model**: `app/models/product.go` with GORM annotations
 - **Controller**: `app/http/controllers/product.go` with CRUD methods
 - **Repository**: `app/repositories/product.go` with data access layer
-- **HTMX Views**: `ui/views/pages/product/` with index, show, create, edit, form
+- **HTMX Views**: `views/pages/product/` with index, show, create, edit, form (.fin.html)
 - **Migration**: `migrations/*_product.go` for database schema
 
 ### 🎯 **API Resource Generation**
@@ -3429,18 +3446,18 @@ open http://localhost:8080/auth/register
 
 #### **Template Structure**
 ```
-ui/views/
+views/
 ├── layouts/
-│   └── base.html          # Main layout with navigation
+│   └── base.fin.html        # Main layout with navigation
 ├── partials/
-│   ├── header.html        # Navigation header
-│   └── footer.html        # Page footer
+│   ├── header.fin.html      # Navigation header
+│   └── footer.fin.html      # Page footer
 ├── pages/
-│   ├── home.html          # Landing page
-│   └── dashboard.html     # Protected dashboard
+│   ├── home.fin.html        # Landing page
+│   └── dashboard.fin.html   # Protected dashboard
 └── auth/
-    ├── login.html         # Login form
-    └── register.html      # Registration form
+    ├── login.fin.html       # Login form
+    └── register.fin.html    # Registration form
 ```
 
 ### 📮 **Postman Collection Generation**
@@ -3922,7 +3939,7 @@ This generates:
 package migrations
 
 import (
-    raptor "github.com/mrhoseah/raptor/core"
+    "gorm.io/gorm"
 )
 
 type CreateUsersTable struct{}
@@ -3931,12 +3948,20 @@ func (m *CreateUsersTable) Name() string {
     return "create_users_table"
 }
 
-func (m *CreateUsersTable) Up(s raptor.Schema) error {
-    return s.CreateTable("users", []string{"id", "name", "email", "created_at"})
+func (m *CreateUsersTable) Up(db *gorm.DB) error {
+    return db.Exec(`
+        CREATE TABLE users (
+            id BIGINT PRIMARY KEY AUTO_INCREMENT,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    `).Error
 }
 
-func (m *CreateUsersTable) Down(s raptor.Schema) error {
-    return s.DropTable("users")
+func (m *CreateUsersTable) Down(db *gorm.DB) error {
+    return db.Exec("DROP TABLE users").Error
 }
 ```
 
@@ -4148,7 +4173,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Taking inspiration from productive web frameworks
 - Built with Go's performance and concurrency
-- Integrates with [Raptor](https://github.com/mrhoseah/raptor) for migrations
+- Built-in migration system with GORM integration
 - Uses modern Go libraries and best practices
 
 ## 📞 Support
