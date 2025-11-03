@@ -309,6 +309,7 @@ type QueryBuilder struct {
 	orders        []string
 	limit         int
 	offset        int
+	nestedGroups  []*QueryBuilder // For nested condition groups
 }
 
 // Condition represents a query condition
@@ -316,6 +317,8 @@ type Condition struct {
 	Column   string
 	Operator string
 	Value    interface{}
+	Logical  string // "AND" or "OR"
+	Nested   []Condition // For nested conditions
 }
 
 // NewQueryBuilder creates a new query builder
@@ -336,7 +339,63 @@ func (qb *QueryBuilder) Where(column string, operator string, value interface{})
 		Column:   column,
 		Operator: operator,
 		Value:    value,
+		Logical:  "AND",
 	})
+	return qb
+}
+
+// NestedCondition adds nested where conditions for complex queries (Laravel 12 nestedWhere equivalent)
+// This allows grouping conditions with parentheses for better query control
+func (qb *QueryBuilder) NestedCondition(callback func(*QueryBuilder)) *QueryBuilder {
+	nestedQB := &QueryBuilder{
+		db:            qb.db,
+		model:         qb.model,
+		relationships: make([]string, 0),
+		scopes:        make([]string, 0),
+		conditions:    make([]Condition, 0),
+		orders:        make([]string, 0),
+	}
+	
+	// Execute the callback to build nested conditions
+	callback(nestedQB)
+	
+	// Add the nested query builder as a group
+	qb.nestedGroups = append(qb.nestedGroups, nestedQB)
+	
+	return qb
+}
+
+// OrWhere adds an OR where condition
+func (qb *QueryBuilder) OrWhere(column string, operator string, value interface{}) *QueryBuilder {
+	qb.conditions = append(qb.conditions, Condition{
+		Column:   column,
+		Operator: operator,
+		Value:    value,
+		Logical:  "OR",
+	})
+	return qb
+}
+
+// OrNestedCondition adds a nested condition group with OR logic
+func (qb *QueryBuilder) OrNestedCondition(callback func(*QueryBuilder)) *QueryBuilder {
+	nestedQB := &QueryBuilder{
+		db:            qb.db,
+		model:         qb.model,
+		relationships: make([]string, 0),
+		scopes:        make([]string, 0),
+		conditions:    make([]Condition, 0),
+		orders:        make([]string, 0),
+	}
+	
+	// Execute the callback to build nested conditions
+	callback(nestedQB)
+	
+	// Mark as OR group
+	nestedQB.nestedGroups = append(nestedQB.nestedGroups, nestedQB)
+	
+	// Add to parent with OR logic
+	qb.nestedGroups = append(qb.nestedGroups, nestedQB)
+	
 	return qb
 }
 
@@ -398,25 +457,60 @@ func (qb *QueryBuilder) Offset(offset int) *QueryBuilder {
 	return qb
 }
 
+// applyConditions applies conditions to a query, handling nested groups
+func (qb *QueryBuilder) applyConditions(query *gorm.DB) *gorm.DB {
+	// Apply regular conditions first
+	for i, condition := range qb.conditions {
+		if condition.Operator == "IN" {
+			if i == 0 || condition.Logical == "AND" {
+				query = query.Where(fmt.Sprintf("%s IN ?", condition.Column), condition.Value)
+			} else {
+				query = query.Or(fmt.Sprintf("%s IN ?", condition.Column), condition.Value)
+			}
+		} else if condition.Operator == "BETWEEN" {
+			values := condition.Value.([]interface{})
+			if i == 0 || condition.Logical == "AND" {
+				query = query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", condition.Column), values[0], values[1])
+			} else {
+				query = query.Or(fmt.Sprintf("%s BETWEEN ? AND ?", condition.Column), values[0], values[1])
+			}
+		} else if condition.Operator == "IS NULL" {
+			if i == 0 || condition.Logical == "AND" {
+				query = query.Where(fmt.Sprintf("%s IS NULL", condition.Column))
+			} else {
+				query = query.Or(fmt.Sprintf("%s IS NULL", condition.Column))
+			}
+		} else if condition.Operator == "IS NOT NULL" {
+			if i == 0 || condition.Logical == "AND" {
+				query = query.Where(fmt.Sprintf("%s IS NOT NULL", condition.Column))
+			} else {
+				query = query.Or(fmt.Sprintf("%s IS NOT NULL", condition.Column))
+			}
+		} else {
+			if i == 0 || condition.Logical == "AND" {
+				query = query.Where(fmt.Sprintf("%s %s ?", condition.Column, condition.Operator), condition.Value)
+			} else {
+				query = query.Or(fmt.Sprintf("%s %s ?", condition.Column, condition.Operator), condition.Value)
+			}
+		}
+	}
+
+	// Apply nested condition groups
+	for _, nestedQB := range qb.nestedGroups {
+		query = query.Where(func(db *gorm.DB) *gorm.DB {
+			return nestedQB.applyConditions(db)
+		})
+	}
+
+	return query
+}
+
 // Get executes the query and returns results
 func (qb *QueryBuilder) Get() (interface{}, error) {
 	query := qb.db.Model(qb.model)
 
-	// Apply conditions
-	for _, condition := range qb.conditions {
-		if condition.Operator == "IN" {
-			query = query.Where(fmt.Sprintf("%s IN ?", condition.Column), condition.Value)
-		} else if condition.Operator == "BETWEEN" {
-			values := condition.Value.([]interface{})
-			query = query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", condition.Column), values[0], values[1])
-		} else if condition.Operator == "IS NULL" {
-			query = query.Where(fmt.Sprintf("%s IS NULL", condition.Column))
-		} else if condition.Operator == "IS NOT NULL" {
-			query = query.Where(fmt.Sprintf("%s IS NOT NULL", condition.Column))
-		} else {
-			query = query.Where(fmt.Sprintf("%s %s ?", condition.Column, condition.Operator), condition.Value)
-		}
-	}
+	// Apply conditions (including nested)
+	query = qb.applyConditions(query)
 
 	// Apply relationships
 	if len(qb.relationships) > 0 {
@@ -445,21 +539,8 @@ func (qb *QueryBuilder) Get() (interface{}, error) {
 func (qb *QueryBuilder) First() (interface{}, error) {
 	query := qb.db.Model(qb.model)
 
-	// Apply conditions (same as Get)
-	for _, condition := range qb.conditions {
-		if condition.Operator == "IN" {
-			query = query.Where(fmt.Sprintf("%s IN ?", condition.Column), condition.Value)
-		} else if condition.Operator == "BETWEEN" {
-			values := condition.Value.([]interface{})
-			query = query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", condition.Column), values[0], values[1])
-		} else if condition.Operator == "IS NULL" {
-			query = query.Where(fmt.Sprintf("%s IS NULL", condition.Column))
-		} else if condition.Operator == "IS NOT NULL" {
-			query = query.Where(fmt.Sprintf("%s IS NOT NULL", condition.Column))
-		} else {
-			query = query.Where(fmt.Sprintf("%s %s ?", condition.Column, condition.Operator), condition.Value)
-		}
-	}
+	// Apply conditions (including nested)
+	query = qb.applyConditions(query)
 
 	// Apply relationships
 	if len(qb.relationships) > 0 {
@@ -480,21 +561,8 @@ func (qb *QueryBuilder) First() (interface{}, error) {
 func (qb *QueryBuilder) Count() (int64, error) {
 	query := qb.db.Model(qb.model)
 
-	// Apply conditions
-	for _, condition := range qb.conditions {
-		if condition.Operator == "IN" {
-			query = query.Where(fmt.Sprintf("%s IN ?", condition.Column), condition.Value)
-		} else if condition.Operator == "BETWEEN" {
-			values := condition.Value.([]interface{})
-			query = query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", condition.Column), values[0], values[1])
-		} else if condition.Operator == "IS NULL" {
-			query = query.Where(fmt.Sprintf("%s IS NULL", condition.Column))
-		} else if condition.Operator == "IS NOT NULL" {
-			query = query.Where(fmt.Sprintf("%s IS NOT NULL", condition.Column))
-		} else {
-			query = query.Where(fmt.Sprintf("%s %s ?", condition.Column, condition.Operator), condition.Value)
-		}
-	}
+	// Apply conditions (including nested)
+	query = qb.applyConditions(query)
 
 	var count int64
 	err := query.Count(&count).Error
