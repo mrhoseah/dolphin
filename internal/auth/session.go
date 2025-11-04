@@ -42,3 +42,10 @@ func (s *MemorySessionStore) Forget(key string) {
 func (s *MemorySessionStore) Regenerate() {
 	// No-op for in-memory demo to avoid losing session data on login.
 }
+
+// Flush clears all session data
+func (s *MemorySessionStore) Flush() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.data = make(map[string]interface{})
+}
