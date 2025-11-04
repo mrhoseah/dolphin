@@ -347,7 +347,7 @@ func DefaultStorageConfig() *StorageConfig {
 			"local": {
 				Driver: "local",
 				Options: map[string]string{
-					"root":     "./storage/app",
+					"root":     "./storage/app/public",
 					"base_url": "/storage",
 				},
 			},

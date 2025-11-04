@@ -35,6 +35,8 @@ import (
 	"dolphin/internal/database"
 	"dolphin/internal/logger"
 	"dolphin/internal/router"
+	"dolphin/internal/storage"
+
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -113,6 +115,13 @@ func main() {
 		Run:   generateSwagger,
 	}
 
+	// Storage symlink command
+	var storageLinkCmd = &cobra.Command{
+		Use:   "storage:link",
+		Short: "Create a symbolic link from public/storage to storage/app/public",
+		Run:   storageLink,
+	}
+
 	// Add commands
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(migrateCmd)
@@ -123,6 +132,7 @@ func main() {
 	rootCmd.AddCommand(makeMigrationCmd)
 	rootCmd.AddCommand(makeMiddlewareCmd)
 	rootCmd.AddCommand(swaggerCmd)
+	rootCmd.AddCommand(storageLinkCmd)
 
 	// Initialize configuration
 	var err error
@@ -280,4 +290,18 @@ func generateSwagger(cmd *cobra.Command, args []string) {
 	fmt.Println("📚 Generating Swagger documentation...")
 	fmt.Println("Run: swag init -g main.go")
 	fmt.Println("Then visit: http://localhost:8080/swagger/index.html")
+}
+
+func storageLink(cmd *cobra.Command, args []string) {
+	logger := logger.New(cfg.Log.Level, cfg.Log.Format)
+
+	publicPath := "public"
+	storagePath := "storage"
+
+	if err := storage.CreateSymlink(publicPath, storagePath); err != nil {
+		logger.Fatal("Failed to create storage symlink", zap.Error(err))
+	}
+
+	fmt.Println("✅ Storage symlink created successfully!")
+	fmt.Println("   public/storage → storage/app/public")
 }

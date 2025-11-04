@@ -13,9 +13,11 @@ import (
 	"dolphin/internal/maintenance"
 	loggingMiddleware "dolphin/internal/middleware/logging"
 	recoveryMiddleware "dolphin/internal/middleware/recovery"
+	"dolphin/internal/storage"
 	"dolphin/internal/template"
 
 	httpSwagger "github.com/swaggo/http-swagger"
+	"go.uber.org/zap"
 )
 
 // Router handles HTTP routing
@@ -148,7 +150,23 @@ func (r *Router) setupStaticRoutes() {
 	fileServer := http.FileServer(http.Dir("./public/"))
 	r.router.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
-	// Serve uploaded files
+	// Ensure storage symlink exists (Laravel-style: public/storage → storage/app/public)
+	// This allows public access to files stored in storage/app/public
+	if !storage.SymlinkExists("public") {
+		// Try to create symlink automatically
+		if err := storage.CreateSymlink("public", "storage"); err != nil {
+			r.app.Logger().Warn("Storage symlink not found. Run 'dolphin storage:link' to create it.",
+				zap.Error(err),
+			)
+		} else {
+			r.app.Logger().Info("Storage symlink created automatically")
+		}
+	}
+
+	// Serve storage files from public/storage (symlinked to storage/app/public)
+	r.router.Handle("/storage/*", http.StripPrefix("/storage/", http.FileServer(http.Dir("./public/storage/"))))
+
+	// Serve uploaded files (backward compatibility)
 	r.router.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./storage/uploads/"))))
 }
 
