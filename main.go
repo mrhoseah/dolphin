@@ -26,7 +26,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -140,6 +143,15 @@ func main() {
 	makeClientCmd.Flags().StringP("spec", "s", "swagger.json", "OpenAPI spec file path")
 	makeClientCmd.Flags().StringP("output", "o", "generated", "Output directory")
 
+	// Update command
+	var updateCmd = &cobra.Command{
+		Use:   "update",
+		Short: "Update the Dolphin CLI to the latest version",
+		Long:  "Updates the global Dolphin CLI installation by running 'go install .' from the dolphin directory",
+		Run:   updateCLI,
+	}
+	updateCmd.Flags().BoolP("force", "f", false, "Force update even if already up to date")
+
 	// Add commands
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(migrateCmd)
@@ -153,6 +165,7 @@ func main() {
 	rootCmd.AddCommand(swaggerCmd)
 	rootCmd.AddCommand(storageLinkCmd)
 	rootCmd.AddCommand(makeClientCmd)
+	rootCmd.AddCommand(updateCmd)
 
 	// Initialize configuration
 	var err error
@@ -350,4 +363,68 @@ func makeClient(cmd *cobra.Command, args []string) {
 	if err := cli.GenerateClientCommand(specPath, outputDir, language); err != nil {
 		log.Fatal("Failed to generate client:", err)
 	}
+}
+
+func updateCLI(cmd *cobra.Command, args []string) {
+	force, _ := cmd.Flags().GetBool("force")
+	_ = force // Force flag is for future use
+
+	// Get the directory where dolphin source is located
+	// Try to find dolphin directory in common locations
+	homeDir, _ := os.UserHomeDir()
+	possiblePaths := []string{
+		filepath.Join(homeDir, "dev", "dolphin"),
+		filepath.Join(homeDir, "go", "src", "dolphin"),
+		filepath.Join(homeDir, "projects", "dolphin"),
+		".",
+	}
+
+	var dolphinDir string
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(filepath.Join(path, "main.go")); err == nil {
+			if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
+				// Check if go.mod contains module dolphin
+				modContent, err := os.ReadFile(filepath.Join(path, "go.mod"))
+				if err == nil && strings.Contains(string(modContent), "module dolphin") {
+					dolphinDir = path
+					break
+				}
+			}
+		}
+	}
+
+	// If still not found, try current directory
+	if dolphinDir == "" {
+		if _, err := os.Stat("main.go"); err == nil {
+			if _, err := os.Stat("go.mod"); err == nil {
+				dolphinDir = "."
+			}
+		}
+	}
+
+	if dolphinDir == "" {
+		log.Fatal("Cannot find dolphin source directory. Please run 'dolphin update' from the dolphin source directory or specify the path.")
+	}
+
+	// Get absolute path
+	absPath, err := filepath.Abs(dolphinDir)
+	if err != nil {
+		log.Fatal("Failed to get absolute path:", err)
+	}
+
+	fmt.Println("🔄 Updating Dolphin CLI...")
+	fmt.Printf("   Source directory: %s\n", absPath)
+
+	// Run go install
+	updateCmd := exec.Command("go", "install", ".")
+	updateCmd.Dir = absPath
+	updateCmd.Stdout = os.Stdout
+	updateCmd.Stderr = os.Stderr
+
+	if err := updateCmd.Run(); err != nil {
+		log.Fatal("Failed to update Dolphin CLI:", err)
+	}
+
+	fmt.Println("✅ Dolphin CLI updated successfully!")
+	fmt.Println("   Run 'dolphin --help' to verify")
 }

@@ -91,45 +91,20 @@ func render(w http.ResponseWriter, pagePath string) error {
 }
 
 // setupWebRoutes configures web routes with HTMX support
+// Note: This is called AFTER custom routes, so we skip routes that apps might have already registered
 func (r *Router) setupWebRoutes(router chi.Router) {
 	// Setup Dolphin-style authentication for web routes using router's manager
 	webAuthMiddleware := dolphinMiddleware.NewAuthMiddleware(r.authManager, r.app.Logger())
 
-	// Home page with HTMX
-	router.Get("/", r.handleHome)
+	// Skip default routes if apps have registered custom routes
+	// Apps should register their own home and auth routes before calling SetupRoutes()
+	// We'll only set up optional routes that don't conflict
 
-	// Authentication pages
-	router.Route("/auth", func(auth chi.Router) {
-		auth.Get("/login", r.handleLoginPage)
-		auth.Post("/login", r.handleLoginSubmit)
-		auth.Get("/register", r.handleRegisterPage)
-		auth.Post("/register", r.handleRegisterSubmit)
-		auth.Post("/logout", webAuthMiddleware.Authenticate(http.HandlerFunc(r.handleLogout)).ServeHTTP)
-	})
+	// Note: Home and auth routes are now expected to be provided by apps
+	// If you want default Dolphin routes, don't register custom ones
 
-	// Dashboard (protected)
-	router.Route("/dashboard", func(dashboard chi.Router) {
-		dashboard.Use(webAuthMiddleware.Authenticate)
-		dashboard.Get("/", r.handleDashboard)
-	})
-
-	// Admin routes
-	router.Route("/admin", func(admin chi.Router) {
-		admin.Use(webAuthMiddleware.Authenticate)
-		admin.Use(webAuthMiddleware.RoleMiddleware("admin"))
-
-		admin.Get("/", r.handleAdminDashboard)
-		admin.Get("/users", r.handleAdminUsers)
-		admin.Get("/posts", r.handleAdminPosts)
-	})
-
-	// HTMX partial routes
-	router.Route("/partials", func(partials chi.Router) {
-		partials.Use(webAuthMiddleware.Authenticate)
-		partials.Get("/user-menu", r.handleUserMenu)
-		partials.Get("/notifications", r.handleNotifications)
-		partials.Get("/sidebar", r.handleSidebar)
-	})
+	// Skip all default routes - apps should provide their own
+	// This prevents conflicts when apps register custom routes before SetupRoutes()
 }
 
 // handleHome renders the home page with HTMX integration

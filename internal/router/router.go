@@ -51,7 +51,8 @@ func New(app *app.App) *Router {
 	r.finEngine = template.NewFinEngine(finConfig)
 
 	r.setupMiddleware()
-	r.setupRoutes()
+	// Don't setup routes here - allow apps to add custom routes first
+	// r.setupRoutes() will be called after custom routes are added
 
 	return r
 }
@@ -64,6 +65,11 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 // GetChiRouter returns the underlying chi router
 func (r *Router) GetChiRouter() *chi.Mux {
 	return r.router
+}
+
+// GetFinEngine returns the Fin template engine
+func (r *Router) GetFinEngine() template.FinTemplateEngine {
+	return r.finEngine
 }
 
 // Mount attaches a sub-router at a given pattern
@@ -112,6 +118,12 @@ func (r *Router) setupMiddleware() {
 	r.router.Use(middleware.Compress(5))
 }
 
+// SetupRoutes configures application routes
+// This should be called after custom routes are added to allow apps to override defaults
+func (r *Router) SetupRoutes() {
+	r.setupRoutes()
+}
+
 // setupRoutes configures application routes
 func (r *Router) setupRoutes() {
 	// Health check endpoints (Kubernetes-ready)
@@ -135,10 +147,10 @@ func (r *Router) setupRoutes() {
 		})
 	})
 
-	// Web routes
-	r.router.Route("/", func(web chi.Router) {
-		r.setupWebRoutes(web)
-	})
+	// Web routes - setup AFTER custom routes can be added
+	// This allows apps to override default routes
+	// Note: Don't wrap in Route("/") - add directly to allow root path matching
+	r.setupWebRoutes(r.router)
 
 	// Static file serving
 	r.setupStaticRoutes()

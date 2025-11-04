@@ -5,6 +5,7 @@ import (
 
 	"dolphin/internal/app"
 	"dolphin/internal/router"
+	"dolphin/internal/template"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -24,6 +25,17 @@ func New(app *app.App) *Router {
 // GetRouter returns the underlying chi router for custom route setup
 func (r *Router) GetRouter() chi.Router {
 	return r.Router.GetChiRouter()
+}
+
+// GetFinEngine returns the Fin template engine
+func (r *Router) GetFinEngine() template.FinTemplateEngine {
+	return r.Router.GetFinEngine()
+}
+
+// SetupRoutes configures Dolphin's default routes
+// Call this after adding your custom routes to allow them to override defaults
+func (r *Router) SetupRoutes() {
+	r.Router.SetupRoutes()
 }
 
 // ServeHTTP implements http.Handler

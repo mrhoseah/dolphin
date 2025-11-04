@@ -71,13 +71,13 @@ func (g *Generator) CreateResource(name string) error {
 	return nil
 }
 
-// CreateAuth generates authentication views and pages
+// CreateAuth generates complete authentication setup (like Laravel Breeze)
 func (g *Generator) CreateAuth() error {
 	// Create views directory structure
 	viewsDir := "views"
 	authDir := filepath.Join(viewsDir, "auth")
 	layoutsDir := filepath.Join(viewsDir, "layouts")
-	
+
 	if err := os.MkdirAll(authDir, 0755); err != nil {
 		return err
 	}
@@ -85,32 +85,69 @@ func (g *Generator) CreateAuth() error {
 		return err
 	}
 
-	// Create login page
+	// Create controllers directory
+	controllersDir := "app/http/controllers"
+	if err := os.MkdirAll(controllersDir, 0755); err != nil {
+		return err
+	}
+
+	// Create bootstrap directory for routes
+	bootstrapDir := "bootstrap"
+	if err := os.MkdirAll(bootstrapDir, 0755); err != nil {
+		return err
+	}
+
+	// 1. Create authentication views
 	if err := g.createAuthView("login", authDir); err != nil {
 		return err
 	}
 
-	// Create register page
 	if err := g.createAuthView("register", authDir); err != nil {
 		return err
 	}
 
-	// Create forgot password page
 	if err := g.createAuthView("forgot-password", authDir); err != nil {
 		return err
 	}
 
-	// Create reset password page
 	if err := g.createAuthView("reset-password", authDir); err != nil {
 		return err
 	}
 
-	// Create base layout if it doesn't exist
+	// 2. Create or update base layout with auth navigation
 	baseLayoutPath := filepath.Join(layoutsDir, "base.fin.html")
-	if _, err := os.Stat(baseLayoutPath); os.IsNotExist(err) {
-		if err := g.createBaseLayout(layoutsDir); err != nil {
-			return err
-		}
+	if err := g.createOrUpdateBaseLayout(baseLayoutPath); err != nil {
+		return err
+	}
+
+	// 3. Generate AuthController with web methods
+	authControllerPath := filepath.Join(controllersDir, "auth_controller.go")
+	if err := g.createAuthController(authControllerPath); err != nil {
+		return err
+	}
+
+	// 4. Generate auth routes file
+	authRoutesPath := filepath.Join(bootstrapDir, "auth_routes.go")
+	if err := g.createAuthRoutes(authRoutesPath); err != nil {
+		return err
+	}
+
+	// 5. Create essential pages (home, dashboard)
+	pagesDir := filepath.Join(viewsDir, "pages")
+	if err := os.MkdirAll(pagesDir, 0755); err != nil {
+		return err
+	}
+
+	// Create home page
+	homePagePath := filepath.Join(pagesDir, "home.fin.html")
+	if err := g.createHomePage(homePagePath); err != nil {
+		return err
+	}
+
+	// Create dashboard page
+	dashboardPagePath := filepath.Join(pagesDir, "dashboard.fin.html")
+	if err := g.createDashboardPage(dashboardPagePath); err != nil {
+		return err
 	}
 
 	return nil
@@ -129,6 +166,50 @@ func (g *Generator) createBaseLayout(layoutsDir string) error {
 	filename := "base.fin.html"
 	filepath := filepath.Join(layoutsDir, filename)
 	content := g.generateBaseLayoutContent()
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
+// createOrUpdateBaseLayout creates or updates base layout with auth navigation
+func (g *Generator) createOrUpdateBaseLayout(filepath string) error {
+	// Always create/update with auth-enabled layout
+	content := g.generateBaseLayoutWithAuth()
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
+// createAuthController generates AuthController with web methods
+func (g *Generator) createAuthController(filepath string) error {
+	content := g.generateAuthControllerContent()
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
+// createAuthRoutes generates auth routes file
+func (g *Generator) createAuthRoutes(filepath string) error {
+	// Try to detect module name from go.mod
+	moduleName := "app" // default
+	if modContent, err := os.ReadFile("go.mod"); err == nil {
+		lines := strings.Split(string(modContent), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "module ") {
+				moduleName = strings.TrimSpace(strings.TrimPrefix(line, "module "))
+				break
+			}
+		}
+	}
+	
+	content := g.generateAuthRoutesContent(moduleName)
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
+// createHomePage creates the home page view
+func (g *Generator) createHomePage(filepath string) error {
+	content := g.generateHomePageContent()
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
+// createDashboardPage creates the dashboard page view
+func (g *Generator) createDashboardPage(filepath string) error {
+	content := g.generateDashboardPageContent()
 	return os.WriteFile(filepath, []byte(content), 0644)
 }
 
