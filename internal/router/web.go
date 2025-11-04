@@ -7,7 +7,6 @@ import (
 	"text/template"
 
 	"dolphin/internal/auth"
-	dolphinMiddleware "dolphin/internal/middleware"
 	"dolphin/internal/time"
 	"dolphin/internal/version"
 
@@ -93,9 +92,6 @@ func render(w http.ResponseWriter, pagePath string) error {
 // setupWebRoutes configures web routes with HTMX support
 // Note: This is called AFTER custom routes, so we skip routes that apps might have already registered
 func (r *Router) setupWebRoutes(router chi.Router) {
-	// Setup Dolphin-style authentication for web routes using router's manager
-	webAuthMiddleware := dolphinMiddleware.NewAuthMiddleware(r.authManager, r.app.Logger())
-
 	// Skip default routes if apps have registered custom routes
 	// Apps should register their own home and auth routes before calling SetupRoutes()
 	// We'll only set up optional routes that don't conflict
@@ -105,6 +101,11 @@ func (r *Router) setupWebRoutes(router chi.Router) {
 
 	// Skip all default routes - apps should provide their own
 	// This prevents conflicts when apps register custom routes before SetupRoutes()
+	//
+	// If apps want to use Dolphin's default web routes, they can:
+	// 1. Not register custom routes, or
+	// 2. Register custom routes with different paths
+	_ = router // Keep router parameter for future use
 }
 
 // handleHome renders the home page with HTMX integration
