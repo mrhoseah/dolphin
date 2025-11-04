@@ -41,7 +41,7 @@ The comprehensive documentation includes:
 - **📊 Session Management**: Cookie and database session storage
 - **🎯 Event System**: Comprehensive event dispatching and queuing
 - **📮 Postman Integration**: Auto-generated API collections for testing
-- **🗂️ File Storage**: Multi-driver storage system (Local, S3, GCS, Azure)
+- **🗂️ File Storage**: Multi-driver storage system (Local, S3, GCS, Azure) with secure symlink support
 - **🔌 Service Providers**: Modular architecture with dependency injection
 - **🎨 HTMX Support**: Modern web interactions without heavy JavaScript
 - **🔧 Maintenance Mode**: Graceful application maintenance with bypass options
@@ -582,6 +582,13 @@ dolphin db:seed
 dolphin db:wipe
 ```
 
+### 📦 Storage Commands
+
+```bash
+# Create storage symlink (public/storage → storage/app/public)
+dolphin storage:link
+```
+
 ### 🔨 Code Generation (Make Commands)
 
 ```bash
@@ -642,6 +649,7 @@ dolphin cache:get <key>
 dolphin cache:put <key> <value>
 
 # Storage management
+dolphin storage:link                    # Create storage symlink (public/storage → storage/app/public)
 dolphin storage:list [path]
 dolphin storage:put <local-path> <remote-path>
 dolphin storage:get <remote-path> <local-path>
@@ -3314,7 +3322,7 @@ Stop spending hours setting up boilerplate code. Dolphin generates everything yo
 Dolphin includes everything you need for production applications:
 - **Event System**: Dispatch events, queue processing, and listener management
 - **Service Providers**: Modular architecture with dependency injection
-- **Multi-Driver Storage**: Local, S3, Google Cloud, Azure support
+- **Multi-Driver Storage**: Local, S3, Google Cloud, Azure support with secure symlink
 - **Advanced Caching**: Redis and memory caching with TTL and tagging
 - **Comprehensive Auth**: JWT authentication with guards and providers
 
@@ -3500,7 +3508,26 @@ files, _ := storage.List("uploads/")
 
 // Generate URLs
 url := storage.URL("uploads/avatar.jpg")
+// Returns: /storage/uploads/avatar.jpg
 ```
+
+#### **Storage Symlink**
+
+Create a symlink for public file access:
+
+```bash
+# Create storage symlink
+dolphin storage:link
+# Creates: public/storage → storage/app/public
+```
+
+Files stored in `storage/app/public/` are accessible via `/storage/*`:
+
+- **Store**: `storage.Put("avatars/user.jpg", file)`
+- **URL**: `/storage/avatars/user.jpg`
+- **Access**: `http://localhost:8080/storage/avatars/user.jpg`
+
+The symlink is automatically created when you start the server if it doesn't exist.
 
 ### 💾 **Cache System Usage**
 

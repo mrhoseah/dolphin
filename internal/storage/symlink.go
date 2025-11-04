@@ -7,7 +7,7 @@ import (
 )
 
 // CreateSymlink creates a symbolic link from public/storage to storage/app/public
-// This is similar to Laravel's storage:link command
+// This allows secure public access to files stored in the storage directory
 func CreateSymlink(publicPath, storagePath string) error {
 	// Ensure storage/app/public exists
 	storagePublicPath := filepath.Join(storagePath, "app", "public")

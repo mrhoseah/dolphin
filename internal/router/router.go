@@ -150,7 +150,7 @@ func (r *Router) setupStaticRoutes() {
 	fileServer := http.FileServer(http.Dir("./public/"))
 	r.router.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
-	// Ensure storage symlink exists (Laravel-style: public/storage → storage/app/public)
+	// Ensure storage symlink exists (public/storage → storage/app/public)
 	// This allows public access to files stored in storage/app/public
 	if !storage.SymlinkExists("public") {
 		// Try to create symlink automatically

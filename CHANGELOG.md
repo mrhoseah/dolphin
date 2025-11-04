@@ -12,6 +12,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Generators for modules, views, repositories, providers, Postman collection
 - Event system scaffolding
 - README docs and examples; basic tests for debug, maintenance, static
+- Storage symlink feature (`dolphin storage:link`) - Secure symlink from `public/storage` to `storage/app/public`
+- Task Scheduler - Cron-like task scheduling system
+- API Resources/Transformers - Clean API response transformation
+- Webhook System - Event-driven webhook system for integrations
+- Feature Flags System - Runtime feature toggling
+- API Mock Server - Development mock API server
+- Performance Budget Monitoring - Real-time performance monitoring
 
 ### Changed
 - **BREAKING**: Simplified project structure - now uses single `/views` directory instead of `/resources/views` and `/ui/views`
