@@ -41,8 +41,8 @@ func (r *Router) setupAPIRoutes(router chi.Router) {
 		auth.Get("/guest", dolphinAuthController.Guest)
 	})
 
-	// Protected API routes
-	router.Route("/api", func(api chi.Router) {
+	// Protected API routes (already under /api/v1, so no need to add /api prefix)
+	router.Group(func(api chi.Router) {
 		api.Use(dolphinAuthMiddleware.Authenticate)
 
 		// User routes

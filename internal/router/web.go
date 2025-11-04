@@ -205,9 +205,17 @@ func (r *Router) handleRegisterSubmit(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	// Minimal user create (plaintext password placeholder)
+	// Hash password before storing
+	hashedPassword, err := auth.HashPassword(password)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">Failed to process password.</div>`))
+		return
+	}
+
+	// Create user with hashed password
 	db := r.app.DB().GetDB()
-	u := auth.User{Email: email, Password: password}
+	u := auth.User{Email: email, Password: hashedPassword}
 	if err := db.Create(&u).Error; err != nil {
 		w.WriteHeader(http.StatusConflict)
 		w.Write([]byte(`<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">` + err.Error() + `</div>`))
