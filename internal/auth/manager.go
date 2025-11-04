@@ -60,14 +60,28 @@ func NewDatabaseProvider(db *gorm.DB, model interface{}) *DatabaseProvider {
 
 // RetrieveByID retrieves a user by ID
 func (dp *DatabaseProvider) RetrieveByID(id interface{}) (interface{}, error) {
-	var user interface{}
-	err := dp.db.First(&user, id).Error
-	return user, err
+	// Create a new instance of the model type using reflection
+	modelType := reflect.TypeOf(dp.model)
+	if modelType.Kind() == reflect.Ptr {
+		modelType = modelType.Elem()
+	}
+	
+	// Create a new instance of the model
+	userValue := reflect.New(modelType).Interface()
+	err := dp.db.First(userValue, id).Error
+	return userValue, err
 }
 
 // RetrieveByCredentials retrieves a user by credentials
 func (dp *DatabaseProvider) RetrieveByCredentials(credentials map[string]string) (interface{}, error) {
-	var user interface{}
+	// Create a new instance of the model type using reflection
+	modelType := reflect.TypeOf(dp.model)
+	if modelType.Kind() == reflect.Ptr {
+		modelType = modelType.Elem()
+	}
+	
+	// Create a new instance of the model
+	userValue := reflect.New(modelType).Interface()
 	query := dp.db
 
 	for key, value := range credentials {
@@ -76,8 +90,8 @@ func (dp *DatabaseProvider) RetrieveByCredentials(credentials map[string]string)
 		}
 	}
 
-	err := query.First(&user).Error
-	return user, err
+	err := query.First(userValue).Error
+	return userValue, err
 }
 
 // ValidateCredentials validates user credentials
