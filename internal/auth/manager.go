@@ -438,7 +438,44 @@ func (am *AuthManager) Guard(name string) Guard {
 
 // DefaultGuard returns the default guard
 func (am *AuthManager) DefaultGuard() Guard {
-	return am.Guard(am.defaultGuard)
+	guard := am.Guard(am.defaultGuard)
+	if guard == nil {
+		// Return a no-op guard if no guard is registered to prevent nil pointer panics
+		// This allows the app to start even if guards aren't configured yet
+		return &noOpGuard{}
+	}
+	return guard
+}
+
+// noOpGuard is a guard that always returns false/empty to prevent nil pointer panics
+type noOpGuard struct{}
+
+func (g *noOpGuard) Attempt(credentials map[string]string) (bool, error) {
+	return false, nil
+}
+
+func (g *noOpGuard) Login(user interface{}) error {
+	return nil
+}
+
+func (g *noOpGuard) Logout() error {
+	return nil
+}
+
+func (g *noOpGuard) Check() bool {
+	return false
+}
+
+func (g *noOpGuard) User() interface{} {
+	return nil
+}
+
+func (g *noOpGuard) ID() interface{} {
+	return nil
+}
+
+func (g *noOpGuard) Guest() bool {
+	return true
 }
 
 // RegisterGuard registers a guard
