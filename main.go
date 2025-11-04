@@ -180,6 +180,15 @@ func main() {
 }
 
 func serve(cmd *cobra.Command, args []string) {
+	// Check if we're in an application directory (has main.go with serve command)
+	// If so, delegate to the application's serve command
+	if isApplicationDirectory() {
+		// Run the application's serve command
+		runApplicationServe()
+		return
+	}
+
+	// Otherwise, run the framework's default server
 	// Initialize logger
 	logger := logger.New(cfg.Log.Level, cfg.Log.Format)
 
@@ -427,4 +436,64 @@ func updateCLI(cmd *cobra.Command, args []string) {
 
 	fmt.Println("✅ Dolphin CLI updated successfully!")
 	fmt.Println("   Run 'dolphin --help' to verify")
+}
+
+// isApplicationDirectory checks if the current directory is an application directory
+// An application directory has:
+// 1. A main.go file
+// 2. A go.mod file with a module name that's not "dolphin"
+func isApplicationDirectory() bool {
+	// Check if main.go exists
+	if _, err := os.Stat("main.go"); os.IsNotExist(err) {
+		return false
+	}
+
+	// Check if go.mod exists
+	if _, err := os.Stat("go.mod"); os.IsNotExist(err) {
+		return false
+	}
+
+	// Read go.mod to check module name
+	modContent, err := os.ReadFile("go.mod")
+	if err != nil {
+		return false
+	}
+
+	modContentStr := string(modContent)
+	// Check if it's NOT the dolphin framework module
+	// Framework module is "dolphin" or "module dolphin"
+	if strings.Contains(modContentStr, "module dolphin") {
+		return false
+	}
+
+	// Check if main.go has a serve command (look for "serve" function or cobra command)
+	mainContent, err := os.ReadFile("main.go")
+	if err != nil {
+		return false
+	}
+
+	mainContentStr := string(mainContent)
+	// Check if it has a serve function or cobra serve command
+	hasServe := strings.Contains(mainContentStr, "func serve") ||
+		strings.Contains(mainContentStr, "serveCmd") ||
+		strings.Contains(mainContentStr, "Use:   \"serve\"")
+
+	return hasServe
+}
+
+// runApplicationServe runs the application's serve command
+func runApplicationServe() {
+	fmt.Println("🐬 Detected application directory. Running application server...")
+	fmt.Println("   (Use 'go run main.go serve' directly for more control)")
+	fmt.Println()
+
+	// Run: go run main.go serve
+	serveCmd := exec.Command("go", "run", "main.go", "serve")
+	serveCmd.Stdin = os.Stdin
+	serveCmd.Stdout = os.Stdout
+	serveCmd.Stderr = os.Stderr
+
+	if err := serveCmd.Run(); err != nil {
+		log.Fatalf("Failed to run application server: %v", err)
+	}
 }
