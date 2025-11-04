@@ -71,9 +71,70 @@ func (g *Generator) CreateResource(name string) error {
 	return nil
 }
 
+// CreateAuth generates authentication views and pages
+func (g *Generator) CreateAuth() error {
+	// Create views directory structure
+	viewsDir := "views"
+	authDir := filepath.Join(viewsDir, "auth")
+	layoutsDir := filepath.Join(viewsDir, "layouts")
+	
+	if err := os.MkdirAll(authDir, 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(layoutsDir, 0755); err != nil {
+		return err
+	}
+
+	// Create login page
+	if err := g.createAuthView("login", authDir); err != nil {
+		return err
+	}
+
+	// Create register page
+	if err := g.createAuthView("register", authDir); err != nil {
+		return err
+	}
+
+	// Create forgot password page
+	if err := g.createAuthView("forgot-password", authDir); err != nil {
+		return err
+	}
+
+	// Create reset password page
+	if err := g.createAuthView("reset-password", authDir); err != nil {
+		return err
+	}
+
+	// Create base layout if it doesn't exist
+	baseLayoutPath := filepath.Join(layoutsDir, "base.fin.html")
+	if _, err := os.Stat(baseLayoutPath); os.IsNotExist(err) {
+		if err := g.createBaseLayout(layoutsDir); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// createAuthView creates a specific authentication view
+func (g *Generator) createAuthView(viewType, authDir string) error {
+	filename := fmt.Sprintf("%s.fin.html", viewType)
+	filepath := filepath.Join(authDir, filename)
+	content := g.generateAuthViewContent(viewType)
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
+// createBaseLayout creates the base layout template
+func (g *Generator) createBaseLayout(layoutsDir string) error {
+	filename := "base.fin.html"
+	filepath := filepath.Join(layoutsDir, filename)
+	content := g.generateBaseLayoutContent()
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
 // CreateHTMXViews generates HTMX-based views for a module
 func (g *Generator) CreateHTMXViews(name string) error {
-	viewsDir := fmt.Sprintf("resources/views/%s", strings.ToLower(name))
+	viewsDir := fmt.Sprintf("views/pages/%s", strings.ToLower(name))
 	if err := os.MkdirAll(viewsDir, 0755); err != nil {
 		return err
 	}
@@ -164,8 +225,9 @@ func (g *Generator) CreateProvider(name, providerType string, priority int) erro
 }
 
 // createHTMXView creates a specific HTMX view
+// Enforces .fin.html extension
 func (g *Generator) createHTMXView(name, viewType, viewsDir string) error {
-	filename := fmt.Sprintf("%s.html", viewType)
+	filename := fmt.Sprintf("%s.fin.html", viewType)
 	filepath := filepath.Join(viewsDir, filename)
 	content := g.generateHTMXViewContent(name, viewType)
 	return os.WriteFile(filepath, []byte(content), 0644)

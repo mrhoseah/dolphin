@@ -67,6 +67,14 @@ The comprehensive documentation includes:
 - **⚡ Dolphin CLI**: Laravel-inspired CLI with generators and commands
 - **🌍 Localization**: Multi-locale support with file-based translations
 - **📝 Form Helpers**: Fluent form builder with validation integration
+- **🔐 Two-Factor Authentication (2FA/MFA)**: TOTP, SMS, and Email-based MFA
+- **🌐 OAuth2 Social Login**: Google, GitHub, Facebook, Microsoft providers
+- **🔑 API Key Management**: Secure API key generation with scopes and rate limiting
+- **⚡ Real-time Communication**: WebSocket and Server-Sent Events (SSE) support
+- **❤️ Health Checks**: Kubernetes-ready liveness and readiness probes
+- **📡 gRPC Support**: High-performance RPC with gRPC-Gateway for REST compatibility
+- **📊 OpenTelemetry**: Enhanced observability with OTLP, Prometheus, and distributed tracing
+- **🔧 API Client Generator**: Generate type-safe Go/TypeScript clients from OpenAPI specs
 
 ## 🚀 Quick Start
 

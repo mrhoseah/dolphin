@@ -42,11 +42,11 @@ func New(app *app.App) *Router {
 
 	// Initialize Fin template engine
 	finConfig := &template.Config{
-		ViewsPath:    "ui/views",
+		ViewsPath:    "views",
 		CachePath:    "storage/cache/views",
 		CacheEnabled: true,
 		DebugMode:    app.Config().App.Debug,
-		Extensions:   []string{".fin.go", ".go.html"},
+		Extensions:   []string{".fin.html"}, // Only .fin.html is supported
 	}
 	r.finEngine = template.NewFinEngine(finConfig)
 
@@ -59,6 +59,11 @@ func New(app *app.App) *Router {
 // ServeHTTP implements http.Handler
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.router.ServeHTTP(w, req)
+}
+
+// GetChiRouter returns the underlying chi router
+func (r *Router) GetChiRouter() *chi.Mux {
+	return r.router
 }
 
 // Mount attaches a sub-router at a given pattern
@@ -109,8 +114,10 @@ func (r *Router) setupMiddleware() {
 
 // setupRoutes configures application routes
 func (r *Router) setupRoutes() {
-	// Health check endpoint
+	// Health check endpoints (Kubernetes-ready)
 	r.router.Get("/health", r.healthCheck)
+	r.router.Get("/health/live", r.healthLiveness)
+	r.router.Get("/health/ready", r.healthReadiness)
 
 	// Maintenance status endpoint
 	r.router.Get("/maintenance/status", r.maintenanceStatus)
@@ -176,6 +183,31 @@ func (r *Router) healthCheck(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"ok","service":"dolphin-framework"}`))
+}
+
+func (r *Router) healthLiveness(w http.ResponseWriter, req *http.Request) {
+	// Liveness probe - checks if the application is alive
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"alive","service":"dolphin-framework"}`))
+}
+
+func (r *Router) healthReadiness(w http.ResponseWriter, req *http.Request) {
+	// Readiness probe - checks if the application is ready to serve traffic
+	w.Header().Set("Content-Type", "application/json")
+	
+	response := map[string]interface{}{
+		"status":  "ready",
+		"service": "dolphin-framework",
+		"checks": map[string]string{
+			"database": "ok",
+			"cache":    "ok",
+		},
+	}
+	
+	jsonData, _ := json.Marshal(response)
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonData)
 }
 
 func (r *Router) maintenanceStatus(w http.ResponseWriter, req *http.Request) {

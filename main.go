@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"dolphin/internal/app"
+	"dolphin/internal/cli"
 	"dolphin/internal/config"
 	"dolphin/internal/database"
 	"dolphin/internal/logger"
@@ -108,6 +109,12 @@ func main() {
 		Run:   makeMiddleware,
 	}
 
+	var makeAuthCmd = &cobra.Command{
+		Use:   "make:auth",
+		Short: "Generate authentication views and pages",
+		Run:   makeAuth,
+	}
+
 	// Swagger command
 	var swaggerCmd = &cobra.Command{
 		Use:   "swagger",
@@ -122,6 +129,17 @@ func main() {
 		Run:   storageLink,
 	}
 
+	// Client generation command
+	var makeClientCmd = &cobra.Command{
+		Use:   "make:client [language]",
+		Short: "Generate type-safe API client from OpenAPI spec",
+		Long:  "Generate type-safe API client (go or typescript) from OpenAPI spec",
+		Args:  cobra.ExactArgs(1),
+		Run:   makeClient,
+	}
+	makeClientCmd.Flags().StringP("spec", "s", "swagger.json", "OpenAPI spec file path")
+	makeClientCmd.Flags().StringP("output", "o", "generated", "Output directory")
+
 	// Add commands
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(migrateCmd)
@@ -131,8 +149,10 @@ func main() {
 	rootCmd.AddCommand(makeModelCmd)
 	rootCmd.AddCommand(makeMigrationCmd)
 	rootCmd.AddCommand(makeMiddlewareCmd)
+	rootCmd.AddCommand(makeAuthCmd)
 	rootCmd.AddCommand(swaggerCmd)
 	rootCmd.AddCommand(storageLinkCmd)
+	rootCmd.AddCommand(makeClientCmd)
 
 	// Initialize configuration
 	var err error
@@ -286,6 +306,18 @@ func makeMiddleware(cmd *cobra.Command, args []string) {
 	fmt.Printf("✅ Middleware %s created successfully!\n", name)
 }
 
+func makeAuth(cmd *cobra.Command, args []string) {
+	generator := app.NewGenerator()
+	if err := generator.CreateAuth(); err != nil {
+		log.Fatal("Failed to create auth views:", err)
+	}
+	fmt.Println("✅ Authentication views and pages created successfully!")
+	fmt.Println("   Created views/auth/login.fin.html")
+	fmt.Println("   Created views/auth/register.fin.html")
+	fmt.Println("   Created views/auth/forgot-password.fin.html")
+	fmt.Println("   Created views/auth/reset-password.fin.html")
+}
+
 func generateSwagger(cmd *cobra.Command, args []string) {
 	fmt.Println("📚 Generating Swagger documentation...")
 	fmt.Println("Run: swag init -g main.go")
@@ -304,4 +336,18 @@ func storageLink(cmd *cobra.Command, args []string) {
 
 	fmt.Println("✅ Storage symlink created successfully!")
 	fmt.Println("   public/storage → storage/app/public")
+}
+
+func makeClient(cmd *cobra.Command, args []string) {
+	language := args[0]
+	if language != "go" && language != "typescript" {
+		log.Fatal("Language must be 'go' or 'typescript'")
+	}
+
+	specPath, _ := cmd.Flags().GetString("spec")
+	outputDir, _ := cmd.Flags().GetString("output")
+
+	if err := cli.GenerateClientCommand(specPath, outputDir, language); err != nil {
+		log.Fatal("Failed to generate client:", err)
+	}
 }

@@ -18,7 +18,7 @@ func runFinUsageExample() {
 		CachePath:    "storage/cache/views",
 		CacheEnabled: true,
 		DebugMode:    true,
-		Extensions:   []string{".fin.go", ".go.html"},
+		Extensions:   []string{".fin.html"}, // Only .fin.html is supported
 	}
 
 	// Initialize Fin template engine
@@ -80,7 +80,7 @@ func runFinUsageExample() {
 	`
 
 	// For this example, we'll create a temporary template file
-	tempFile := "temp_example.fin.go"
+	tempFile := "temp_example.fin.html"
 	err := os.WriteFile(tempFile, []byte(simpleTemplate), 0644)
 	if err != nil {
 		log.Fatal("Failed to create temp file:", err)
@@ -108,7 +108,7 @@ func runFinUsageExample() {
 	// Example 3: Template structure
 	fmt.Println("\n3. Example Fin Template Structure:")
 	fmt.Println(`
-<!-- pages/welcome.fin.go -->
+<!-- pages/welcome.fin.html -->
 @extends('layouts.app')
 @model('User', user)
 

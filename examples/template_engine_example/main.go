@@ -21,7 +21,7 @@ func main() {
 	config.CachePath = "storage/cache/views"
 	config.CacheEnabled = true
 	config.DebugMode = true
-	config.Extensions = []string{".html", ".blade.go"}
+	config.Extensions = []string{".fin.html"} // Only .fin.html is supported
 
 	// Create template engine
 	engine := template.NewFinEngine(config)

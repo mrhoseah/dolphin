@@ -99,7 +99,7 @@ func demoTemplateEngine() {
 		CachePath:    "storage/cache/views",
 		CacheEnabled: true,
 		DebugMode:    false,
-		Extensions:   []string{".blade.go", ".go.html"},
+		Extensions:   []string{".fin.html"}, // Only .fin.html is supported
 	}
 
 	engine := template.NewFinEngine(config)

@@ -21,7 +21,7 @@ func runFinIntegrationExample() {
 		CachePath:    "storage/cache/views",
 		CacheEnabled: true,
 		DebugMode:    true,
-		Extensions:   []string{".fin.go", ".go.html"},
+		Extensions:   []string{".fin.html"}, // Only .fin.html is supported
 	}
 
 	finEngine := template.NewFinEngine(finConfig)
@@ -126,7 +126,7 @@ func runFinIntegrationExample() {
 	`
 
 	// For demonstration, we'll create a temporary template file
-	tempFile := "temp_demo.fin.go"
+	tempFile := "temp_demo.fin.html"
 	err := writeTemplateFile(tempFile, simpleTemplate)
 	if err != nil {
 		log.Fatal("Failed to create temp template:", err)

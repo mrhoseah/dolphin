@@ -65,11 +65,11 @@ type Config struct {
 // DefaultConfig returns the default configuration
 func DefaultConfig() *Config {
 	return &Config{
-		ViewsPath:    "ui/views",
+		ViewsPath:    "views",
 		CachePath:    "storage/cache/views",
 		CacheEnabled: true,
 		DebugMode:    false,
-		Extensions:   []string{".fin.go", ".go.html"},
+		Extensions:   []string{".fin.html"}, // Only .fin.html is supported
 	}
 }
 
@@ -271,7 +271,22 @@ func (e *FinEngine) RegisterLayout(name string, template string) {
 }
 
 // Render renders a Fin template with data
+// Template names should use .fin.html extension or omit extension (will be enforced)
 func (e *FinEngine) Render(templateName string, data interface{}) (string, error) {
+	// Enforce .fin.html extension
+	if !strings.HasSuffix(templateName, ".fin.html") {
+		if strings.Contains(templateName, ".") {
+			// Replace any extension with .fin.html
+			if e.debugMode {
+				fmt.Printf("Warning: Template '%s' should use .fin.html extension. Converting...\n", templateName)
+			}
+			templateName = strings.TrimSuffix(templateName, filepath.Ext(templateName)) + ".fin.html"
+		} else {
+			// If no extension provided, append .fin.html
+			templateName = templateName + ".fin.html"
+		}
+	}
+
 	// Get template content
 	content, err := e.getTemplateContent(templateName)
 	if err != nil {
@@ -334,13 +349,28 @@ func (e *FinEngine) getTemplateContent(templateName string) (string, error) {
 }
 
 // findTemplateFile finds the template file
+// Enforces .fin.html extension only
 func (e *FinEngine) findTemplateFile(templateName string) string {
+	// Remove any existing extension from templateName to enforce .fin.html
+	templateName = strings.TrimSuffix(templateName, ".fin.html")
+	templateName = strings.TrimSuffix(templateName, ".fin")
+	templateName = strings.TrimSuffix(templateName, ".html")
+	templateName = strings.TrimSuffix(templateName, ".go.html")
+
+	// Only use .fin.html extension
 	for _, ext := range e.extensions {
 		filePath := filepath.Join(e.viewsPath, templateName+ext)
 		if _, err := os.Stat(filePath); err == nil {
 			return filePath
 		}
 	}
+
+	// If not found with configured extensions, try .fin.html as fallback
+	filePath := filepath.Join(e.viewsPath, templateName+".fin.html")
+	if _, err := os.Stat(filePath); err == nil {
+		return filePath
+	}
+
 	return ""
 }
 
@@ -368,15 +398,36 @@ func (e *FinEngine) compileTemplate(content string, data interface{}) (string, e
 }
 
 // processExtendsDirective processes @extends directive
+// Enforces .fin.html extension in layout references
 func (e *FinEngine) processExtendsDirective(content string, data interface{}) string {
+	// Support both @extends('layout') and {{extend "layout"}} syntax
 	extendsRegex := regexp.MustCompile(`@extends\s*\(\s*['"]([^'"]+)['"]\s*\)`)
-	matches := extendsRegex.FindAllStringSubmatch(content, -1)
+	extendRegex := regexp.MustCompile(`\{\{\s*extend\s+['"]([^'"]+)['"]\s*\}\}`)
 
+	// Process @extends syntax
+	matches := extendsRegex.FindAllStringSubmatch(content, -1)
 	for _, match := range matches {
-		_ = match[1] // Use the layout name
-		// Remove @extends line
-		content = strings.Replace(content, match[0], "", 1)
-		// This will be handled in renderWithLayout
+		layoutName := match[1]
+		// Enforce .fin.html extension
+		if !strings.HasSuffix(layoutName, ".fin.html") {
+			layoutName = strings.TrimSuffix(layoutName, filepath.Ext(layoutName)) + ".fin.html"
+			// Replace in content
+			newMatch := strings.Replace(match[0], match[1], layoutName, 1)
+			content = strings.Replace(content, match[0], newMatch, 1)
+		}
+	}
+
+	// Process {{extend}} syntax
+	extendMatches := extendRegex.FindAllStringSubmatch(content, -1)
+	for _, match := range extendMatches {
+		layoutName := match[1]
+		// Enforce .fin.html extension
+		if !strings.HasSuffix(layoutName, ".fin.html") {
+			layoutName = strings.TrimSuffix(layoutName, filepath.Ext(layoutName)) + ".fin.html"
+			// Replace in content
+			newMatch := strings.Replace(match[0], match[1], layoutName, 1)
+			content = strings.Replace(content, match[0], newMatch, 1)
+		}
 	}
 
 	return content
@@ -525,13 +576,32 @@ func (e *FinEngine) parseDirectiveArgs(argsStr string) []string {
 }
 
 // renderWithLayout renders content with a layout
+// Enforces .fin.html extension for layout names
 func (e *FinEngine) renderWithLayout(layoutName string, content string, data interface{}) (string, error) {
+	// Enforce .fin.html extension
+	if !strings.HasSuffix(layoutName, ".fin.html") {
+		layoutName = strings.TrimSuffix(layoutName, filepath.Ext(layoutName)) + ".fin.html"
+	}
+
 	e.mu.RLock()
 	layout, exists := e.layouts[layoutName]
 	e.mu.RUnlock()
 
 	if !exists {
-		return "", fmt.Errorf("layout '%s' not found", layoutName)
+		// Try loading layout from file if not in memory
+		layoutContent, err := e.getTemplateContent(layoutName)
+		if err != nil {
+			return "", fmt.Errorf("layout '%s' not found", layoutName)
+		}
+		// Register layout in memory
+		e.mu.Lock()
+		e.layouts[layoutName] = &Layout{
+			Name:     layoutName,
+			Template: layoutContent,
+			Sections: make(map[string]string),
+		}
+		layout = e.layouts[layoutName]
+		e.mu.Unlock()
 	}
 
 	// Compile layout template

@@ -1181,3 +1181,300 @@ func (g *Generator) generatePostmanCollectionContent() string {
 	]
 }`
 }
+
+// generateAuthViewContent generates authentication view templates
+func (g *Generator) generateAuthViewContent(viewType string) string {
+	switch viewType {
+	case "login":
+		return g.generateLoginView()
+	case "register":
+		return g.generateRegisterView()
+	case "forgot-password":
+		return g.generateForgotPasswordView()
+	case "reset-password":
+		return g.generateResetPasswordView()
+	default:
+		return ""
+	}
+}
+
+// generateLoginView generates the login page template
+func (g *Generator) generateLoginView() string {
+	return `{{extend "layouts/base.fin.html"}}
+
+{{define "content"}}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Sign in to your account
+            </h2>
+        </div>
+        <form class="mt-8 space-y-6" hx-post="/auth/login" hx-target="#error-message" hx-swap="outerHTML">
+            <div class="rounded-md shadow-sm -space-y-px">
+                <div>
+                    <label for="email" class="sr-only">Email address</label>
+                    <input id="email" name="email" type="email" autocomplete="email" required
+                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                           placeholder="Email address">
+                </div>
+                <div>
+                    <label for="password" class="sr-only">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required
+                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                           placeholder="Password">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <input id="remember-me" name="remember-me" type="checkbox"
+                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="remember-me" class="ml-2 block text-sm text-gray-900">
+                        Remember me
+                    </label>
+                </div>
+
+                <div class="text-sm">
+                    <a href="/auth/forgot-password" class="font-medium text-blue-600 hover:text-blue-500">
+                        Forgot your password?
+                    </a>
+                </div>
+            </div>
+
+            <div id="error-message"></div>
+
+            <div>
+                <button type="submit"
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Sign in
+                </button>
+            </div>
+
+            <div class="text-center">
+                <span class="text-sm text-gray-600">
+                    Don't have an account?
+                    <a href="/auth/register" class="font-medium text-blue-600 hover:text-blue-500">
+                        Sign up
+                    </a>
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}`
+}
+
+// generateRegisterView generates the register page template
+func (g *Generator) generateRegisterView() string {
+	return `{{extend "layouts/base.fin.html"}}
+
+{{define "content"}}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Create your account
+            </h2>
+        </div>
+        <form class="mt-8 space-y-6" hx-post="/auth/register" hx-target="#error-message" hx-swap="outerHTML">
+            <div class="rounded-md shadow-sm space-y-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input id="name" name="name" type="text" required
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                           placeholder="Full name">
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email address</label>
+                    <input id="email" name="email" type="email" autocomplete="email" required
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                           placeholder="Email address">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="new-password" required
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                           placeholder="Password">
+                </div>
+                <div>
+                    <label for="password-confirm" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                    <input id="password-confirm" name="password-confirm" type="password" autocomplete="new-password" required
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                           placeholder="Confirm password">
+                </div>
+            </div>
+
+            <div id="error-message"></div>
+
+            <div>
+                <button type="submit"
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Sign up
+                </button>
+            </div>
+
+            <div class="text-center">
+                <span class="text-sm text-gray-600">
+                    Already have an account?
+                    <a href="/auth/login" class="font-medium text-blue-600 hover:text-blue-500">
+                        Sign in
+                    </a>
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}`
+}
+
+// generateForgotPasswordView generates the forgot password page template
+func (g *Generator) generateForgotPasswordView() string {
+	return `{{extend "layouts/base.fin.html"}}
+
+{{define "content"}}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Forgot your password?
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Enter your email address and we'll send you a link to reset your password.
+            </p>
+        </div>
+        <form class="mt-8 space-y-6" hx-post="/auth/forgot-password" hx-target="#error-message" hx-swap="outerHTML">
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700">Email address</label>
+                <input id="email" name="email" type="email" autocomplete="email" required
+                       class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                       placeholder="Email address">
+            </div>
+
+            <div id="error-message"></div>
+
+            <div>
+                <button type="submit"
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Send reset link
+                </button>
+            </div>
+
+            <div class="text-center">
+                <a href="/auth/login" class="font-medium text-blue-600 hover:text-blue-500">
+                    Back to login
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}`
+}
+
+// generateResetPasswordView generates the reset password page template
+func (g *Generator) generateResetPasswordView() string {
+	return `{{extend "layouts/base.fin.html"}}
+
+{{define "content"}}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Reset your password
+            </h2>
+        </div>
+        <form class="mt-8 space-y-6" hx-post="/auth/reset-password" hx-target="#error-message" hx-swap="outerHTML">
+            <input type="hidden" name="token" value="{{.Token}}">
+            
+            <div class="rounded-md shadow-sm space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email address</label>
+                    <input id="email" name="email" type="email" autocomplete="email" required
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                           placeholder="Email address">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">New Password</label>
+                    <input id="password" name="password" type="password" autocomplete="new-password" required
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                           placeholder="New password">
+                </div>
+                <div>
+                    <label for="password-confirm" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                    <input id="password-confirm" name="password-confirm" type="password" autocomplete="new-password" required
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                           placeholder="Confirm password">
+                </div>
+            </div>
+
+            <div id="error-message"></div>
+
+            <div>
+                <button type="submit"
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Reset password
+                </button>
+            </div>
+
+            <div class="text-center">
+                <a href="/auth/login" class="font-medium text-blue-600 hover:text-blue-500">
+                    Back to login
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}`
+}
+
+// generateBaseLayoutContent generates the base layout template
+func (g *Generator) generateBaseLayoutContent() string {
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{block "title" .}}Dolphin Framework{{end}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold text-blue-600">🐬 Dolphin</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {{if .User}}
+                        <span class="text-gray-700">{{.User.Email}}</span>
+                        <form hx-post="/auth/logout" hx-swap="none">
+                            <button type="submit" class="text-gray-600 hover:text-gray-900">
+                                Logout
+                            </button>
+                        </form>
+                    {{else}}
+                        <a href="/auth/login" class="text-gray-600 hover:text-gray-900">Login</a>
+                        <a href="/auth/register" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                            Register
+                        </a>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {{block "content" .}}{{end}}
+    </main>
+
+    <footer class="bg-white border-t mt-auto">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <p class="text-center text-sm text-gray-500">
+                &copy; {{.Year}} Dolphin Framework. All rights reserved.
+            </p>
+        </div>
+    </footer>
+</body>
+</html>`
+}

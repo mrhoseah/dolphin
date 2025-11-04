@@ -18,7 +18,7 @@ func RunFinTemplateExample() {
 		CachePath:    "storage/cache/views",
 		CacheEnabled: true,
 		DebugMode:    true,
-		Extensions:   []string{".fin.html", ".fin.go", ".go.html"},
+		Extensions:   []string{".fin.html"}, // Only .fin.html is supported
 	}
 
 	// Initialize Fin template engine
@@ -259,7 +259,7 @@ func RunFinTemplateExample() {
 @endsection`
 
 	// For demonstration, we'll create a temporary template file
-	tempFile := "temp_dashboard.fin.go"
+	tempFile := "temp_dashboard.fin.html"
 	err := os.WriteFile(tempFile, []byte(finTemplate), 0644)
 	if err != nil {
 		log.Fatal("Failed to create temp template:", err)
