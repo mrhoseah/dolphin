@@ -293,7 +293,28 @@ func (e *FinEngine) Render(templateName string, data interface{}) (string, error
 		return "", err
 	}
 
-	// Compile template
+	// Check if template uses {{extend}} directive BEFORE compiling
+	extendRegex := regexp.MustCompile(`\{\{\s*extend\s+['"]([^'"]+)['"]\s*\}\}`)
+	if extendMatch := extendRegex.FindStringSubmatch(content); extendMatch != nil {
+		layoutName := extendMatch[1]
+		// Enforce .fin.html extension for layout
+		if !strings.HasSuffix(layoutName, ".fin.html") {
+			layoutName = strings.TrimSuffix(layoutName, filepath.Ext(layoutName)) + ".fin.html"
+		}
+		// Remove the extend line from content
+		lines := strings.Split(content, "\n")
+		var newLines []string
+		for _, line := range lines {
+			if !extendRegex.MatchString(line) {
+				newLines = append(newLines, line)
+			}
+		}
+		contentWithoutExtend := strings.Join(newLines, "\n")
+		// Render with layout
+		return e.renderWithLayout(layoutName, contentWithoutExtend, data)
+	}
+
+	// Compile template (no layout)
 	compiled, err := e.compileTemplate(content, data)
 	if err != nil {
 		return "", err
@@ -424,10 +445,22 @@ func (e *FinEngine) processExtendsDirective(content string, data interface{}) st
 		// Enforce .fin.html extension
 		if !strings.HasSuffix(layoutName, ".fin.html") {
 			layoutName = strings.TrimSuffix(layoutName, filepath.Ext(layoutName)) + ".fin.html"
-			// Replace in content
-			newMatch := strings.Replace(match[0], match[1], layoutName, 1)
-			content = strings.Replace(content, match[0], newMatch, 1)
 		}
+
+		// Remove the {{extend}} line from content - layout will be loaded separately
+		// The extend directive will be processed by renderWithLayout
+		lines := strings.Split(content, "\n")
+		var newLines []string
+		for _, line := range lines {
+			if !extendRegex.MatchString(line) {
+				newLines = append(newLines, line)
+			}
+		}
+		content = strings.Join(newLines, "\n")
+
+		// Store layout name for later processing
+		// This will be handled by checking for extend directive in Render method
+		_ = layoutName // Layout processing happens in renderWithLayout
 	}
 
 	return content
@@ -508,6 +541,14 @@ func (e *FinEngine) processDirectives(content string, data interface{}) string {
 
 // convertFinToGo converts Fin syntax to Go template syntax
 func (e *FinEngine) convertFinToGo(content string) string {
+	// Go template keywords that should NOT be converted to variables
+	goKeywords := map[string]bool{
+		"define": true, "block": true, "template": true, "if": true, "else": true,
+		"end": true, "range": true, "with": true, "index": true, "len": true,
+		"eq": true, "ne": true, "lt": true, "le": true, "gt": true, "ge": true,
+		"and": true, "or": true, "not": true, "print": true, "printf": true,
+	}
+
 	// Convert {{ $variable }} to {{.Variable}}
 	content = regexp.MustCompile(`\{\{\s*\$(\w+)\s*\}\}`).ReplaceAllString(content, "{{.$1}}")
 
@@ -518,13 +559,56 @@ func (e *FinEngine) convertFinToGo(content string) string {
 	content = regexp.MustCompile(`\{\{\s*\$(\w+)\['([^']+)'\]\s*\}\}`).ReplaceAllString(content, "{{index .$1 \"$2\"}}")
 
 	// Convert {{variable}} to {{.Variable}} (without $ prefix)
+	// BUT skip Go template keywords and commands
+	// First, protect Go template keywords like {{define}}, {{block}}, {{template}}, etc.
+	// These have the pattern: {{keyword "string"}} or {{keyword .}} or {{keyword}}
+	keywordPattern := regexp.MustCompile(`\{\{\s*(define|block|template|if|else|end|range|with)\s+[^}]+\}\}`)
+	protectedKeywords := make(map[string]string)
+	protectedCount := 0
+
+	// Protect all Go template keywords by replacing them temporarily
+	content = keywordPattern.ReplaceAllStringFunc(content, func(match string) string {
+		protectedCount++
+		placeholder := fmt.Sprintf("__PROTECTED_KEYWORD_%d__", protectedCount)
+		protectedKeywords[placeholder] = match
+		return placeholder
+	})
+
+	// Also protect standalone keywords like {{end}}
+	standaloneKeywords := regexp.MustCompile(`\{\{\s*(end|else)\s*\}\}`)
+	content = standaloneKeywords.ReplaceAllStringFunc(content, func(match string) string {
+		protectedCount++
+		placeholder := fmt.Sprintf("__PROTECTED_KEYWORD_%d__", protectedCount)
+		protectedKeywords[placeholder] = match
+		return placeholder
+	})
+
+	// Now convert remaining {{variable}} patterns
 	content = regexp.MustCompile(`\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}`).ReplaceAllStringFunc(content, func(match string) string {
+		// Extract the variable name
+		re := regexp.MustCompile(`\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}`)
+		matches := re.FindStringSubmatch(match)
+		if len(matches) < 2 {
+			return match
+		}
+		varName := matches[1]
+
+		// Don't convert Go template keywords
+		if goKeywords[varName] {
+			return match
+		}
+
 		// Only convert if it's not already a Go template expression
 		if strings.Contains(match, ".") || strings.Contains(match, "|") || strings.Contains(match, "(") {
 			return match
 		}
 		return strings.Replace(match, "{{", "{{.", 1)
 	})
+
+	// Restore protected keywords
+	for placeholder, original := range protectedKeywords {
+		content = strings.Replace(content, placeholder, original, -1)
+	}
 
 	// Convert {{variable.property}} to {{.Variable.Property}}
 	content = regexp.MustCompile(`\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}`).ReplaceAllStringFunc(content, func(match string) string {
@@ -604,34 +688,73 @@ func (e *FinEngine) renderWithLayout(layoutName string, content string, data int
 		e.mu.Unlock()
 	}
 
-	// Compile layout template
-	compiledLayout, err := e.compileTemplate(layout.Template, data)
-	if err != nil {
-		return "", err
-	}
+	// Parse both templates into the same template set
+	// Go templates require that {{define}} blocks be parsed into the same template set
+	// as the {{block}} that references them.
 
-	// Compile content template
-	compiledContent, err := e.compileTemplate(content, data)
-	if err != nil {
-		return "", err
-	}
+	// First, compile the content template (which will have {{define "content"}})
+	// Skip directive processing for extend since we're already handling it
+	compiledContent := content
+	// Remove any {{extend}} directive from content if it exists
+	extendRegex := regexp.MustCompile(`\{\{\s*extend\s+['"]([^'"]+)['"]\s*\}\}`)
+	compiledContent = extendRegex.ReplaceAllString(compiledContent, "")
+	compiledContent = strings.TrimSpace(compiledContent)
 
-	// Combine layout and content
-	combined := compiledLayout + "\n" + compiledContent
+	// Process other directives but not extend
+	// Note: processSectionDirectives only processes @section syntax, not {{define}}
+	compiledContent = e.processSectionDirectives(compiledContent, data)
+	compiledContent = e.processComponentDirectives(compiledContent, data)
+	compiledContent = e.processDirectives(compiledContent, data)
+	compiledContent = e.convertFinToGo(compiledContent)
 
-	// Execute combined template
+	// Compile layout template (which has {{block "content"}})
+	// Don't process extend directive on layout - it's already loaded
+	compiledLayout := layout.Template
+	// Layout templates use Go template syntax directly ({{block}}, {{define}}, etc.)
+	// Only process component directives if needed, but preserve Go template keywords
+	compiledLayout = e.processComponentDirectives(compiledLayout, data)
+	// DO NOT process directives or convert Fin syntax - layout is pure Go template syntax
+	// {{block}} and {{define}} are Go template keywords and must remain unchanged
+
+	// Create a new template set
+	// Parse content first to define the {{define "content"}} block
 	var buf bytes.Buffer
-	tmpl, err := template.New(layoutName).Parse(combined)
+
+	// Create a template set with layout as the main template
+	// The layout template will be the root template (not wrapped in {{define}})
+	// The content template will define {{define "content"}} which the layout references via {{block}}
+	tmpl := template.New(layoutName)
+
+	// Parse layout first as the main template
+	// This will be the root template that contains {{block "content"}}
+	tmpl, err := tmpl.Parse(compiledLayout)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to parse layout template: %w\nLayout preview (first 500 chars):\n%s", err, compiledLayout[:min(500, len(compiledLayout))])
 	}
 
+	// Parse content template into the same set
+	// This defines {{define "content"}}...{{end}} which the layout's {{block}} will use
+	tmpl, err = tmpl.Parse(compiledContent)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse content template: %w\nContent preview (first 500 chars):\n%s", err, compiledContent[:min(500, len(compiledContent))])
+	}
+
+	// Execute the layout template (which is the main/root template)
+	// The layout's {{block "content"}} will automatically use the {{define "content"}} from the content template
 	err = tmpl.Execute(&buf, data)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to execute layout template: %w", err)
 	}
 
 	return buf.String(), nil
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // renderComponent renders a component

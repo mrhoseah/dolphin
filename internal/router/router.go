@@ -2,7 +2,9 @@ package router
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -97,8 +99,12 @@ func (r *Router) setupMiddleware() {
 	// Logger middleware
 	r.router.Use(loggingMiddleware.New(r.app.Logger()))
 
-	// Recovery middleware
-	r.router.Use(recoveryMiddleware.New(r.app.Logger()))
+	// Recovery middleware with debug mode
+	r.router.Use(recoveryMiddleware.NewWithConfig(recoveryMiddleware.RecoveryConfig{
+		Logger:      r.app.Logger(),
+		DebugMode:   r.app.Config().App.Debug,
+		Environment: r.app.Config().App.Environment,
+	}))
 
 	// Timeout middleware
 	r.router.Use(middleware.Timeout(30))
@@ -154,6 +160,10 @@ func (r *Router) setupRoutes() {
 
 	// Static file serving
 	r.setupStaticRoutes()
+
+	// Custom 404 handler - must be last
+	r.router.NotFound(r.handleNotFound)
+	r.router.MethodNotAllowed(r.handleMethodNotAllowed)
 }
 
 // placeholderHandler is a temporary handler for routes without controllers
@@ -207,19 +217,8 @@ func (r *Router) healthLiveness(w http.ResponseWriter, req *http.Request) {
 func (r *Router) healthReadiness(w http.ResponseWriter, req *http.Request) {
 	// Readiness probe - checks if the application is ready to serve traffic
 	w.Header().Set("Content-Type", "application/json")
-	
-	response := map[string]interface{}{
-		"status":  "ready",
-		"service": "dolphin-framework",
-		"checks": map[string]string{
-			"database": "ok",
-			"cache":    "ok",
-		},
-	}
-	
-	jsonData, _ := json.Marshal(response)
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonData)
+	w.Write([]byte(`{"status":"ready","service":"dolphin-framework"}`))
 }
 
 func (r *Router) maintenanceStatus(w http.ResponseWriter, req *http.Request) {
@@ -241,4 +240,146 @@ func (r *Router) maintenanceStatus(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Write(jsonData)
+}
+
+// handleNotFound handles 404 Not Found errors
+func (r *Router) handleNotFound(w http.ResponseWriter, req *http.Request) {
+	r.renderErrorPage(w, req, http.StatusNotFound, "Page Not Found", "The page you're looking for doesn't exist or has been moved.")
+}
+
+// handleMethodNotAllowed handles 405 Method Not Allowed errors
+func (r *Router) handleMethodNotAllowed(w http.ResponseWriter, req *http.Request) {
+	r.renderErrorPage(w, req, http.StatusMethodNotAllowed, "Method Not Allowed", "The requested method is not allowed for this resource.")
+}
+
+// renderErrorPage renders an elegant error page
+func (r *Router) renderErrorPage(w http.ResponseWriter, req *http.Request, statusCode int, title, message string) {
+	// Check if this is an API request
+	if strings.HasPrefix(req.URL.Path, "/api/") {
+		r.renderAPIError(w, req, statusCode, title, message)
+		return
+	}
+
+	// Try to render error page using Fin template
+	errorData := map[string]interface{}{
+		"StatusCode": statusCode,
+		"Title":      title,
+		"Message":    message,
+		"Path":       req.URL.Path,
+		"Method":     req.Method,
+		"Debug":      r.app.Config().App.Debug,
+		"Environment": r.app.Config().App.Environment,
+	}
+
+	// Try to render error page template
+	html, err := r.finEngine.Render("errors/error", errorData)
+	if err != nil {
+		// Fallback to built-in error page
+		r.renderBuiltInErrorPage(w, req, statusCode, title, message, errorData)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(statusCode)
+	w.Write([]byte(html))
+}
+
+// renderAPIError renders JSON error response for API requests
+func (r *Router) renderAPIError(w http.ResponseWriter, req *http.Request, statusCode int, title, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	response := map[string]interface{}{
+		"error":   title,
+		"message": message,
+		"status":  statusCode,
+	}
+
+	// Add debug info in development
+	if r.app.Config().App.Debug || r.app.Config().App.Environment == "development" {
+		response["path"] = req.URL.Path
+		response["method"] = req.Method
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
+// renderBuiltInErrorPage renders a built-in elegant error page
+func (r *Router) renderBuiltInErrorPage(w http.ResponseWriter, req *http.Request, statusCode int, title, message string, data map[string]interface{}) {
+	debugMode := r.app.Config().App.Debug || r.app.Config().App.Environment == "development"
+	env := r.app.Config().App.Environment
+
+	html := r.generateErrorPageHTML(statusCode, title, message, req.URL.Path, req.Method, debugMode, env)
+	
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(statusCode)
+	w.Write([]byte(html))
+}
+
+// generateErrorPageHTML generates elegant error page HTML
+func (r *Router) generateErrorPageHTML(statusCode int, title, message, path, method string, debugMode bool, env string) string {
+	statusEmoji := "🐬"
+	
+	switch statusCode {
+	case 404:
+		statusEmoji = "🔍"
+	case 500:
+		statusEmoji = "⚠️"
+	case 403:
+		statusEmoji = "🔒"
+	case 401:
+		statusEmoji = "🔐"
+	}
+
+	debugSection := ""
+	if debugMode {
+		debugSection = fmt.Sprintf(`
+		<div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mt-6">
+			<h3 class="text-lg font-semibold text-gray-900 mb-4">Debug Information</h3>
+			<div class="space-y-2 text-sm">
+				<p><strong class="text-gray-700">Path:</strong> <code class="bg-gray-200 px-2 py-1 rounded">%s</code></p>
+				<p><strong class="text-gray-700">Method:</strong> <code class="bg-gray-200 px-2 py-1 rounded">%s</code></p>
+				<p><strong class="text-gray-700">Status Code:</strong> <code class="bg-gray-200 px-2 py-1 rounded">%d</code></p>
+				<p><strong class="text-gray-700">Environment:</strong> <code class="bg-gray-200 px-2 py-1 rounded">%s</code></p>
+			</div>
+		</div>`, path, method, statusCode, env)
+	}
+
+	return fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>%s - Dolphin Framework</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
+	<div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 md:p-12">
+		<div class="text-center mb-8">
+			<div class="text-6xl md:text-8xl mb-4">%s</div>
+			<h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-2">%s</h1>
+			<p class="text-lg text-gray-600">%s</p>
+		</div>
+		
+		<div class="border-t border-gray-200 pt-6">
+			<div class="flex flex-col sm:flex-row gap-4 justify-center">
+				<a href="/" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+					<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+					</svg>
+					Go Home
+				</a>
+				<button onclick="window.history.back()" class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+					<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+					</svg>
+					Go Back
+				</button>
+			</div>
+		</div>
+		
+		%s
+	</div>
+</body>
+	</html>`, title, statusEmoji, title, message, debugSection)
 }

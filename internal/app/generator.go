@@ -150,6 +150,18 @@ func (g *Generator) CreateAuth() error {
 		return err
 	}
 
+	// 6. Create error pages
+	errorsDir := filepath.Join(viewsDir, "errors")
+	if err := os.MkdirAll(errorsDir, 0755); err != nil {
+		return err
+	}
+
+	// Create error page
+	errorPagePath := filepath.Join(errorsDir, "error.fin.html")
+	if err := g.createErrorPage(errorPagePath); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -210,6 +222,12 @@ func (g *Generator) createHomePage(filepath string) error {
 // createDashboardPage creates the dashboard page view
 func (g *Generator) createDashboardPage(filepath string) error {
 	content := g.generateDashboardPageContent()
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
+// createErrorPage creates the error page view
+func (g *Generator) createErrorPage(filepath string) error {
+	content := g.generateErrorPageContent()
 	return os.WriteFile(filepath, []byte(content), 0644)
 }
 
