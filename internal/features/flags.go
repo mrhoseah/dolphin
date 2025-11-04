@@ -210,7 +210,12 @@ func (m *Manager) OnChange(listener func(flagName string, enabled bool)) {
 
 // notifyListeners notifies all listeners of a flag change
 func (m *Manager) notifyListeners(name string, enabled bool) {
-	for _, listener := range m.listeners {
+	m.mu.RLock()
+	listeners := make([]func(string, bool), len(m.listeners))
+	copy(listeners, m.listeners)
+	m.mu.RUnlock()
+
+	for _, listener := range listeners {
 		go listener(name, enabled)
 	}
 }

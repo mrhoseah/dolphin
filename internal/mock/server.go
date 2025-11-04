@@ -141,6 +141,8 @@ func (s *Server) evaluateCondition(condition Condition, r *http.Request) bool {
 	}
 
 	// Check body (for POST/PUT requests)
+	// Note: Reading the body consumes it, so this should be used as the first handler
+	// or in a middleware that restores the body after reading.
 	if r.Body != nil && (r.Method == "POST" || r.Method == "PUT" || r.Method == "PATCH") {
 		var body map[string]interface{}
 		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
