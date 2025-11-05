@@ -7,7 +7,6 @@ import (
 )
 
 // CreateShadcnUI sets up shadcn/ui for React-based Dolphin apps
-// Similar to Laravel's shadcn integration
 func (g *Generator) CreateShadcnUI() error {
 	// Create necessary directories
 	dirs := []string{

@@ -208,7 +208,7 @@ func (g *Generator) createAuthRoutes(filepath string) error {
 			}
 		}
 	}
-	
+
 	content := g.generateAuthRoutesContent(moduleName)
 	return os.WriteFile(filepath, []byte(content), 0644)
 }
@@ -586,4 +586,218 @@ func %s(next http.Handler) http.Handler {
 	})
 }
 `, name, name)
+}
+
+// CreateNewApp creates a new Dolphin application with the specified frontend stack
+func (g *Generator) CreateNewApp(appName, frontend string, includeAuth bool) error {
+	// Create app directory
+	if err := os.MkdirAll(appName, 0755); err != nil {
+		return fmt.Errorf("failed to create app directory: %w", err)
+	}
+
+	// Change to app directory for file creation
+	originalDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+	defer os.Chdir(originalDir)
+
+	if err := os.Chdir(appName); err != nil {
+		return fmt.Errorf("failed to change to app directory: %w", err)
+	}
+
+	// Create basic directory structure
+	dirs := []string{
+		"app/models",
+		"app/http/controllers",
+		"app/repositories",
+		"bootstrap",
+		"config",
+		"database/migrations",
+		"views/layouts",
+		"views/pages",
+		"public",
+		"storage/app/public",
+		"assets",
+	}
+
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+	}
+
+	// Create go.mod
+	if err := g.createGoMod(appName); err != nil {
+		return fmt.Errorf("failed to create go.mod: %w", err)
+	}
+
+	// Create main.go
+	if err := g.createMainGo(appName); err != nil {
+		return fmt.Errorf("failed to create main.go: %w", err)
+	}
+
+	// Create config files
+	if err := g.createConfigFiles(); err != nil {
+		return fmt.Errorf("failed to create config files: %w", err)
+	}
+
+	// Setup frontend based on choice
+	switch frontend {
+	case "react":
+		if err := g.setupReactFrontend(); err != nil {
+			return fmt.Errorf("failed to setup React frontend: %w", err)
+		}
+	case "vue":
+		if err := g.setupVueFrontend(); err != nil {
+			return fmt.Errorf("failed to setup Vue frontend: %w", err)
+		}
+	case "fin":
+		if err := g.setupFinFrontend(); err != nil {
+			return fmt.Errorf("failed to setup Fin frontend: %w", err)
+		}
+	}
+
+	// Create base layout
+	if err := g.createBaseLayoutForNewApp(frontend); err != nil {
+		return fmt.Errorf("failed to create base layout: %w", err)
+	}
+
+	// Create home page
+	if err := g.createHomePageForNewApp(frontend); err != nil {
+		return fmt.Errorf("failed to create home page: %w", err)
+	}
+
+	// Create bootstrap routes
+	if err := g.createBootstrapRoutes(); err != nil {
+		return fmt.Errorf("failed to create bootstrap routes: %w", err)
+	}
+
+	// Include auth if requested
+	if includeAuth {
+		if err := g.CreateAuth(); err != nil {
+			return fmt.Errorf("failed to create auth: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// setupReactFrontend sets up React frontend
+func (g *Generator) setupReactFrontend() error {
+	// Create assets directories
+	dirs := []string{"assets/ts", "assets/js", "assets/css"}
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+
+	// Create package.json
+	if err := g.createReactPackageJson(); err != nil {
+		return err
+	}
+
+	// Create TypeScript config
+	if err := g.createTsConfig(); err != nil {
+		return err
+	}
+
+	// Create Tailwind config
+	if err := g.createTailwindConfig(); err != nil {
+		return err
+	}
+
+	// Create PostCSS config
+	if err := g.createPostCSSConfig(); err != nil {
+		return err
+	}
+
+	// Create basic React entry point
+	if err := g.createReactEntryPoint(); err != nil {
+		return err
+	}
+
+	// Create CSS file
+	if err := g.createAppCSS(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// setupVueFrontend sets up Vue.js frontend
+func (g *Generator) setupVueFrontend() error {
+	// Create assets directories
+	dirs := []string{"assets/js", "assets/css"}
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+
+	// Create package.json for Vue
+	if err := g.createVuePackageJson(); err != nil {
+		return err
+	}
+
+	// Create Tailwind config
+	if err := g.createTailwindConfig(); err != nil {
+		return err
+	}
+
+	// Create PostCSS config
+	if err := g.createPostCSSConfig(); err != nil {
+		return err
+	}
+
+	// Create basic Vue entry point
+	if err := g.createVueEntryPoint(); err != nil {
+		return err
+	}
+
+	// Create CSS file
+	if err := g.createAppCSS(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// setupFinFrontend sets up Fin templates with vanilla JS
+func (g *Generator) setupFinFrontend() error {
+	// Create assets directories
+	dirs := []string{"assets/js", "assets/css"}
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+
+	// Create package.json for vanilla JS
+	if err := g.createFinPackageJson(); err != nil {
+		return err
+	}
+
+	// Create Tailwind config
+	if err := g.createTailwindConfig(); err != nil {
+		return err
+	}
+
+	// Create PostCSS config
+	if err := g.createPostCSSConfig(); err != nil {
+		return err
+	}
+
+	// Create vanilla JS entry point
+	if err := g.createVanillaJSEntryPoint(); err != nil {
+		return err
+	}
+
+	// Create CSS file
+	if err := g.createAppCSS(); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -21,6 +21,7 @@ package main
 // @description Type "Bearer" followed by a space and JWT token.
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -122,7 +123,7 @@ func main() {
 	var makeShadcnCmd = &cobra.Command{
 		Use:   "make:shadcn",
 		Short: "Set up shadcn/ui for React-based Dolphin apps",
-		Long:  "Sets up shadcn/ui component library similar to Laravel's integration. Configures components.json, Tailwind CSS, and necessary dependencies.",
+		Long:  "Sets up shadcn/ui component library for React-based Dolphin apps. Configures components.json, Tailwind CSS, and necessary dependencies.",
 		Run:   makeShadcn,
 	}
 
@@ -151,6 +152,17 @@ func main() {
 	makeClientCmd.Flags().StringP("spec", "s", "swagger.json", "OpenAPI spec file path")
 	makeClientCmd.Flags().StringP("output", "o", "generated", "Output directory")
 
+	// New command
+	var newCmd = &cobra.Command{
+		Use:   "new [name]",
+		Short: "Create a new Dolphin application",
+		Long:  "Creates a new Dolphin application with your chosen frontend stack (React, Vue, or Fin templates with vanilla JS)",
+		Args:  cobra.ExactArgs(1),
+		Run:   createNewApp,
+	}
+	newCmd.Flags().StringP("frontend", "f", "", "Frontend stack: react, vue, or fin (default: interactive prompt)")
+	newCmd.Flags().BoolP("auth", "a", false, "Include authentication scaffolding")
+
 	// Update command
 	var updateCmd = &cobra.Command{
 		Use:   "update",
@@ -161,6 +173,7 @@ func main() {
 	updateCmd.Flags().BoolP("force", "f", false, "Force update even if already up to date")
 
 	// Add commands
+	rootCmd.AddCommand(newCmd)
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(migrateCmd)
 	rootCmd.AddCommand(rollbackCmd)
@@ -337,6 +350,76 @@ func makeMiddleware(cmd *cobra.Command, args []string) {
 	fmt.Printf("✅ Middleware %s created successfully!\n", name)
 }
 
+func createNewApp(cmd *cobra.Command, args []string) {
+	appName := args[0]
+	frontend, _ := cmd.Flags().GetString("frontend")
+	includeAuth, _ := cmd.Flags().GetBool("auth")
+
+	// Interactive frontend selection if not provided
+	if frontend == "" {
+		fmt.Println("🐬 Create New Dolphin Application")
+		fmt.Println("==================================")
+		fmt.Println()
+		fmt.Println("Choose your frontend stack:")
+		fmt.Println("  1) React (with shadcn/ui support)")
+		fmt.Println("  2) Vue.js")
+		fmt.Println("  3) Fin templates (with vanilla JS)")
+		fmt.Println()
+
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print("Enter your choice (1-3): ")
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+
+		switch choice {
+		case "1":
+			frontend = "react"
+		case "2":
+			frontend = "vue"
+		case "3":
+			frontend = "fin"
+		default:
+			log.Fatal("Invalid choice. Please run the command again and select 1, 2, or 3.")
+		}
+	}
+
+	// Normalize frontend choice
+	frontend = strings.ToLower(frontend)
+	if frontend != "react" && frontend != "vue" && frontend != "fin" {
+		log.Fatalf("Invalid frontend stack: %s. Must be 'react', 'vue', or 'fin'", frontend)
+	}
+
+	fmt.Printf("\n📦 Creating new Dolphin application: %s\n", appName)
+	fmt.Printf("   Frontend: %s\n", strings.ToUpper(frontend))
+	if includeAuth {
+		fmt.Println("   Authentication: ✅ Included")
+	}
+	fmt.Println()
+
+	generator := app.NewGenerator()
+	if err := generator.CreateNewApp(appName, frontend, includeAuth); err != nil {
+		log.Fatalf("Failed to create application: %v", err)
+	}
+
+	fmt.Println("✅ Application created successfully!")
+	fmt.Println()
+	fmt.Printf("📁 Next steps:\n")
+	fmt.Printf("   cd %s\n", appName)
+	if frontend == "react" {
+		fmt.Println("   npm install")
+		fmt.Println("   dolphin make:shadcn  # Set up shadcn/ui (optional)")
+	} else if frontend == "vue" {
+		fmt.Println("   npm install")
+	} else {
+		fmt.Println("   npm install  # For asset compilation")
+	}
+	if includeAuth {
+		fmt.Println("   dolphin make:auth  # Generate auth views (if not already included)")
+	}
+	fmt.Println("   dolphin serve")
+	fmt.Println()
+}
+
 func makeAuth(cmd *cobra.Command, args []string) {
 	generator := app.NewGenerator()
 	if err := generator.CreateAuth(); err != nil {
@@ -350,6 +433,18 @@ func makeAuth(cmd *cobra.Command, args []string) {
 }
 
 func makeShadcn(cmd *cobra.Command, args []string) {
+	// Check if this is a React app (has tsconfig.json or React in package.json)
+	if _, err := os.Stat("tsconfig.json"); os.IsNotExist(err) {
+		// Check package.json for React
+		if pkgContent, err := os.ReadFile("package.json"); err == nil {
+			if !strings.Contains(string(pkgContent), "react") {
+				log.Fatal("❌ shadcn/ui is only available for React apps. Please use React frontend when creating your app with 'dolphin new'.")
+			}
+		} else {
+			log.Fatal("❌ shadcn/ui is only available for React apps. Please use React frontend when creating your app with 'dolphin new'.")
+		}
+	}
+
 	generator := app.NewGenerator()
 	if err := generator.CreateShadcnUI(); err != nil {
 		log.Fatal("Failed to set up shadcn/ui:", err)
@@ -375,7 +470,7 @@ func makeShadcn(cmd *cobra.Command, args []string) {
 	fmt.Println("      npx shadcn@latest add card")
 	fmt.Println("      # See more at: https://ui.shadcn.com/docs/components")
 	fmt.Println("")
-	fmt.Println("📚 Documentation: https://ui.shadcn.com/docs/installation/laravel")
+	fmt.Println("📚 Documentation: https://ui.shadcn.com/docs")
 }
 
 func generateSwagger(cmd *cobra.Command, args []string) {

@@ -27,7 +27,7 @@ The comprehensive documentation includes:
 - **🔄 Active Record ORM**: GORM-based ORM with repository pattern
 - **🛡️ Middleware System**: Comprehensive middleware for auth, CORS, logging, and more
 - **📱 Frontend Integration**: Built-in support for Vue.js, React.js, and Tailwind CSS
-- **🎨 shadcn/ui Support**: Optional shadcn/ui integration for React-based apps (similar to Laravel)
+- **🎨 shadcn/ui Support**: Optional shadcn/ui integration for React-based apps
 - **📚 API Documentation**: Automatic Swagger/OpenAPI documentation with SwagGo
 - **📊 Telemetry System**: Opt-in telemetry with privacy-first design
 - **🏭 Database Factories**: Laravel-style factories for realistic test data
