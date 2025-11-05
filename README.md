@@ -27,6 +27,7 @@ The comprehensive documentation includes:
 - **🔄 Active Record ORM**: GORM-based ORM with repository pattern
 - **🛡️ Middleware System**: Comprehensive middleware for auth, CORS, logging, and more
 - **📱 Frontend Integration**: Built-in support for Vue.js, React.js, and Tailwind CSS
+- **🎨 shadcn/ui Support**: Optional shadcn/ui integration for React-based apps (similar to Laravel)
 - **📚 API Documentation**: Automatic Swagger/OpenAPI documentation with SwagGo
 - **📊 Telemetry System**: Opt-in telemetry with privacy-first design
 - **🏭 Database Factories**: Laravel-style factories for realistic test data
@@ -646,6 +647,10 @@ dolphin make:model User --migration --factory
 
 # Migrations
 dolphin make:migration create_users_table
+
+# Frontend
+dolphin make:auth          # Generate authentication views
+dolphin make:shadcn        # Set up shadcn/ui for React apps
 dolphin make:migration add_email_to_users_table
 
 # Middleware

@@ -118,6 +118,14 @@ func main() {
 		Run:   makeAuth,
 	}
 
+	// Shadcn UI setup command
+	var makeShadcnCmd = &cobra.Command{
+		Use:   "make:shadcn",
+		Short: "Set up shadcn/ui for React-based Dolphin apps",
+		Long:  "Sets up shadcn/ui component library similar to Laravel's integration. Configures components.json, Tailwind CSS, and necessary dependencies.",
+		Run:   makeShadcn,
+	}
+
 	// Swagger command
 	var swaggerCmd = &cobra.Command{
 		Use:   "swagger",
@@ -162,6 +170,7 @@ func main() {
 	rootCmd.AddCommand(makeMigrationCmd)
 	rootCmd.AddCommand(makeMiddlewareCmd)
 	rootCmd.AddCommand(makeAuthCmd)
+	rootCmd.AddCommand(makeShadcnCmd)
 	rootCmd.AddCommand(swaggerCmd)
 	rootCmd.AddCommand(storageLinkCmd)
 	rootCmd.AddCommand(makeClientCmd)
@@ -338,6 +347,35 @@ func makeAuth(cmd *cobra.Command, args []string) {
 	fmt.Println("   Created views/auth/register.fin.html")
 	fmt.Println("   Created views/auth/forgot-password.fin.html")
 	fmt.Println("   Created views/auth/reset-password.fin.html")
+}
+
+func makeShadcn(cmd *cobra.Command, args []string) {
+	generator := app.NewGenerator()
+	if err := generator.CreateShadcnUI(); err != nil {
+		log.Fatal("Failed to set up shadcn/ui:", err)
+	}
+	fmt.Println("✅ shadcn/ui setup completed successfully!")
+	fmt.Println("")
+	fmt.Println("📦 Created files:")
+	fmt.Println("   - components.json (shadcn configuration)")
+	fmt.Println("   - lib/utils.ts (utility functions)")
+	fmt.Println("   - components/ui/button.tsx (example component)")
+	fmt.Println("   - tsconfig.paths.json (path aliases)")
+	fmt.Println("")
+	fmt.Println("🎨 Updated files:")
+	fmt.Println("   - tailwind.config.js (shadcn theme)")
+	fmt.Println("   - assets/css/app.css (CSS variables)")
+	fmt.Println("")
+	fmt.Println("📝 Next steps:")
+	fmt.Println("   1. Install dependencies: npm install")
+	fmt.Println("   2. Install shadcn dependencies:")
+	fmt.Println("      npm install clsx tailwind-merge tailwindcss-animate")
+	fmt.Println("   3. Add components:")
+	fmt.Println("      npx shadcn@latest add button")
+	fmt.Println("      npx shadcn@latest add card")
+	fmt.Println("      # See more at: https://ui.shadcn.com/docs/components")
+	fmt.Println("")
+	fmt.Println("📚 Documentation: https://ui.shadcn.com/docs/installation/laravel")
 }
 
 func generateSwagger(cmd *cobra.Command, args []string) {
