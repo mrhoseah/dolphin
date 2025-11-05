@@ -80,15 +80,51 @@ The comprehensive documentation includes:
 
 ### Installation
 
-#### One-liner Installer (Recommended)
+#### 🪟 Windows
+
+**PowerShell (Recommended):**
+```powershell
+irm https://raw.githubusercontent.com/mrhoseah/dolphin/main/scripts/install.ps1 | iex
+```
+
+**Command Prompt:**
+```batch
+# Download and run install.bat
+powershell -Command "Invoke-WebRequest -Uri https://raw.githubusercontent.com/mrhoseah/dolphin/main/scripts/install.bat -OutFile install.bat"
+install.bat
+```
+
+**Manual:**
+```powershell
+go install github.com/mrhoseah/dolphin/cmd/dolphin@latest
+```
+
+#### 🍎 macOS
+
+**Automated Installer:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/mrhoseah/dolphin/main/scripts/install-mac.sh | bash
+```
+
+**Homebrew:**
+```bash
+brew install go
+go install github.com/mrhoseah/dolphin/cmd/dolphin@latest
+```
+
+#### 🐧 Linux
+
+**Automated Installer (Recommended):**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mrhoseah/dolphin/main/scripts/install.sh | bash
 ```
 
-Install a specific version:
+**Manual:**
 ```bash
-VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/mrhoseah/dolphin/main/scripts/install.sh | bash
+go install github.com/mrhoseah/dolphin/cmd/dolphin@latest
 ```
+
+> 📖 **Full Installation Guide**: See [INSTALLATION.md](INSTALLATION.md) for detailed instructions for all platforms.
 
 Then:
 ```bash
