@@ -142,7 +142,12 @@ func (g *Generator) CreateAuth() error {
 		return err
 	}
 
-	// 6. Create essential pages (home, dashboard)
+	// 6. Create users migration (required for authentication)
+	if err := g.createUsersMigration(); err != nil {
+		return err
+	}
+
+	// 7. Create essential pages (home, dashboard)
 	pagesDir := filepath.Join(viewsDir, "pages")
 	if err := os.MkdirAll(pagesDir, 0755); err != nil {
 		return err
@@ -160,7 +165,7 @@ func (g *Generator) CreateAuth() error {
 		return err
 	}
 
-	// 7. Create error pages
+	// 8. Create error pages
 	errorsDir := filepath.Join(viewsDir, "errors")
 	if err := os.MkdirAll(errorsDir, 0755); err != nil {
 		return err
@@ -257,6 +262,36 @@ func (g *Generator) createErrorPage(filepath string) error {
 func (g *Generator) createUserModel(filepath string) error {
 	content := g.generateUserModelContent()
 	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
+// createUsersMigration creates a timestamped users migration file under database/migrations
+func (g *Generator) createUsersMigration() error {
+	// Ensure migrations directory exists
+	migrationsDir := filepath.Join("database", "migrations")
+	if err := os.MkdirAll(migrationsDir, 0755); err != nil {
+		return err
+	}
+
+	// Detect module name for imports
+	moduleName := "app"
+	if modContent, err := os.ReadFile("go.mod"); err == nil {
+		lines := strings.Split(string(modContent), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "module ") {
+				moduleName = strings.TrimSpace(strings.TrimPrefix(line, "module "))
+				break
+			}
+		}
+	}
+
+	// Timestamped filename
+	ts := time.Now().Format("20060102150405")
+	filename := fmt.Sprintf("%s_create_users_table.go", ts)
+	path := filepath.Join(migrationsDir, filename)
+
+	content := g.generateUsersMigrationContent(moduleName)
+	return os.WriteFile(path, []byte(content), 0644)
 }
 
 // CreateHTMXViews generates HTMX-based views for a module
