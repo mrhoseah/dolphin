@@ -120,19 +120,29 @@ func (g *Generator) CreateAuth() error {
 		return err
 	}
 
-	// 3. Generate AuthController with web methods
+	// 3. Create User model (required for authentication)
+	modelsDir := "app/models"
+	if err := os.MkdirAll(modelsDir, 0755); err != nil {
+		return err
+	}
+	userModelPath := filepath.Join(modelsDir, "user.go")
+	if err := g.createUserModel(userModelPath); err != nil {
+		return err
+	}
+
+	// 4. Generate AuthController with web methods
 	authControllerPath := filepath.Join(controllersDir, "auth_controller.go")
 	if err := g.createAuthController(authControllerPath); err != nil {
 		return err
 	}
 
-	// 4. Generate auth routes file
+	// 5. Generate auth routes file
 	authRoutesPath := filepath.Join(bootstrapDir, "auth_routes.go")
 	if err := g.createAuthRoutes(authRoutesPath); err != nil {
 		return err
 	}
 
-	// 5. Create essential pages (home, dashboard)
+	// 6. Create essential pages (home, dashboard)
 	pagesDir := filepath.Join(viewsDir, "pages")
 	if err := os.MkdirAll(pagesDir, 0755); err != nil {
 		return err
@@ -150,7 +160,7 @@ func (g *Generator) CreateAuth() error {
 		return err
 	}
 
-	// 6. Create error pages
+	// 7. Create error pages
 	errorsDir := filepath.Join(viewsDir, "errors")
 	if err := os.MkdirAll(errorsDir, 0755); err != nil {
 		return err
@@ -190,7 +200,19 @@ func (g *Generator) createOrUpdateBaseLayout(filepath string) error {
 
 // createAuthController generates AuthController with web methods
 func (g *Generator) createAuthController(filepath string) error {
-	content := g.generateAuthControllerContent()
+	// Try to detect module name from go.mod
+	moduleName := "app" // default
+	if modContent, err := os.ReadFile("go.mod"); err == nil {
+		lines := strings.Split(string(modContent), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "module ") {
+				moduleName = strings.TrimSpace(strings.TrimPrefix(line, "module "))
+				break
+			}
+		}
+	}
+	content := g.generateAuthControllerContent(moduleName)
 	return os.WriteFile(filepath, []byte(content), 0644)
 }
 
@@ -228,6 +250,12 @@ func (g *Generator) createDashboardPage(filepath string) error {
 // createErrorPage creates the error page view
 func (g *Generator) createErrorPage(filepath string) error {
 	content := g.generateErrorPageContent()
+	return os.WriteFile(filepath, []byte(content), 0644)
+}
+
+// createUserModel creates the User model for authentication
+func (g *Generator) createUserModel(filepath string) error {
+	content := g.generateUserModelContent()
 	return os.WriteFile(filepath, []byte(content), 0644)
 }
 
@@ -668,8 +696,8 @@ func (g *Generator) CreateNewApp(appName, frontend string, includeAuth bool) err
 		return fmt.Errorf("failed to create home page: %w", err)
 	}
 
-	// Create bootstrap routes
-	if err := g.createBootstrapRoutes(); err != nil {
+	// Create bootstrap routes (pass includeAuth flag)
+	if err := g.createBootstrapRoutes(includeAuth, appName); err != nil {
 		return fmt.Errorf("failed to create bootstrap routes: %w", err)
 	}
 

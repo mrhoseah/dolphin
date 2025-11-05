@@ -139,13 +139,28 @@ log:
 }
 
 // createBootstrapRoutes creates bootstrap routes file
-func (g *Generator) createBootstrapRoutes() error {
+func (g *Generator) createBootstrapRoutes(includeAuth bool, moduleName string) error {
+	authRoutesCall := ""
+	if includeAuth {
+		authRoutesCall = `
+	// Setup authentication routes (guards initialized in SetupAuthRoutes)
+	authManager := auth.NewAuthManager()
+	SetupAuthRoutes(chiRouter, authManager, templateEngine, logger, db)
+`
+	}
+	
+	authImport := ""
+	if includeAuth {
+		authImport = `
+	"dolphin/pkg/auth"`
+	}
+	
 	content := `package bootstrap
 
 import (
 	"net/http"
 	"dolphin/internal/router"
-	"dolphin/pkg/app"
+	"dolphin/pkg/app"` + authImport + `
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -160,7 +175,7 @@ func SetupRoutes(r *router.Router, application *app.Application, logger *zap.Log
 			logger.Error("Failed to render home page", zap.Error(err))
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
-	})
+	})` + authRoutesCall + `
 }
 `
 	return os.WriteFile("bootstrap/routes.go", []byte(content), 0644)
@@ -385,13 +400,13 @@ func (g *Generator) generateReactLayout() string {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{block "title" .}}Dolphin App{{end}}</title>
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
     <div id="app">{{block "content" .}}{{end}}</div>
-    <script id="app-script" src="/js/app.js"></script>
+    <script id="app-script" src="/static/js/app.js"></script>
     <script>
-    fetch('/manifest.json').then(r=>r.ok?r.json():null).then(m=>{if(m&&m['js/app.js']){var s=document.getElementById('app-script');if(s){s.src='/' + m['js/app.js'];}}}).catch(()=>{})
+    fetch('/static/manifest.json').then(r=>r.ok?r.json():null).then(m=>{if(m&&m['js/app.js']){var s=document.getElementById('app-script');if(s){s.src='/static/' + m['js/app.js'];}}}).catch(()=>{})
     </script>
 </body>
 </html>
@@ -406,13 +421,13 @@ func (g *Generator) generateVueLayout() string {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{block "title" .}}Dolphin App{{end}}</title>
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
     <div id="app">{{block "content" .}}{{end}}</div>
-    <script id="app-script" src="/js/app.js"></script>
+    <script id="app-script" src="/static/js/app.js"></script>
     <script>
-    fetch('/manifest.json').then(r=>r.ok?r.json():null).then(m=>{if(m&&m['js/app.js']){var s=document.getElementById('app-script');if(s){s.src='/' + m['js/app.js'];}}}).catch(()=>{})
+    fetch('/static/manifest.json').then(r=>r.ok?r.json():null).then(m=>{if(m&&m['js/app.js']){var s=document.getElementById('app-script');if(s){s.src='/static/' + m['js/app.js'];}}}).catch(()=>{})
     </script>
 </body>
 </html>
@@ -427,12 +442,12 @@ func (g *Generator) generateFinLayout() string {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{block "title" .}}Dolphin App{{end}}</title>
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/static/css/app.css">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
 <body class="bg-gray-50">
     <main>{{block "content" .}}{{end}}</main>
-    <script src="/js/app.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
 `

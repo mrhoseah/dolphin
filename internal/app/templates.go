@@ -1555,11 +1555,12 @@ func (g *Generator) generateBaseLayoutWithAuth() string {
 }
 
 // generateAuthControllerContent generates AuthController with web methods
-func (g *Generator) generateAuthControllerContent() string {
+func (g *Generator) generateAuthControllerContent(moduleName string) string {
 	return `package controllers
 
 import (
 	"net/http"
+	"` + moduleName + `/app/models"
 	"dolphin/pkg/auth"
 	"dolphin/pkg/template"
 	"go.uber.org/zap"
@@ -1712,10 +1713,45 @@ func (c *AuthController) HandleRegister(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// TODO: Implement user registration logic
-	// For now, redirect to login
-	c.logger.Info("User registration", zap.String("email", email), zap.String("name", name))
-	http.Redirect(w, r, "/auth/login", http.StatusFound)
+	// Check if user already exists
+	var existing models.User
+	if err := c.db.Where("email = ?", email).First(&existing).Error; err == nil {
+		data := map[string]interface{}{
+			"User":  nil,
+			"Error": "Email already registered",
+		}
+		html, _ := c.template.Render("auth/register", data)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(html))
+		return
+	}
+
+	// Create new user
+	user := models.User{
+		Email: email,
+		Name:  name,
+	}
+	if err := user.SetPassword(password); err != nil {
+		c.logger.Error("Failed to hash password", zap.Error(err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := c.db.Create(&user).Error; err != nil {
+		c.logger.Error("Failed to create user", zap.Error(err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Auto-login after registration
+	if err := c.authManager.Login(&user); err != nil {
+		c.logger.Error("Auto-login failed after registration", zap.Error(err))
+		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		return
+	}
+
+	http.Redirect(w, r, "/dashboard", http.StatusFound)
 }
 
 // HandleLogout processes logout
@@ -1756,6 +1792,7 @@ func (g *Generator) generateAuthRoutesContent(moduleName string) string {
 
 import (
 	"` + moduleName + `/app/http/controllers"
+	"` + moduleName + `/app/models"
 	"dolphin/pkg/auth"
 	"dolphin/pkg/template"
 	"go.uber.org/zap"
@@ -1767,6 +1804,22 @@ import (
 // SetupAuthRoutes configures authentication routes
 // Call this function from your main routes setup
 func SetupAuthRoutes(r chi.Router, authManager *auth.AuthManager, templateEngine template.FinTemplateEngine, logger *zap.Logger, db *gorm.DB) {
+	// IMPORTANT: Initialize auth guards before using auth middleware
+	// Without guards, authManager.Check() will panic with nil pointer
+	
+	// Create a session store (in-memory for now, can be replaced with database-backed)
+	sessionStore := auth.NewMemorySessionStore()
+	
+	// Create user provider (uses User model from database)
+	userProvider := auth.NewDatabaseProvider(db, &models.User{})
+	
+	// Create and register session guard for web authentication
+	sessionGuard := auth.NewSessionGuard("web", userProvider, sessionStore)
+	authManager.RegisterGuard("web", sessionGuard)
+	authManager.SetDefaultGuard("web")
+	
+	logger.Info("Auth guards initialized", zap.String("guard", "web"))
+
 	// Create auth controller
 	authController := controllers.NewAuthController(authManager, templateEngine, logger, db)
 
@@ -2005,7 +2058,6 @@ func (g *Generator) generateDashboardPageContent() string {
 `
 }
 
-
 // generateErrorPageContent generates the error page template
 func (g *Generator) generateErrorPageContent() string {
 	return `{{extend "layouts/base.fin.html"}}
@@ -2070,5 +2122,41 @@ func (g *Generator) generateErrorPageContent() string {
 	</div>
 </div>
 {{end}}
+`
+}
+
+// generateUserModelContent generates User model for authentication
+func (g *Generator) generateUserModelContent() string {
+	return `package models
+
+import (
+	"time"
+	"golang.org/x/crypto/bcrypt"
+)
+
+type User struct {
+	ID        uint      ` + "`gorm:\"primaryKey\" json:\"id\"`" + `
+	Email     string    ` + "`gorm:\"unique;not null\" json:\"email\"`" + `
+	Password  string    ` + "`gorm:\"not null\" json:\"-\"`" + ` // Hashed password
+	Name      string    ` + "`gorm:\"not null\" json:\"name\"`" + `
+	CreatedAt time.Time ` + "`json:\"created_at\"`" + `
+	UpdatedAt time.Time ` + "`json:\"updated_at\"`" + `
+}
+
+// SetPassword hashes the password before storing
+func (u *User) SetPassword(password string) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	u.Password = string(hashedPassword)
+	return nil
+}
+
+// CheckPassword verifies the password
+func (u *User) CheckPassword(password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+	return err == nil
+}
 `
 }
