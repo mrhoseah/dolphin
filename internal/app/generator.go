@@ -864,3 +864,40 @@ func (g *Generator) setupFinFrontend() error {
 
 	return nil
 }
+
+// createConfigFiles creates default application configuration files
+func (g *Generator) createConfigFiles() error {
+	// Ensure config directory exists
+	if err := os.MkdirAll("config", 0755); err != nil {
+		return err
+	}
+
+	content := `app:
+  name: "Dolphin App"
+  env: "development"
+  debug: true
+  url: "http://localhost:8080"
+
+server:
+  host: "localhost"
+  port: 8080
+  read_timeout: 30
+  write_timeout: 30
+  idle_timeout: 120
+
+database:
+  driver: "sqlite"
+  database: "app.db"
+  host: ""
+  port: 0
+  username: ""
+  password: ""
+  ssl_mode: "disable"
+
+log:
+  level: "debug"
+  format: "json"
+  output: "stdout"
+`
+	return os.WriteFile("config/config.yaml", []byte(content), 0644)
+}

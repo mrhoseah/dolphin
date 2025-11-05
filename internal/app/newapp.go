@@ -97,9 +97,7 @@ func main() {
 		logger.Fatal("Command execution failed", zap.Error(err))
 	}
 }
-`, appName, appName)
-	return os.WriteFile("main.go", []byte(content), 0644)
-}
+
 
 // createConfigFiles creates configuration files
 func (g *Generator) createConfigFiles() error {
