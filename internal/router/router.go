@@ -13,11 +13,14 @@ import (
 	"dolphin/internal/app"
 	"dolphin/internal/auth"
 	"dolphin/internal/maintenance"
+	authMiddleware "dolphin/internal/middleware"
 	loggingMiddleware "dolphin/internal/middleware/logging"
 	recoveryMiddleware "dolphin/internal/middleware/recovery"
+	"dolphin/internal/session"
 	"dolphin/internal/storage"
 	"dolphin/internal/template"
 
+	"github.com/gorilla/sessions"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
 )
@@ -28,6 +31,8 @@ type Router struct {
 	router             *chi.Mux
 	maintenanceManager *maintenance.Manager
 	authManager        *auth.AuthManager
+	sessionManager     *session.SessionManager
+	sessionStore       *sessions.CookieStore
 	finEngine          template.FinTemplateEngine
 }
 
@@ -37,6 +42,21 @@ func New(app *app.App) *Router {
 		app:                app,
 		router:             chi.NewRouter(),
 		maintenanceManager: maintenance.NewManager("storage/framework/maintenance.json"),
+	}
+
+	// Initialize session manager
+	secretKey := app.Config().App.Key
+	if secretKey == "" {
+		secretKey = "dolphin-secret-key-change-in-production"
+	}
+	r.sessionManager = session.NewSessionManager(secretKey)
+	r.sessionStore = sessions.NewCookieStore([]byte(secretKey))
+	r.sessionStore.Options = &sessions.Options{
+		Path:     "/",
+		MaxAge:   86400 * 7, // 7 days
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		SameSite: http.SameSiteLaxMode,
 	}
 
 	// Initialize web auth manager (session-based)
@@ -74,9 +94,28 @@ func (r *Router) GetFinEngine() template.FinTemplateEngine {
 	return r.finEngine
 }
 
+// GetAuthManager returns the auth manager
+func (r *Router) GetAuthManager() *auth.AuthManager {
+	return r.authManager
+}
+
 // Mount attaches a sub-router at a given pattern
 func (r *Router) Mount(pattern string, sr chi.Router) {
 	r.router.Mount(pattern, sr)
+}
+
+// GetAuthMiddleware returns a new auth middleware instance
+// Use this to protect Fin template routes:
+//
+//	authMiddleware := router.GetAuthMiddleware()
+//	router.GetChiRouter().Group(func(r chi.Router) {
+//		r.Use(authMiddleware.Authenticate)
+//		r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
+//			router.renderFin(w, "pages/dashboard", map[string]interface{}{})
+//		})
+//	})
+func (r *Router) GetAuthMiddleware() *authMiddleware.AuthMiddleware {
+	return authMiddleware.NewAuthMiddleware(r.authManager, r.app.Logger())
 }
 
 // Use adds a middleware to the router
@@ -95,6 +134,13 @@ func (r *Router) setupMiddleware() {
 
 	// Real IP middleware
 	r.router.Use(middleware.RealIP)
+
+	// Session middleware (must be before auth)
+	r.router.Use(session.SessionMiddleware(r.sessionManager, "dolphin_session"))
+
+	// Auth guard initialization middleware
+	// This sets up the HTTP session guard with request/response for each request
+	r.router.Use(r.authGuardMiddleware())
 
 	// Logger middleware
 	r.router.Use(loggingMiddleware.New(r.app.Logger()))
@@ -122,6 +168,33 @@ func (r *Router) setupMiddleware() {
 
 	// Compress middleware
 	r.router.Use(middleware.Compress(5))
+}
+
+// authGuardMiddleware initializes the HTTP session guard for each request
+func (r *Router) authGuardMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			// Get or create HTTP session guard
+			guard := r.authManager.Guard("web")
+			if guard == nil {
+				// Create HTTP session guard if it doesn't exist
+				// We need a provider - for now, we'll create a basic one
+				// Apps should register their own provider
+				provider := auth.NewDatabaseProvider(r.app.DB().GetDB(), &auth.User{})
+				httpGuard := auth.NewHTTPSessionGuard("web", provider, r.sessionStore, "dolphin_session")
+				r.authManager.RegisterGuard("web", httpGuard)
+				r.authManager.SetDefaultGuard("web")
+				guard = httpGuard
+			}
+
+			// If it's an HTTPGuard, set the request/response
+			if httpGuard, ok := guard.(auth.HTTPGuard); ok {
+				httpGuard.SetRequestResponse(req, w)
+			}
+
+			next.ServeHTTP(w, req)
+		})
+	}
 }
 
 // SetupRoutes configures application routes

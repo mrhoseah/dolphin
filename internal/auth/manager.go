@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/sessions"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -24,6 +25,12 @@ type User struct {
 	RememberToken   string     `json:"remember_token"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
+}
+
+// HTTPGuard represents a guard that can work with HTTP requests
+type HTTPGuard interface {
+	Guard
+	SetRequestResponse(r *http.Request, w http.ResponseWriter)
 }
 
 // Guard represents an authentication guard
@@ -113,6 +120,7 @@ func (dp *DatabaseProvider) ValidateCredentials(user interface{}, credentials ma
 }
 
 // SessionGuard implements Guard using sessions
+// This version uses the simple SessionStore interface (for backward compatibility)
 type SessionGuard struct {
 	name     string
 	provider Provider
@@ -225,6 +233,168 @@ func (sg *SessionGuard) ID() interface{} {
 
 // Guest checks if user is a guest
 func (sg *SessionGuard) Guest() bool {
+	return !sg.Check()
+}
+
+// HTTPSessionGuard implements Guard using HTTP sessions (gorilla/sessions)
+// This version works with HTTP requests and responses
+type HTTPSessionGuard struct {
+	name         string
+	provider     Provider
+	sessionStore *sessions.CookieStore
+	sessionName  string
+	user         interface{}
+	request      *http.Request
+	response     http.ResponseWriter
+}
+
+// NewHTTPSessionGuard creates a new HTTP session guard
+func NewHTTPSessionGuard(name string, provider Provider, sessionStore *sessions.CookieStore, sessionName string) *HTTPSessionGuard {
+	return &HTTPSessionGuard{
+		name:         name,
+		provider:     provider,
+		sessionStore: sessionStore,
+		sessionName:  sessionName,
+	}
+}
+
+// SetRequestResponse sets the HTTP request and response for the guard
+// This must be called before using the guard in a request context
+func (sg *HTTPSessionGuard) SetRequestResponse(r *http.Request, w http.ResponseWriter) {
+	sg.request = r
+	sg.response = w
+}
+
+// getSession gets the session from the request
+func (sg *HTTPSessionGuard) getSession() (*sessions.Session, error) {
+	if sg.request == nil {
+		return nil, errors.New("request not set, call SetRequestResponse first")
+	}
+	return sg.sessionStore.Get(sg.request, sg.sessionName)
+}
+
+// Attempt attempts to authenticate a user
+func (sg *HTTPSessionGuard) Attempt(credentials map[string]string) (bool, error) {
+	user, err := sg.provider.RetrieveByCredentials(credentials)
+	if err != nil {
+		return false, err
+	}
+
+	if sg.provider.ValidateCredentials(user, credentials) {
+		return true, sg.Login(user)
+	}
+
+	return false, nil
+}
+
+// Login logs in a user
+func (sg *HTTPSessionGuard) Login(user interface{}) error {
+	sg.user = user
+
+	// Get user ID
+	userValue := reflect.ValueOf(user)
+	if userValue.Kind() == reflect.Ptr {
+		userValue = userValue.Elem()
+	}
+
+	idField := userValue.FieldByName("ID")
+	if !idField.IsValid() {
+		return errors.New("user must have an ID field")
+	}
+
+	userID := idField.Interface()
+
+	// Get session and store user ID
+	session, err := sg.getSession()
+	if err != nil {
+		return err
+	}
+
+	session.Values[fmt.Sprintf("auth.%s", sg.name)] = userID
+	session.Values[fmt.Sprintf("auth.%s.login", sg.name)] = time.Now().Unix()
+
+	// Save session
+	if sg.response != nil && sg.request != nil {
+		return session.Save(sg.request, sg.response)
+	}
+
+	return nil
+}
+
+// Logout logs out the current user
+func (sg *HTTPSessionGuard) Logout() error {
+	sg.user = nil
+
+	session, err := sg.getSession()
+	if err != nil {
+		return err
+	}
+
+	delete(session.Values, fmt.Sprintf("auth.%s", sg.name))
+	delete(session.Values, fmt.Sprintf("auth.%s.login", sg.name))
+
+	// Save session
+	if sg.response != nil && sg.request != nil {
+		return session.Save(sg.request, sg.response)
+	}
+
+	return nil
+}
+
+// Check checks if user is authenticated
+func (sg *HTTPSessionGuard) Check() bool {
+	if sg.user != nil {
+		return true
+	}
+
+	session, err := sg.getSession()
+	if err != nil {
+		return false
+	}
+
+	userID, exists := session.Values[fmt.Sprintf("auth.%s", sg.name)]
+	if !exists || userID == nil {
+		return false
+	}
+
+	user, err := sg.provider.RetrieveByID(userID)
+	if err != nil {
+		return false
+	}
+
+	sg.user = user
+	return true
+}
+
+// User returns the authenticated user
+func (sg *HTTPSessionGuard) User() interface{} {
+	if !sg.Check() {
+		return nil
+	}
+	return sg.user
+}
+
+// ID returns the authenticated user's ID
+func (sg *HTTPSessionGuard) ID() interface{} {
+	if !sg.Check() {
+		return nil
+	}
+
+	userValue := reflect.ValueOf(sg.user)
+	if userValue.Kind() == reflect.Ptr {
+		userValue = userValue.Elem()
+	}
+
+	idField := userValue.FieldByName("ID")
+	if idField.IsValid() {
+		return idField.Interface()
+	}
+
+	return nil
+}
+
+// Guest checks if user is a guest
+func (sg *HTTPSessionGuard) Guest() bool {
 	return !sg.Check()
 }
 

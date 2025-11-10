@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/render"
 	"dolphin/internal/auth"
@@ -23,14 +24,35 @@ func NewAuthMiddleware(authManager *auth.AuthManager, logger *zap.Logger) *AuthM
 }
 
 // Authenticate middleware that requires authentication
+// For web requests (HTML), redirects to login page
+// For API requests (JSON), returns JSON error response
 func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check if this is an API request
+		isAPIRequest := strings.HasPrefix(r.URL.Path, "/api/") ||
+			r.Header.Get("Accept") == "application/json" ||
+			r.Header.Get("Content-Type") == "application/json"
+
 		if !m.authManager.Check() {
-			m.logger.Warn("Unauthenticated request")
-			render.Status(r, http.StatusUnauthorized)
-			render.JSON(w, r, map[string]string{
-				"message": "Unauthenticated",
-			})
+			m.logger.Warn("Unauthenticated request",
+				zap.String("path", r.URL.Path),
+				zap.String("method", r.Method))
+
+			if isAPIRequest {
+				// Return JSON response for API requests
+				render.Status(r, http.StatusUnauthorized)
+				render.JSON(w, r, map[string]string{
+					"message": "Unauthenticated",
+				})
+			} else {
+				// Redirect to login for web requests
+				// Store the intended URL for redirect after login
+				loginURL := "/auth/login"
+				if r.URL.Path != "/" && r.URL.Path != "/auth/login" {
+					loginURL = "/auth/login?redirect=" + r.URL.Path
+				}
+				http.Redirect(w, r, loginURL, http.StatusFound)
+			}
 			return
 		}
 

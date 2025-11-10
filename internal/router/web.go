@@ -15,6 +15,17 @@ import (
 
 // renderFin renders a Fin template with data
 func (r *Router) renderFin(w http.ResponseWriter, templateName string, data interface{}) error {
+	// Add user data to template if authenticated
+	if dataMap, ok := data.(map[string]interface{}); ok {
+		if r.authManager.Check() {
+			dataMap["User"] = r.authManager.User()
+			dataMap["Authenticated"] = true
+		} else {
+			dataMap["User"] = nil
+			dataMap["Authenticated"] = false
+		}
+	}
+
 	content, err := r.finEngine.Render(templateName, data)
 	if err != nil {
 		return err
