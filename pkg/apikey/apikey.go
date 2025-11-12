@@ -1,7 +1,7 @@
 package apikey
 
 import (
-	"dolphin/internal/apikey"
+	"github.com/mrhoseah/dolphin/internal/apikey"
 	"gorm.io/gorm"
 )
 

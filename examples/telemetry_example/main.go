@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"dolphin/internal/telemetry"
+	"github.com/mrhoseah/dolphin/internal/telemetry"
 )
 
 func main() {

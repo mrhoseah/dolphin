@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"dolphin/internal/validation"
+	"github.com/mrhoseah/dolphin/internal/validation"
 )
 
 // User represents a user with validation

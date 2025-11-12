@@ -9,9 +9,9 @@ import (
 	"net/smtp"
 	"time"
 
-	"dolphin/internal/cache"
-	"dolphin/internal/events"
-	"dolphin/internal/storage"
+	"github.com/mrhoseah/dolphin/internal/cache"
+	"github.com/mrhoseah/dolphin/internal/events"
+	"github.com/mrhoseah/dolphin/internal/storage"
 )
 
 // EmailProvider implementation

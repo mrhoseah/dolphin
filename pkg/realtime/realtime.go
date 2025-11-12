@@ -1,7 +1,7 @@
 package realtime
 
 import (
-	"dolphin/internal/realtime"
+	"github.com/mrhoseah/dolphin/internal/realtime"
 	"go.uber.org/zap"
 )
 

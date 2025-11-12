@@ -865,3 +865,10 @@ func (e *FinEngine) GetLayouts() map[string]*Layout {
 
 	return layouts
 }
+
+// GetViewsPath returns the views path
+func (e *FinEngine) GetViewsPath() string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.viewsPath
+}

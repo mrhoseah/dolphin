@@ -1,7 +1,7 @@
 package template
 
 import (
-	"dolphin/internal/template"
+	"github.com/mrhoseah/dolphin/internal/template"
 )
 
 // FinTemplateEngine represents the Fin template engine interface

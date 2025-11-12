@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"dolphin/internal/auth"
-	"dolphin/internal/middleware"
+	"github.com/mrhoseah/dolphin/internal/auth"
+	"github.com/mrhoseah/dolphin/internal/middleware"
 
 	"go.uber.org/zap"
 )

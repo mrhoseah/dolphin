@@ -1,9 +1,9 @@
 package app
 
 import (
-	"dolphin/internal/app"
-	"dolphin/internal/config"
-	"dolphin/internal/database"
+	"github.com/mrhoseah/dolphin/internal/app"
+	"github.com/mrhoseah/dolphin/internal/config"
+	"github.com/mrhoseah/dolphin/internal/database"
 	"go.uber.org/zap"
 )
 

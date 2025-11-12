@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"dolphin/internal/template"
+	"github.com/mrhoseah/dolphin/internal/template"
 
 	"github.com/spf13/cobra"
 )
@@ -323,11 +323,11 @@ import (
 	"syscall"
 	"time"
 
-	"dolphin/internal/app"
-	"dolphin/internal/config"
-	"dolphin/internal/database"
-	"dolphin/internal/logger"
-	"dolphin/internal/router"
+	"github.com/mrhoseah/dolphin/internal/app"
+	"github.com/mrhoseah/dolphin/internal/config"
+	"github.com/mrhoseah/dolphin/internal/database"
+	"github.com/mrhoseah/dolphin/internal/logger"
+	"github.com/mrhoseah/dolphin/internal/router"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -1132,7 +1132,7 @@ func updateCLI(cmd *cobra.Command, args []string) {
 	fmt.Printf("🔄 Force updating to version: %s\n", targetVersion)
 
 	// Install from GitHub
-	installCmd := exec.Command("go", "install", fmt.Sprintf("dolphin/cmd/dolphin@%s", targetVersion))
+	installCmd := exec.Command("go", "install", fmt.Sprintf("github.com/mrhoseah/dolphin/cmd/dolphin@%s", targetVersion))
 	installCmd.Stdout = os.Stdout
 	installCmd.Stderr = os.Stderr
 
@@ -1268,6 +1268,71 @@ func makeAuth(cmd *cobra.Command, args []string) {
 	fmt.Printf("  GET  /profile            - User profile\n")
 	fmt.Printf("  POST /profile            - Update profile\n")
 	fmt.Printf("  POST /logout             - Logout\n")
+}
+
+// Stub functions for auth scaffolding (to be implemented)
+func createEnhancedUserModel(force bool) {
+	// TODO: Implement
+}
+
+func createPasswordResetModel(force bool) {
+	// TODO: Implement
+}
+
+func createAuthController(force bool) {
+	// TODO: Implement
+}
+
+func createAuthMiddleware(force bool) {
+	// TODO: Implement
+}
+
+func createAuthService(force bool) {
+	// TODO: Implement
+}
+
+func createMailService(force bool) {
+	// TODO: Implement
+}
+
+func createSessionService(force bool) {
+	// TODO: Implement
+}
+
+func createAuthRequests(force bool) {
+	// TODO: Implement
+}
+
+func createAuthMigrations(force bool) {
+	// TODO: Implement
+}
+
+func createAuthRoutes(force bool) {
+	// TODO: Implement
+}
+
+func createTailwindBuildSystem(force bool) {
+	// TODO: Implement
+}
+
+func createAuthViews(force bool) {
+	// TODO: Implement
+}
+
+func createEmailTemplates(force bool) {
+	// TODO: Implement
+}
+
+func createDashboardView(force bool) {
+	// TODO: Implement
+}
+
+func createAuthConfig(force bool) {
+	// TODO: Implement
+}
+
+func createPackageJson(force bool) {
+	// TODO: Implement
 }
 
 func runFinMake(cmd *cobra.Command, args []string) {

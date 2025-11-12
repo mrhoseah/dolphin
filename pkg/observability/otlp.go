@@ -2,7 +2,7 @@ package observability
 
 import (
 	"context"
-	"dolphin/internal/observability"
+	"github.com/mrhoseah/dolphin/internal/observability"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"

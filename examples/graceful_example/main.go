@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"dolphin/internal/graceful"
+	"github.com/mrhoseah/dolphin/internal/graceful"
 	"go.uber.org/zap"
 )
 

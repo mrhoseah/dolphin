@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	"dolphin/internal/observability"
+	"github.com/mrhoseah/dolphin/internal/observability"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"dolphin/internal/security"
+	"github.com/mrhoseah/dolphin/internal/security"
 )
 
 // Mock implementations for demonstration

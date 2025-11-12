@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"dolphin/internal/storage"
+	"github.com/mrhoseah/dolphin/internal/storage"
 )
 
 // CreateSymlink creates a symbolic link from public/storage to storage/app/public

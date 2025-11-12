@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"dolphin/internal/template"
+	"github.com/mrhoseah/dolphin/internal/template"
 )
 
 func main() {

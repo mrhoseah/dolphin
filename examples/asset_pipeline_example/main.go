@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"dolphin/internal/assets"
+	"github.com/mrhoseah/dolphin/internal/assets"
 	"go.uber.org/zap"
 )
 

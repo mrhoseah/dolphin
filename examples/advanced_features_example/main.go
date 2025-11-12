@@ -8,11 +8,11 @@ import (
 	"reflect"
 	"time"
 
-	"dolphin/internal/aop"
-	"dolphin/internal/autoconfig"
-	"dolphin/internal/container"
-	"dolphin/internal/lifecycle"
-	"dolphin/internal/transaction"
+	"github.com/mrhoseah/dolphin/internal/aop"
+	"github.com/mrhoseah/dolphin/internal/autoconfig"
+	"github.com/mrhoseah/dolphin/internal/container"
+	"github.com/mrhoseah/dolphin/internal/lifecycle"
+	"github.com/mrhoseah/dolphin/internal/transaction"
 )
 
 // Example interfaces and implementations

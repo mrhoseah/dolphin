@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"dolphin/internal/circuitbreaker"
+	"github.com/mrhoseah/dolphin/internal/circuitbreaker"
 	"go.uber.org/zap"
 )
 

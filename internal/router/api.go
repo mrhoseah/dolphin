@@ -4,10 +4,14 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"dolphin/app/http/controllers"
-	"dolphin/internal/auth"
-	dolphinMiddleware "dolphin/internal/middleware"
+	"github.com/mrhoseah/dolphin/app/http/controllers"
+	"github.com/mrhoseah/dolphin/internal/auth"
+	dolphinMiddleware "github.com/mrhoseah/dolphin/internal/middleware"
 )
+
+// APIResponse is a helper type for API responses
+// Use the response helpers from response.go for consistent API responses
+type APIResponse = Response
 
 // setupAPIRoutes configures API routes
 func (r *Router) setupAPIRoutes(router chi.Router) {

@@ -3,9 +3,9 @@ package router
 import (
 	"net/http"
 
-	"dolphin/internal/app"
-	"dolphin/internal/router"
-	"dolphin/internal/template"
+	"github.com/mrhoseah/dolphin/internal/app"
+	"github.com/mrhoseah/dolphin/internal/router"
+	"github.com/mrhoseah/dolphin/internal/template"
 
 	"github.com/go-chi/chi/v5"
 )

@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"dolphin/internal/apikey"
-	"dolphin/internal/middleware"
+	"github.com/mrhoseah/dolphin/internal/apikey"
+	"github.com/mrhoseah/dolphin/internal/middleware"
 	"net/http"
 )
 

@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	"dolphin/internal/events"
+	"github.com/mrhoseah/dolphin/internal/events"
 )
 
 // ServiceProvider defines the interface for all service providers

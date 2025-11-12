@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"dolphin/internal/loadshedding"
+	"github.com/mrhoseah/dolphin/internal/loadshedding"
 	"go.uber.org/zap"
 )
 

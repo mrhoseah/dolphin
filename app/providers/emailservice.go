@@ -1,7 +1,7 @@
 package providers
 
 import (
-	"dolphin/internal/providers"
+	"github.com/mrhoseah/dolphin/internal/providers"
 )
 
 // EmailServiceProvider implements email functionality

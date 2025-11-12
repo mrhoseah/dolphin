@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"dolphin/internal/events"
+	"github.com/mrhoseah/dolphin/internal/events"
 )
 
 // User represents a user model

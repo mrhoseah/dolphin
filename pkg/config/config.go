@@ -1,7 +1,7 @@
 package config
 
 import (
-	"dolphin/internal/config"
+	"github.com/mrhoseah/dolphin/internal/config"
 )
 
 // Config represents application configuration

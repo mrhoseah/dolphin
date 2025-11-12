@@ -30,11 +30,11 @@ import (
     "log"
     "net/http"
 
-    "dolphin/internal/config"
-    "dolphin/internal/database"
-    "dolphin/internal/logger"
-    "dolphin/internal/router"
-    "dolphin/pkg/app"
+    "github.com/mrhoseah/dolphin/internal/config"
+    "github.com/mrhoseah/dolphin/internal/database"
+    "github.com/mrhoseah/dolphin/internal/logger"
+    "github.com/mrhoseah/dolphin/internal/router"
+    "github.com/mrhoseah/dolphin/pkg/app"
     "%s/bootstrap"
 
     "github.com/spf13/cobra"
@@ -81,8 +81,8 @@ func (g *Generator) createBootstrapRoutes(includeAuth bool, moduleName string) e
 
 import (
     "net/http"
-    "dolphin/internal/router"
-    "dolphin/pkg/app"
+    "github.com/mrhoseah/dolphin/internal/router"
+    "github.com/mrhoseah/dolphin/pkg/app"
     "go.uber.org/zap"
     "gorm.io/gorm"
 )

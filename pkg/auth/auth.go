@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"dolphin/internal/auth"
+	"github.com/mrhoseah/dolphin/internal/auth"
 	"gorm.io/gorm"
 )
 

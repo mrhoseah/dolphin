@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"dolphin/internal/images"
+	"github.com/mrhoseah/dolphin/internal/images"
 )
 
 func main() {

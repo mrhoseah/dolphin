@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"dolphin/internal/auth"
-	"dolphin/internal/security"
+	"github.com/mrhoseah/dolphin/internal/auth"
+	"github.com/mrhoseah/dolphin/internal/security"
 
 	"github.com/gorilla/sessions"
 	"go.uber.org/zap"

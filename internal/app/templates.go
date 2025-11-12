@@ -268,7 +268,7 @@ func (g *Generator) generateRepositoryContent(name string) string {
 	return fmt.Sprintf(`package repositories
 
 import (
-    "dolphin/app/models"
+    "github.com/mrhoseah/dolphin/app/models"
     "gorm.io/gorm"
 )
 
@@ -331,8 +331,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	"dolphin/app/models"
-	"dolphin/app/repositories"
+	"github.com/mrhoseah/dolphin/app/models"
+	"github.com/mrhoseah/dolphin/app/repositories"
 	"gorm.io/gorm"
 )
 
@@ -495,7 +495,7 @@ func (g *Generator) generateProviderContent(name, providerType string, priority 
 	return `package providers
 
 import (
-	"dolphin/internal/providers"
+	"github.com/mrhoseah/dolphin/internal/providers"
 )
 
 // ` + name + `Provider implements ` + providerType + ` functionality
@@ -1561,8 +1561,8 @@ func (g *Generator) generateAuthControllerContent(moduleName string) string {
 import (
 	"net/http"
 	"` + moduleName + `/app/models"
-	"dolphin/pkg/auth"
-	"dolphin/pkg/template"
+	"github.com/mrhoseah/dolphin/pkg/auth"
+	"github.com/mrhoseah/dolphin/pkg/template"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -1793,12 +1793,12 @@ func (g *Generator) generateAuthRoutesContent(moduleName string) string {
 import (
 	"` + moduleName + `/app/http/controllers"
 	"` + moduleName + `/app/models"
-	"dolphin/pkg/auth"
-	"dolphin/pkg/template"
+	"github.com/mrhoseah/dolphin/pkg/auth"
+	"github.com/mrhoseah/dolphin/pkg/template"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"github.com/go-chi/chi/v5"
-	dolphinMiddleware "dolphin/pkg/middleware"
+	dolphinMiddleware "github.com/mrhoseah/dolphin/pkg/middleware"
 )
 
 // SetupAuthRoutes configures authentication routes

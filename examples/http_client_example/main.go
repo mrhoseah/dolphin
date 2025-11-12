@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"dolphin/internal/http"
+	"github.com/mrhoseah/dolphin/internal/http"
 	"go.uber.org/zap"
 )
 

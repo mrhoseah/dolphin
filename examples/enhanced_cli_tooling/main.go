@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"dolphin/internal/cli"
+	"github.com/mrhoseah/dolphin/internal/cli"
 )
 
 func main() {

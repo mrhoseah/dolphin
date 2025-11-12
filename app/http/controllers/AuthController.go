@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/render"
-	"dolphin/internal/auth"
+	"github.com/mrhoseah/dolphin/internal/auth"
 	"go.uber.org/zap"
 )
 

@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"dolphin/internal/logger"
+	"github.com/mrhoseah/dolphin/internal/logger"
 	"go.uber.org/zap"
 )
 

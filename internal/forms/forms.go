@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strings"
 
-	"dolphin/internal/validation"
+	"github.com/mrhoseah/dolphin/internal/validation"
 )
 
 // Form represents a form with validation and rendering capabilities

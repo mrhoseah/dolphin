@@ -20,6 +20,9 @@ type FinTemplateEngine interface {
 
 	// RegisterLayout registers a Fin template layout
 	RegisterLayout(name string, template string)
+
+	// GetViewsPath returns the views directory path
+	GetViewsPath() string
 }
 
 // Ensure FinEngine implements FinTemplateEngine

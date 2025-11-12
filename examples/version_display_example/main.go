@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"dolphin/internal/version"
+	"github.com/mrhoseah/dolphin/internal/version"
 )
 
 func main() {

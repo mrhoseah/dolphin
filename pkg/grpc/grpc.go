@@ -1,7 +1,7 @@
 package grpc
 
 import (
-	dolphingrpc "dolphin/internal/grpc"
+	dolphingrpc "github.com/mrhoseah/dolphin/internal/grpc"
 
 	"go.uber.org/zap"
 )

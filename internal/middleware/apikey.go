@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"dolphin/internal/apikey"
+	"github.com/mrhoseah/dolphin/internal/apikey"
 )
 
 // APIKeyAuth middleware for API key authentication

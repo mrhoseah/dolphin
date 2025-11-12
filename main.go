@@ -34,13 +34,13 @@ import (
 	"syscall"
 	"time"
 
-	"dolphin/internal/app"
-	"dolphin/internal/cli"
-	"dolphin/internal/config"
-	"dolphin/internal/database"
-	"dolphin/internal/logger"
-	"dolphin/internal/router"
-	"dolphin/internal/storage"
+	"github.com/mrhoseah/dolphin/internal/app"
+	"github.com/mrhoseah/dolphin/internal/cli"
+	"github.com/mrhoseah/dolphin/internal/config"
+	"github.com/mrhoseah/dolphin/internal/database"
+	"github.com/mrhoseah/dolphin/internal/logger"
+	"github.com/mrhoseah/dolphin/internal/router"
+	"github.com/mrhoseah/dolphin/internal/storage"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -225,6 +225,9 @@ func serve(cmd *cobra.Command, args []string) {
 
 	// Initialize router
 	r := router.New(app)
+	
+	// Setup routes (must be called after router initialization)
+	r.SetupRoutes()
 
 	// Create HTTP server
 	srv := &http.Server{

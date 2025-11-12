@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	dolphinTime "dolphin/internal/time"
+	dolphinTime "github.com/mrhoseah/dolphin/internal/time"
 )
 
 func main() {

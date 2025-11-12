@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"dolphin/internal/forms"
-	"dolphin/internal/validation"
+	"github.com/mrhoseah/dolphin/internal/forms"
+	"github.com/mrhoseah/dolphin/internal/validation"
 )
 
 // User represents a user model

@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"dolphin/internal/template"
+	"github.com/mrhoseah/dolphin/internal/template"
 )
 
 func runFinIntegrationExample() {

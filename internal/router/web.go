@@ -1,20 +1,49 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 
-	"dolphin/internal/auth"
-	"dolphin/internal/time"
-	"dolphin/internal/version"
+	"github.com/mrhoseah/dolphin/internal/auth"
+	"github.com/mrhoseah/dolphin/internal/time"
+	"github.com/mrhoseah/dolphin/internal/version"
 
 	"github.com/go-chi/chi/v5"
 )
 
-// renderFin renders a Fin template with data
-func (r *Router) renderFin(w http.ResponseWriter, templateName string, data interface{}) error {
+// renderFin renders a Fin template with data.
+// If the template contains @auth directive at the top level, it will check authentication
+// and redirect to login if not authenticated.
+// Returns an error if template rendering fails.
+func (r *Router) renderFin(w http.ResponseWriter, req *http.Request, templateName string, data interface{}) error {
+	// Check if template requires authentication by looking for @auth directive
+	// We need to read the template file to check
+	viewsPath := r.finEngine.GetViewsPath()
+	templatePath := filepath.Join(viewsPath, templateName+".fin.html")
+	if templateContent, err := r.readTemplateFile(templatePath); err == nil {
+		// Check if template starts with @auth or has @auth at the beginning (before any content)
+		if r.requiresAuth(templateContent) {
+			// Check authentication
+			if !r.authManager.Check() {
+				// Redirect to login for web requests
+				loginURL := "/auth/login"
+				if req != nil && req.URL.Path != "/" && req.URL.Path != "/auth/login" {
+					// Preserve the intended destination for redirect after login
+					loginURL = "/auth/login?redirect=" + req.URL.Path
+				}
+				if w != nil && req != nil {
+					http.Redirect(w, req, loginURL, http.StatusFound)
+					return nil
+				}
+				return fmt.Errorf("authentication required for template: %s", templateName)
+			}
+		}
+	}
+
 	// Add user data to template if authenticated
 	if dataMap, ok := data.(map[string]interface{}); ok {
 		if r.authManager.Check() {
@@ -28,19 +57,60 @@ func (r *Router) renderFin(w http.ResponseWriter, templateName string, data inte
 
 	content, err := r.finEngine.Render(templateName, data)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to render template %s: %w", templateName, err)
 	}
 
-	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	_, err = w.Write([]byte(content))
-	return err
+	if _, err := w.Write([]byte(content)); err != nil {
+		return fmt.Errorf("failed to write template response: %w", err)
+	}
+	return nil
 }
 
-// render joins base layout with header/footer partials and the page body.
-func render(w http.ResponseWriter, pagePath string) error {
-	header, _ := os.ReadFile("ui/views/partials/header.html")
-	footer, _ := os.ReadFile("ui/views/partials/footer.html")
+// requiresAuth checks if a template requires authentication
+// It looks for @auth directive at the top level (before any non-whitespace content)
+func (r *Router) requiresAuth(templateContent string) bool {
+	// Remove leading whitespace and check if it starts with @auth
+	lines := strings.Split(templateContent, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue // Skip empty lines
+		}
+		// Check if line starts with @auth (possibly with whitespace before @)
+		if strings.HasPrefix(trimmed, "@auth") {
+			return true
+		}
+		// If we hit any non-empty line that's not @auth, stop checking
+		// (we only care about top-level @auth)
+		break
+	}
+	return false
+}
+
+// readTemplateFile reads a template file from the filesystem.
+// Returns the file content as a string or an error if the file cannot be read.
+func (r *Router) readTemplateFile(path string) (string, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to read template file %s: %w", path, err)
+	}
+	return string(content), nil
+}
+
+// renderPage joins base layout with header/footer partials and the page body.
+func renderPage(w http.ResponseWriter, pagePath string) error {
+	header, err := os.ReadFile("ui/views/partials/header.html")
+	if err != nil {
+		// Header is optional, continue without it
+		header = []byte{}
+	}
+	footer, err := os.ReadFile("ui/views/partials/footer.html")
+	if err != nil {
+		// Footer is optional, continue without it
+		footer = []byte{}
+	}
 	bodyBytes, err := os.ReadFile(pagePath)
 	if err != nil {
 		return err
@@ -127,9 +197,9 @@ func (r *Router) handleHome(w http.ResponseWriter, req *http.Request) {
 		"AppName": "Dolphin Framework",
 	}
 
-	if err := r.renderFin(w, "pages/home", data); err != nil {
+	if err := r.renderFin(w, req, "pages/home", data); err != nil {
 		// Fallback to traditional HTML rendering
-		if err := render(w, "ui/views/pages/home.html"); err != nil {
+		if err := renderPage(w, "ui/views/pages/home.html"); err != nil {
 			http.Error(w, "Home view not found", http.StatusInternalServerError)
 		}
 	}
@@ -137,7 +207,7 @@ func (r *Router) handleHome(w http.ResponseWriter, req *http.Request) {
 
 // handleLoginPage renders the login page
 func (r *Router) handleLoginPage(w http.ResponseWriter, req *http.Request) {
-	if err := render(w, "ui/views/auth/login.html"); err != nil {
+	if err := renderPage(w, "ui/views/auth/login.html"); err != nil {
 		http.Error(w, "Login view not found", http.StatusInternalServerError)
 	}
 }
@@ -171,7 +241,7 @@ func (r *Router) handleLoginSubmit(w http.ResponseWriter, req *http.Request) {
 
 // handleRegisterPage renders the register page
 func (r *Router) handleRegisterPage(w http.ResponseWriter, req *http.Request) {
-	if err := render(w, "ui/views/auth/register.html"); err != nil {
+	if err := renderPage(w, "ui/views/auth/register.html"); err != nil {
 		http.Error(w, "Register view not found", http.StatusInternalServerError)
 	}
 }
@@ -234,7 +304,7 @@ func (r *Router) handleLogout(w http.ResponseWriter, req *http.Request) {
 
 // handleDashboard renders the dashboard with HTMX
 func (r *Router) handleDashboard(w http.ResponseWriter, req *http.Request) {
-	if err := render(w, "ui/views/pages/dashboard.html"); err != nil {
+	if err := renderPage(w, "ui/views/pages/dashboard.html"); err != nil {
 		http.Error(w, "Dashboard view not found", http.StatusInternalServerError)
 	}
 }
