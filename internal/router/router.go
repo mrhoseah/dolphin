@@ -131,6 +131,16 @@ func (r *Router) GetAuthMiddleware() *authMiddleware.AuthMiddleware {
 	return authMiddleware.NewAuthMiddleware(r.authManager, r.app.Logger())
 }
 
+// GetMetricsCollector returns a new metrics collector instance
+func (r *Router) GetMetricsCollector() *MetricsCollector {
+	return NewMetricsCollector(r.app.Logger())
+}
+
+// GetSSEServer returns a new SSE server instance
+func (r *Router) GetSSEServer() *SSEServer {
+	return NewSSEServer(r.app.Logger())
+}
+
 // Use adds a middleware to the router
 func (r *Router) Use(mwf func(http.Handler) http.Handler) {
 	r.router.Use(mwf)

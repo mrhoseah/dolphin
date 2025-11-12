@@ -48,6 +48,12 @@ func (r *Router) setupAPIRoutes(router chi.Router) {
 	// Protected API routes (already under /api/v1, so no need to add /api prefix)
 	router.Group(func(api chi.Router) {
 		api.Use(dolphinAuthMiddleware.Authenticate)
+		
+		// Add API versioning middleware
+		api.Use(VersionMiddleware())
+		
+		// Add sanitization middleware for POST/PUT/PATCH
+		api.Use(SanitizeMiddleware())
 
 		// User routes
 		api.Route("/users", func(users chi.Router) {
