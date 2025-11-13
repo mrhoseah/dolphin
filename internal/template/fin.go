@@ -508,13 +508,12 @@ func (e *FinEngine) Render(templateName string, data interface{}) (string, error
 	// Execute template
 	var buf bytes.Buffer
 	tmpl := htmltemplate.New(templateName)
-	
+
 	// Add template helpers (HTMX, TailwindCSS, etc.)
 	if e.helpers != nil {
 		tmpl = tmpl.Funcs(e.helpers)
 	}
-	
-	var err error
+
 	tmpl, err = tmpl.Parse(compiled)
 	if err != nil {
 		return "", err
@@ -917,7 +916,7 @@ func (e *FinEngine) renderWithLayout(layoutName string, content string, data int
 	// The layout template will be the root template (not wrapped in {{define}})
 	// The content template will define {{define "content"}} which the layout references via {{block}}
 	tmpl := htmltemplate.New(layoutName)
-	
+
 	// Add template helpers (HTMX, TailwindCSS, etc.)
 	if e.helpers != nil {
 		tmpl = tmpl.Funcs(e.helpers)
