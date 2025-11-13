@@ -514,7 +514,8 @@ func (e *FinEngine) Render(templateName string, data interface{}) (string, error
 		tmpl = tmpl.Funcs(e.helpers)
 	}
 	
-	tmpl, err := tmpl.Parse(compiled)
+	var err error
+	tmpl, err = tmpl.Parse(compiled)
 	if err != nil {
 		return "", err
 	}
