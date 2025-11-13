@@ -47,7 +47,7 @@ type Layout struct {
 
 // CompiledTemplate represents a compiled template
 type CompiledTemplate struct {
-	Template *template.Template
+	Template *htmltemplate.Template
 	Compiled string
 	Hash     string
 	Created  time.Time
@@ -79,6 +79,9 @@ func NewFinEngine(config *Config) *FinEngine {
 		config = DefaultConfig()
 	}
 
+	// Initialize template helpers (HTMX, TailwindCSS, etc.)
+	helpers := GetTemplateHelpers(nil)
+	
 	engine := &FinEngine{
 		viewsPath:     config.ViewsPath,
 		cachePath:     config.CachePath,
@@ -89,10 +92,14 @@ func NewFinEngine(config *Config) *FinEngine {
 		components:    make(map[string]*Component),
 		layouts:       make(map[string]*Layout),
 		compiledCache: make(map[string]*CompiledTemplate),
+		helpers:       helpers,
 	}
 
 	// Register default directives
 	engine.registerDefaultDirectives()
+
+	// Register default layouts with HTMX and TailwindCSS
+	engine.registerDefaultLayouts()
 
 	// Ensure cache directory exists
 	if engine.cacheEnabled {
@@ -100,6 +107,14 @@ func NewFinEngine(config *Config) *FinEngine {
 	}
 
 	return engine
+}
+
+// registerDefaultLayouts registers default layouts with HTMX and TailwindCSS
+func (e *FinEngine) registerDefaultLayouts() {
+	// Register default layout
+	e.RegisterLayout("layouts/app.fin.html", DefaultLayout())
+	e.RegisterLayout("layouts/minimal.fin.html", MinimalLayout())
+	e.RegisterLayout("layouts/htmx.fin.html", HTMXLayout())
 }
 
 // registerDefaultDirectives registers built-in Fin template directives
@@ -440,6 +455,7 @@ func (e *FinEngine) RegisterLayout(name string, template string) {
 
 // Render renders a Fin template with data
 // Template names should use .fin.html extension or omit extension (will be enforced)
+// HTMX and TailwindCSS helpers are automatically available
 func (e *FinEngine) Render(templateName string, data interface{}) (string, error) {
 	// Enforce .fin.html extension
 	if !strings.HasSuffix(templateName, ".fin.html") {

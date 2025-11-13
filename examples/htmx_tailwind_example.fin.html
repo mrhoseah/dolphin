@@ -1,0 +1,99 @@
+@auth
+@extends('layouts/app')
+
+@section('title', 'HTMX + TailwindCSS Example')
+
+@section('content')
+<div class="{{container}}">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">HTMX + TailwindCSS Example</h1>
+    
+    <!-- HTMX Button Example -->
+    <div class="{{card}} mb-6">
+        <h2 class="text-xl font-semibold mb-4">HTMX Button</h2>
+        <button 
+            {{hx_post "/api/metrics"}}
+            {{hx_target "#result"}}
+            {{hx_swap "innerHTML"}}
+            class="{{btn_primary}}">
+            Load Metrics
+        </button>
+        <div id="result" class="mt-4 p-4 bg-gray-100 rounded"></div>
+    </div>
+    
+    <!-- HTMX Form Example -->
+    <div class="{{card}} mb-6">
+        <h2 class="text-xl font-semibold mb-4">HTMX Form</h2>
+        <form 
+            {{hx_post "/api/metrics"}}
+            {{hx_target "#form-result"}}
+            {{hx_swap "innerHTML"}}
+            class="space-y-4">
+            {{csrf_field}}
+            <div>
+                <label class="{{label}}">Metric Name</label>
+                <input type="text" name="name" class="{{input}}" required>
+            </div>
+            <div>
+                <label class="{{label}}">Value</label>
+                <input type="number" name="value" class="{{input}}" required>
+            </div>
+            <button type="submit" class="{{btn_primary}}">Submit</button>
+        </form>
+        <div id="form-result" class="mt-4"></div>
+    </div>
+    
+    <!-- HTMX Link Example -->
+    <div class="{{card}} mb-6">
+        <h2 class="text-xl font-semibold mb-4">HTMX Links</h2>
+        <a 
+            href="/dashboard" 
+            {{hx_get "/dashboard"}}
+            {{hx_target "main"}}
+            {{hx_swap "innerHTML"}}
+            class="text-blue-600 hover:text-blue-800">
+            Load Dashboard
+        </a>
+    </div>
+    
+    <!-- Using @htmx_button directive -->
+    <div class="{{card}} mb-6">
+        <h2 class="text-xl font-semibold mb-4">Using @htmx_button Directive</h2>
+        @htmx_button("post", "/api/metrics", "Create Metric")
+    </div>
+    
+    <!-- TailwindCSS Components -->
+    <div class="{{card}} mb-6">
+        <h2 class="text-xl font-semibold mb-4">TailwindCSS Components</h2>
+        
+        <!-- Alert -->
+        <div class="{{alert "success"}} mb-4">
+            This is a success alert!
+        </div>
+        
+        <!-- Badge -->
+        <span class="{{badge "primary"}}">New</span>
+        <span class="{{badge "success"}}">Active</span>
+        <span class="{{badge "danger"}}">Warning</span>
+    </div>
+    
+    <!-- HTMX with Loading Indicator -->
+    <div class="{{card}}">
+        <h2 class="text-xl font-semibold mb-4">HTMX with Loading Indicator</h2>
+        <button 
+            {{hx_get "/api/data"}}
+            {{hx_target "#data-result"}}
+            {{hx_indicator "#loading"}}
+            class="{{btn_primary}}">
+            Load Data
+        </button>
+        <div id="loading" class="htmx-indicator mt-2">
+            <div class="flex items-center">
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <span class="ml-2 text-gray-600">Loading...</span>
+            </div>
+        </div>
+        <div id="data-result" class="mt-4"></div>
+    </div>
+</div>
+@endsection
+

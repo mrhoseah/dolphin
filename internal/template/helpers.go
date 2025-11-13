@@ -21,7 +21,11 @@ func NewTemplateHelpers(r *http.Request) *TemplateHelpers {
 // GetTemplateHelpers returns a map of helper functions for Fin templates
 func GetTemplateHelpers(r *http.Request) htmltemplate.FuncMap {
 	helpers := NewTemplateHelpers(r)
-	return htmltemplate.FuncMap{
+	htmxHelpers := GetHTMXHelpers(r)
+	tailwindHelpers := GetTailwindHelpers(r)
+	
+	// Merge all helper maps
+	allHelpers := htmltemplate.FuncMap{
 		// URL helpers
 		"url":      helpers.URL,
 		"route":    helpers.Route,
@@ -89,6 +93,18 @@ func GetTemplateHelpers(r *http.Request) htmltemplate.FuncMap {
 		"json_encode": helpers.JSONEncode,
 		"json_decode": helpers.JSONDecode,
 	}
+	
+	// Add HTMX helpers
+	for k, v := range htmxHelpers {
+		allHelpers[k] = v
+	}
+	
+	// Add TailwindCSS helpers
+	for k, v := range tailwindHelpers {
+		allHelpers[k] = v
+	}
+	
+	return allHelpers
 }
 
 // URL generates a URL
