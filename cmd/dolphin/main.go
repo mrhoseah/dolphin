@@ -547,6 +547,9 @@ func serve(cmd *cobra.Command, args []string) {
 	// Initialize router
 	r := router.New(app)
 
+	// Setup routes (must be called after router initialization)
+	r.SetupRoutes()
+
 	// Optionally mount debug dashboard on main server when app debug enabled
 	if cfg.App.Debug {
 		dbg := debug.NewDebugger(debug.Config{Enabled: true, EnableProfiler: true})
