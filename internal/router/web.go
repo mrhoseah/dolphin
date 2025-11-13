@@ -54,12 +54,8 @@ func (r *Router) renderFin(w http.ResponseWriter, req *http.Request, templateNam
 			dataMap["Authenticated"] = false
 		}
 		
-		// Add template helpers (HTMX, TailwindCSS, etc.)
-		// These will be available in templates via the helper functions
-		if helpers := template.GetTemplateHelpers(r); helpers != nil {
-			// Note: Helpers are registered globally via template engine
-			// Individual helper functions can be called in templates
-		}
+		// Template helpers (HTMX, TailwindCSS, etc.) are automatically
+		// registered in the template engine and available in all templates
 	}
 
 	content, err := r.finEngine.Render(templateName, data)
