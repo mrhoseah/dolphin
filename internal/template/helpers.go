@@ -88,7 +88,7 @@ func GetTemplateHelpers(r *http.Request) htmltemplate.FuncMap {
 		"json": helpers.JSON,
 		"json_encode": helpers.JSONEncode,
 		"json_decode": helpers.JSONDecode,
-	},
+	}
 }
 
 // URL generates a URL
