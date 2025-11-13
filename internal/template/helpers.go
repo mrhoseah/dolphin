@@ -81,8 +81,8 @@ func GetTemplateHelpers(r *http.Request) template.FuncMap {
 		
 		// Conditional helpers
 		"if_helper": helpers.If,
-		"unless": helpers.Unless,
-		"isset": helpers.Isset,
+		"unless":    helpers.Unless,
+		"isset":     helpers.Isset,
 		
 		// JSON helpers
 		"json": helpers.JSON,
