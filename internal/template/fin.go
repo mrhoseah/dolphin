@@ -455,21 +455,12 @@ func (e *FinEngine) RegisterLayout(name string, template string) {
 }
 
 // Render renders a Fin template with data
-// Template names should use .fin.html extension or omit extension (will be enforced)
+// Template names must use .fin.html extension
 // HTMX and TailwindCSS helpers are automatically available
 func (e *FinEngine) Render(templateName string, data interface{}) (string, error) {
-	// Enforce .fin.html extension
+	// Enforce .fin.html extension strictly
 	if !strings.HasSuffix(templateName, ".fin.html") {
-		if strings.Contains(templateName, ".") {
-			// Replace any extension with .fin.html
-			if e.debugMode {
-				fmt.Printf("Warning: Template '%s' should use .fin.html extension. Converting...\n", templateName)
-			}
-			templateName = strings.TrimSuffix(templateName, filepath.Ext(templateName)) + ".fin.html"
-		} else {
-			// If no extension provided, append .fin.html
-			templateName = templateName + ".fin.html"
-		}
+		return "", fmt.Errorf("fin templates must use the .fin.html extension (received %s)", templateName)
 	}
 
 	// Get template content
@@ -482,9 +473,8 @@ func (e *FinEngine) Render(templateName string, data interface{}) (string, error
 	extendRegex := regexp.MustCompile(`\{\{\s*extend\s+['"]([^'"]+)['"]\s*\}\}`)
 	if extendMatch := extendRegex.FindStringSubmatch(content); extendMatch != nil {
 		layoutName := extendMatch[1]
-		// Enforce .fin.html extension for layout
 		if !strings.HasSuffix(layoutName, ".fin.html") {
-			layoutName = strings.TrimSuffix(layoutName, filepath.Ext(layoutName)) + ".fin.html"
+			return "", fmt.Errorf("layout templates must use the .fin.html extension (received %s)", layoutName)
 		}
 		// Remove the extend line from content
 		lines := strings.Split(content, "\n")
@@ -854,9 +844,9 @@ func (e *FinEngine) parseDirectiveArgs(argsStr string) []string {
 // renderWithLayout renders content with a layout
 // Enforces .fin.html extension for layout names
 func (e *FinEngine) renderWithLayout(layoutName string, content string, data interface{}) (string, error) {
-	// Enforce .fin.html extension
+	// Enforce .fin.html extension strictly
 	if !strings.HasSuffix(layoutName, ".fin.html") {
-		layoutName = strings.TrimSuffix(layoutName, filepath.Ext(layoutName)) + ".fin.html"
+		return "", fmt.Errorf("layout templates must use the .fin.html extension (received %s)", layoutName)
 	}
 
 	e.mu.RLock()
