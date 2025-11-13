@@ -125,7 +125,7 @@ func (h *HTMXHelpers) HXDisable(value bool) htmltemplate.HTMLAttr {
 	if value {
 		return htmltemplate.HTMLAttr(`hx-disable="true"`)
 	}
-	return ""
+	return htmltemplate.HTMLAttr("")
 }
 
 // HXExt returns hx-ext attribute
@@ -143,7 +143,7 @@ func (h *HTMXHelpers) HXHistory(value bool) htmltemplate.HTMLAttr {
 	if value {
 		return htmltemplate.HTMLAttr(`hx-history="true"`)
 	}
-	return ""
+	return htmltemplate.HTMLAttr("")
 }
 
 // HXHistoryElt returns hx-history-elt attribute
@@ -171,7 +171,7 @@ func (h *HTMXHelpers) HXPreserve(value bool) htmltemplate.HTMLAttr {
 	if value {
 		return htmltemplate.HTMLAttr(`hx-preserve="true"`)
 	}
-	return ""
+	return htmltemplate.HTMLAttr("")
 }
 
 // HXPrompt returns hx-prompt attribute
@@ -231,7 +231,7 @@ func (h *HTMXHelpers) HXValidate(value bool) htmltemplate.HTMLAttr {
 	if value {
 		return htmltemplate.HTMLAttr(`hx-validate="true"`)
 	}
-	return ""
+	return htmltemplate.HTMLAttr("")
 }
 
 // HXVals returns hx-vals attribute
