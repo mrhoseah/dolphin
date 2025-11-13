@@ -143,7 +143,7 @@ func (r *Router) GetSSEServer() *SSEServer {
 
 // Routes returns a simple route registration helper
 func (r *Router) Routes() *Routes {
-	return NewRoutes(r.router)
+	return NewRoutesWithRouter(r)
 }
 
 // SimpleRoutes returns a CodeIgniter-like simple route API

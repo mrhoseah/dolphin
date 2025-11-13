@@ -15,8 +15,9 @@ type RouteGroup struct {
 
 // Routes provides a simple, CodeIgniter-like route registration API
 type Routes struct {
-	router *chi.Mux
-	groups map[string]*RouteGroup
+	routerInstance *Router
+	router         *chi.Mux
+	groups         map[string]*RouteGroup
 }
 
 // NewRoutes creates a new Routes instance
@@ -24,6 +25,15 @@ func NewRoutes(router *chi.Mux) *Routes {
 	return &Routes{
 		router: router,
 		groups: make(map[string]*RouteGroup),
+	}
+}
+
+// NewRoutesWithRouter creates a new Routes instance with Router reference
+func NewRoutesWithRouter(routerInstance *Router) *Routes {
+	return &Routes{
+		routerInstance: routerInstance,
+		router:         routerInstance.router,
+		groups:         make(map[string]*RouteGroup),
 	}
 }
 
