@@ -81,7 +81,7 @@ func NewFinEngine(config *Config) *FinEngine {
 
 	// Initialize template helpers (HTMX, TailwindCSS, etc.)
 	helpers := GetTemplateHelpers(nil)
-	
+
 	engine := &FinEngine{
 		viewsPath:     config.ViewsPath,
 		cachePath:     config.CachePath,

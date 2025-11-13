@@ -22,44 +22,44 @@ func GetHTMXHelpers(r *http.Request) htmltemplate.FuncMap {
 	helpers := NewHTMXHelpers(r)
 	return htmltemplate.FuncMap{
 		// HTMX attributes
-		"hx_get":      helpers.HXGet,
-		"hx_post":     helpers.HXPost,
-		"hx_put":      helpers.HXPut,
-		"hx_patch":    helpers.HXPatch,
-		"hx_delete":   helpers.HXDelete,
-		"hx_trigger":  helpers.HXTrigger,
-		"hx_target":   helpers.HXTarget,
-		"hx_swap":     helpers.HXSwap,
-		"hx_swap_oob": helpers.HXSwapOOB,
-		"hx_boost":    helpers.HXBoost,
-		"hx_confirm":  helpers.HXConfirm,
-		"hx_disable":  helpers.HXDisable,
-		"hx_ext":      helpers.HXExt,
-		"hx_headers":  helpers.HXHeaders,
-		"hx_history":  helpers.HXHistory,
+		"hx_get":         helpers.HXGet,
+		"hx_post":        helpers.HXPost,
+		"hx_put":         helpers.HXPut,
+		"hx_patch":       helpers.HXPatch,
+		"hx_delete":      helpers.HXDelete,
+		"hx_trigger":     helpers.HXTrigger,
+		"hx_target":      helpers.HXTarget,
+		"hx_swap":        helpers.HXSwap,
+		"hx_swap_oob":    helpers.HXSwapOOB,
+		"hx_boost":       helpers.HXBoost,
+		"hx_confirm":     helpers.HXConfirm,
+		"hx_disable":     helpers.HXDisable,
+		"hx_ext":         helpers.HXExt,
+		"hx_headers":     helpers.HXHeaders,
+		"hx_history":     helpers.HXHistory,
 		"hx_history_elt": helpers.HXHistoryElt,
-		"hx_include":  helpers.HXInclude,
-		"hx_indicator": helpers.HXIndicator,
-		"hx_params":   helpers.HXParams,
-		"hx_preserve": helpers.HXPreserve,
-		"hx_prompt":   helpers.HXPrompt,
-		"hx_push_url": helpers.HXPushURL,
+		"hx_include":     helpers.HXInclude,
+		"hx_indicator":   helpers.HXIndicator,
+		"hx_params":      helpers.HXParams,
+		"hx_preserve":    helpers.HXPreserve,
+		"hx_prompt":      helpers.HXPrompt,
+		"hx_push_url":    helpers.HXPushURL,
 		"hx_replace_url": helpers.HXReplaceURL,
-		"hx_request":  helpers.HXRequest,
-		"hx_select":   helpers.HXSelect,
-		"hx_select_oob": helpers.HXSelectOOB,
-		"hx_sse":      helpers.HXSSE,
-		"hx_sync":     helpers.HXSync,
-		"hx_validate": helpers.HXValidate,
-		"hx_vals":     helpers.HXVals,
-		"hx_ws":       helpers.HXWS,
-		
+		"hx_request":     helpers.HXRequest,
+		"hx_select":      helpers.HXSelect,
+		"hx_select_oob":  helpers.HXSelectOOB,
+		"hx_sse":         helpers.HXSSE,
+		"hx_sync":        helpers.HXSync,
+		"hx_validate":    helpers.HXValidate,
+		"hx_vals":        helpers.HXVals,
+		"hx_ws":          helpers.HXWS,
+
 		// HTMX helpers
-		"hx_attrs":    helpers.HXAttrs,
-		"hx_button":   helpers.HXButton,
-		"hx_link":    helpers.HXLink,
-		"hx_form":    helpers.HXForm,
-	},
+		"hx_attrs":  helpers.HXAttrs,
+		"hx_button": helpers.HXButton,
+		"hx_link":   helpers.HXLink,
+		"hx_form":   helpers.HXForm,
+	}
 }
 
 // HXGet returns hx-get attribute
@@ -258,7 +258,7 @@ func (h *HTMXHelpers) HXAttrs(attrs map[string]interface{}) htmltemplate.HTMLAtt
 // HXButton creates an HTMX button
 func (h *HTMXHelpers) HXButton(url, method, text string, attrs map[string]interface{}) htmltemplate.HTML {
 	var attrStr strings.Builder
-	
+
 	// Add method attribute
 	switch strings.ToUpper(method) {
 	case "GET":
@@ -274,14 +274,14 @@ func (h *HTMXHelpers) HXButton(url, method, text string, attrs map[string]interf
 	default:
 		attrStr.WriteString(fmt.Sprintf(`hx-get="%s"`, url))
 	}
-	
+
 	// Add additional attributes
 	for key, value := range attrs {
 		if value != nil && value != false && value != "" {
 			attrStr.WriteString(fmt.Sprintf(` %s="%v"`, key, value))
 		}
 	}
-	
+
 	return htmltemplate.HTML(fmt.Sprintf(`<button %s>%s</button>`, attrStr.String(), text))
 }
 
@@ -289,21 +289,21 @@ func (h *HTMXHelpers) HXButton(url, method, text string, attrs map[string]interf
 func (h *HTMXHelpers) HXLink(url, text string, attrs map[string]interface{}) htmltemplate.HTML {
 	var attrStr strings.Builder
 	attrStr.WriteString(fmt.Sprintf(`hx-get="%s"`, url))
-	
+
 	// Add additional attributes
 	for key, value := range attrs {
 		if value != nil && value != false && value != "" {
 			attrStr.WriteString(fmt.Sprintf(` %s="%v"`, key, value))
 		}
 	}
-	
+
 	return htmltemplate.HTML(fmt.Sprintf(`<a href="%s" %s>%s</a>`, url, attrStr.String(), text))
 }
 
 // HXForm creates an HTMX form
 func (h *HTMXHelpers) HXForm(url, method string, attrs map[string]interface{}) htmltemplate.HTML {
 	var attrStr strings.Builder
-	
+
 	// Add method attribute
 	switch strings.ToUpper(method) {
 	case "POST":
@@ -317,14 +317,13 @@ func (h *HTMXHelpers) HXForm(url, method string, attrs map[string]interface{}) h
 	default:
 		attrStr.WriteString(fmt.Sprintf(`hx-post="%s"`, url))
 	}
-	
+
 	// Add additional attributes
 	for key, value := range attrs {
 		if value != nil && value != false && value != "" {
 			attrStr.WriteString(fmt.Sprintf(` %s="%v"`, key, value))
 		}
 	}
-	
+
 	return htmltemplate.HTML(fmt.Sprintf(`<form %s></form>`, attrStr.String()))
 }
-
