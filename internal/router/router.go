@@ -141,6 +141,16 @@ func (r *Router) GetSSEServer() *SSEServer {
 	return NewSSEServer(r.app.Logger())
 }
 
+// Routes returns a simple route registration helper
+func (r *Router) Routes() *Routes {
+	return NewRoutes(r.router)
+}
+
+// SimpleRoutes returns a CodeIgniter-like simple route API
+func (r *Router) SimpleRoutes() *SimpleRoutes {
+	return NewSimpleRoutes(r)
+}
+
 // Use adds a middleware to the router
 func (r *Router) Use(mwf func(http.Handler) http.Handler) {
 	r.router.Use(mwf)
