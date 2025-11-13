@@ -211,7 +211,11 @@ type ResourceController struct {
 
 // AuthGroup creates a route group with authentication middleware
 func (r *Routes) AuthGroup(prefix string, fn func(*RouteGroup)) {
-	authMiddleware := r.router.(*Router).GetAuthMiddleware()
+	if r.routerInstance == nil {
+		r.Group(prefix, nil, fn)
+		return
+	}
+	authMiddleware := r.routerInstance.GetAuthMiddleware()
 	r.Group(prefix, []func(http.Handler) http.Handler{
 		authMiddleware.Authenticate,
 	}, fn)
@@ -219,7 +223,11 @@ func (r *Routes) AuthGroup(prefix string, fn func(*RouteGroup)) {
 
 // GuestGroup creates a route group for guest-only routes
 func (r *Routes) GuestGroup(prefix string, fn func(*RouteGroup)) {
-	authMiddleware := r.router.(*Router).GetAuthMiddleware()
+	if r.routerInstance == nil {
+		r.Group(prefix, nil, fn)
+		return
+	}
+	authMiddleware := r.routerInstance.GetAuthMiddleware()
 	r.Group(prefix, []func(http.Handler) http.Handler{
 		authMiddleware.Guest,
 	}, fn)
@@ -227,7 +235,11 @@ func (r *Routes) GuestGroup(prefix string, fn func(*RouteGroup)) {
 
 // RoleGroup creates a route group with role-based middleware
 func (r *Routes) RoleGroup(prefix string, role string, fn func(*RouteGroup)) {
-	authMiddleware := r.router.(*Router).GetAuthMiddleware()
+	if r.routerInstance == nil {
+		r.Group(prefix, nil, fn)
+		return
+	}
+	authMiddleware := r.routerInstance.GetAuthMiddleware()
 	r.Group(prefix, []func(http.Handler) http.Handler{
 		authMiddleware.Authenticate,
 		authMiddleware.RoleMiddleware(role),
@@ -236,7 +248,11 @@ func (r *Routes) RoleGroup(prefix string, role string, fn func(*RouteGroup)) {
 
 // PermissionGroup creates a route group with permission-based middleware
 func (r *Routes) PermissionGroup(prefix string, permission string, fn func(*RouteGroup)) {
-	authMiddleware := r.router.(*Router).GetAuthMiddleware()
+	if r.routerInstance == nil {
+		r.Group(prefix, nil, fn)
+		return
+	}
+	authMiddleware := r.routerInstance.GetAuthMiddleware()
 	r.Group(prefix, []func(http.Handler) http.Handler{
 		authMiddleware.Authenticate,
 		authMiddleware.PermissionMiddleware(permission),
@@ -245,10 +261,15 @@ func (r *Routes) PermissionGroup(prefix string, permission string, fn func(*Rout
 
 // View registers a route that renders a Fin template
 func (r *Routes) View(path string, templateName string) {
+	if r.routerInstance == nil {
+		r.Get(path, func(w http.ResponseWriter, req *http.Request) {
+			http.Error(w, "View helper requires Router instance", http.StatusNotImplemented)
+		})
+		return
+	}
 	r.Get(path, func(w http.ResponseWriter, req *http.Request) {
-		router := r.router.(*Router)
 		data := make(map[string]interface{})
-		if err := router.renderFin(w, req, templateName, data); err != nil {
+		if err := r.routerInstance.renderFin(w, req, templateName, data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
@@ -256,11 +277,16 @@ func (r *Routes) View(path string, templateName string) {
 
 // ViewWithAuth registers a route that renders a Fin template with authentication
 func (r *Routes) ViewWithAuth(path string, templateName string) {
-	authMiddleware := r.router.(*Router).GetAuthMiddleware()
+	if r.routerInstance == nil {
+		r.Get(path, func(w http.ResponseWriter, req *http.Request) {
+			http.Error(w, "ViewWithAuth helper requires Router instance", http.StatusNotImplemented)
+		})
+		return
+	}
+	authMiddleware := r.routerInstance.GetAuthMiddleware()
 	r.router.With(authMiddleware.Authenticate).Get(path, func(w http.ResponseWriter, req *http.Request) {
-		router := r.router.(*Router)
 		data := make(map[string]interface{})
-		if err := router.renderFin(w, req, templateName, data); err != nil {
+		if err := r.routerInstance.renderFin(w, req, templateName, data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
