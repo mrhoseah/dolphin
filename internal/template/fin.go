@@ -238,6 +238,174 @@ func (e *FinEngine) registerDefaultDirectives() {
 	e.RegisterDirective("endforeach", func(args []string, content string, data interface{}) (string, error) {
 		return "", nil
 	})
+
+	// @include directive - include another template
+	e.RegisterDirective("include", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) == 0 {
+			return "", fmt.Errorf("@include requires a template name")
+		}
+		templateName := args[0]
+		// Enforce .fin.html extension
+		if !strings.HasSuffix(templateName, ".fin.html") {
+			templateName = strings.TrimSuffix(templateName, filepath.Ext(templateName)) + ".fin.html"
+		}
+		return fmt.Sprintf("{{template \"%s\" .}}", templateName), nil
+	})
+
+	// @stack directive - define a stack
+	e.RegisterDirective("stack", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) == 0 {
+			return "", fmt.Errorf("@stack requires a stack name")
+		}
+		stackName := args[0]
+		return fmt.Sprintf("{{if .Stacks.%s}}{{.Stacks.%s}}{{end}}", stackName, stackName), nil
+	})
+
+	// @push directive - push content to a stack
+	e.RegisterDirective("push", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) == 0 {
+			return "", fmt.Errorf("@push requires a stack name")
+		}
+		stackName := args[0]
+		// This would be handled during template compilation
+		return fmt.Sprintf("{{/* Push to stack: %s */}}%s", stackName, content), nil
+	})
+
+	// @prepend directive - prepend content to a stack
+	e.RegisterDirective("prepend", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) == 0 {
+			return "", fmt.Errorf("@prepend requires a stack name")
+		}
+		stackName := args[0]
+		return fmt.Sprintf("{{/* Prepend to stack: %s */}}%s", stackName, content), nil
+	})
+
+	// @once directive - include content only once
+	e.RegisterDirective("once", func(args []string, content string, data interface{}) (string, error) {
+		// This would track if content has been included
+		return fmt.Sprintf("{{/* Once block */}}%s", content), nil
+	})
+
+	// @verbatim directive - prevent directive processing
+	e.RegisterDirective("verbatim", func(args []string, content string, data interface{}) (string, error) {
+		// Return content as-is without processing
+		return content, nil
+	})
+
+	// @endverbatim directive
+	e.RegisterDirective("endverbatim", func(args []string, content string, data interface{}) (string, error) {
+		return "", nil
+	})
+
+	// @php directive - execute PHP code (not supported, placeholder)
+	e.RegisterDirective("php", func(args []string, content string, data interface{}) (string, error) {
+		return "{{/* PHP code not supported in Fin templates */}}", nil
+	})
+
+	// @endphp directive
+	e.RegisterDirective("endphp", func(args []string, content string, data interface{}) (string, error) {
+		return "", nil
+	})
+
+	// @can directive - check permission
+	e.RegisterDirective("can", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) == 0 {
+			return "", fmt.Errorf("@can requires a permission name")
+		}
+		permission := args[0]
+		return fmt.Sprintf("{{if .Can.%s}}%s{{end}}", permission, content), nil
+	})
+
+	// @cannot directive - check if permission is denied
+	e.RegisterDirective("cannot", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) == 0 {
+			return "", fmt.Errorf("@cannot requires a permission name")
+		}
+		permission := args[0]
+		return fmt.Sprintf("{{if not .Can.%s}}%s{{end}}", permission, content), nil
+	})
+
+	// @canany directive - check if user has any of the permissions
+	e.RegisterDirective("canany", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) == 0 {
+			return "", fmt.Errorf("@canany requires at least one permission")
+		}
+		// Build condition for any permission
+		conditions := make([]string, len(args))
+		for i, perm := range args {
+			conditions[i] = fmt.Sprintf(".Can.%s", perm)
+		}
+		condition := strings.Join(conditions, " or ")
+		return fmt.Sprintf("{{if %s}}%s{{end}}", condition, content), nil
+	})
+
+	// @cannotany directive - check if user lacks all permissions
+	e.RegisterDirective("cannotany", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) == 0 {
+			return "", fmt.Errorf("@cannotany requires at least one permission")
+		}
+		// Build condition for all permissions denied
+		conditions := make([]string, len(args))
+		for i, perm := range args {
+			conditions[i] = fmt.Sprintf("not .Can.%s", perm)
+		}
+		condition := strings.Join(conditions, " and ")
+		return fmt.Sprintf("{{if %s}}%s{{end}}", condition, content), nil
+	})
+
+	// @hasrole directive - check if user has role
+	e.RegisterDirective("hasrole", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) == 0 {
+			return "", fmt.Errorf("@hasrole requires a role name")
+		}
+		role := args[0]
+		return fmt.Sprintf("{{if .HasRole.%s}}%s{{end}}", role, content), nil
+	})
+
+	// @hasanyrole directive - check if user has any of the roles
+	e.RegisterDirective("hasanyrole", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) == 0 {
+			return "", fmt.Errorf("@hasanyrole requires at least one role")
+		}
+		conditions := make([]string, len(args))
+		for i, role := range args {
+			conditions[i] = fmt.Sprintf(".HasRole.%s", role)
+		}
+		condition := strings.Join(conditions, " or ")
+		return fmt.Sprintf("{{if %s}}%s{{end}}", condition, content), nil
+	})
+
+	// @hasallroles directive - check if user has all roles
+	e.RegisterDirective("hasallroles", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) == 0 {
+			return "", fmt.Errorf("@hasallroles requires at least one role")
+		}
+		conditions := make([]string, len(args))
+		for i, role := range args {
+			conditions[i] = fmt.Sprintf(".HasRole.%s", role)
+		}
+		condition := strings.Join(conditions, " and ")
+		return fmt.Sprintf("{{if %s}}%s{{end}}", condition, content), nil
+	})
+
+	// @lang directive - translate text
+	e.RegisterDirective("lang", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) == 0 {
+			return "", fmt.Errorf("@lang requires a translation key")
+		}
+		key := args[0]
+		return fmt.Sprintf("{{.Translate \"%s\"}}", key), nil
+	})
+
+	// @choice directive - translate with pluralization
+	e.RegisterDirective("choice", func(args []string, content string, data interface{}) (string, error) {
+		if len(args) < 2 {
+			return "", fmt.Errorf("@choice requires a translation key and count")
+		}
+		key := args[0]
+		count := args[1]
+		return fmt.Sprintf("{{.TranslatePlural \"%s\" %s}}", key, count), nil
+	})
 }
 
 // RegisterDirective registers a custom Fin template directive
