@@ -2,7 +2,7 @@ package template
 
 import (
 	"fmt"
-	"html/template"
+	htmltemplate "html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -19,9 +19,9 @@ func NewTemplateHelpers(r *http.Request) *TemplateHelpers {
 }
 
 // GetTemplateHelpers returns a map of helper functions for Fin templates
-func GetTemplateHelpers(r *http.Request) template.FuncMap {
+func GetTemplateHelpers(r *http.Request) htmltemplate.FuncMap {
 	helpers := NewTemplateHelpers(r)
-	return template.FuncMap{
+	return htmltemplate.FuncMap{
 		// URL helpers
 		"url":      helpers.URL,
 		"route":    helpers.Route,
@@ -355,13 +355,13 @@ func (th *TemplateHelpers) Currency(amount float64, currency string) string {
 }
 
 // Escape escapes HTML
-func (th *TemplateHelpers) Escape(str string) template.HTML {
-	return template.HTML(template.HTMLEscapeString(str))
+func (th *TemplateHelpers) Escape(str string) htmltemplate.HTML {
+	return htmltemplate.HTML(htmltemplate.HTMLEscapeString(str))
 }
 
 // Raw returns raw HTML
-func (th *TemplateHelpers) Raw(html string) template.HTML {
-	return template.HTML(html)
+func (th *TemplateHelpers) Raw(html string) htmltemplate.HTML {
+	return htmltemplate.HTML(html)
 }
 
 // Old retrieves old input value (from form validation)
@@ -424,14 +424,14 @@ func (th *TemplateHelpers) CSRFToken() string {
 }
 
 // CSRFField returns a CSRF hidden field
-func (th *TemplateHelpers) CSRFField() template.HTML {
+func (th *TemplateHelpers) CSRFField() htmltemplate.HTML {
 	token := th.CSRFToken()
-	return template.HTML(fmt.Sprintf(`<input type="hidden" name="_token" value="%s">`, token))
+	return htmltemplate.HTML(fmt.Sprintf(`<input type="hidden" name="_token" value="%s">`, token))
 }
 
 // MethodField returns a method spoofing field
-func (th *TemplateHelpers) MethodField(method string) template.HTML {
-	return template.HTML(fmt.Sprintf(`<input type="hidden" name="_method" value="%s">`, method))
+func (th *TemplateHelpers) MethodField(method string) htmltemplate.HTML {
+	return htmltemplate.HTML(fmt.Sprintf(`<input type="hidden" name="_method" value="%s">`, method))
 }
 
 // If returns value1 if condition is true, otherwise value2
