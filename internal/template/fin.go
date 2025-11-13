@@ -3,7 +3,7 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"html/template"
+	htmltemplate "html/template"
 	"io"
 	"os"
 	"path/filepath"
@@ -25,6 +25,7 @@ type FinEngine struct {
 	layouts       map[string]*Layout
 	mu            sync.RWMutex
 	compiledCache map[string]*CompiledTemplate
+	helpers       htmltemplate.FuncMap // Template helpers (HTMX, TailwindCSS, etc.)
 }
 
 // DirectiveFunc represents a template directive function
@@ -506,7 +507,14 @@ func (e *FinEngine) Render(templateName string, data interface{}) (string, error
 
 	// Execute template
 	var buf bytes.Buffer
-	tmpl, err := template.New(templateName).Parse(compiled)
+	tmpl := htmltemplate.New(templateName)
+	
+	// Add template helpers (HTMX, TailwindCSS, etc.)
+	if e.helpers != nil {
+		tmpl = tmpl.Funcs(e.helpers)
+	}
+	
+	tmpl, err := tmpl.Parse(compiled)
 	if err != nil {
 		return "", err
 	}
@@ -907,7 +915,12 @@ func (e *FinEngine) renderWithLayout(layoutName string, content string, data int
 	// Create a template set with layout as the main template
 	// The layout template will be the root template (not wrapped in {{define}})
 	// The content template will define {{define "content"}} which the layout references via {{block}}
-	tmpl := template.New(layoutName)
+	tmpl := htmltemplate.New(layoutName)
+	
+	// Add template helpers (HTMX, TailwindCSS, etc.)
+	if e.helpers != nil {
+		tmpl = tmpl.Funcs(e.helpers)
+	}
 
 	// Parse layout first as the main template
 	// This will be the root template that contains {{block "content"}}
