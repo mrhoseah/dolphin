@@ -80,7 +80,7 @@ func GetTemplateHelpers(r *http.Request) template.FuncMap {
 		"method_field": helpers.MethodField,
 		
 		// Conditional helpers
-		"if": helpers.If,
+		"if_helper": helpers.If,
 		"unless": helpers.Unless,
 		"isset": helpers.Isset,
 		
