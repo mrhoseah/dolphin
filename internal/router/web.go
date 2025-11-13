@@ -176,36 +176,102 @@ func renderPage(w http.ResponseWriter, pagePath string) error {
 // setupWebRoutes configures web routes with HTMX support
 // Note: This is called AFTER custom routes, so we skip routes that apps might have already registered
 func (r *Router) setupWebRoutes(router chi.Router) {
-	// Skip default routes if apps have registered custom routes
-	// Apps should register their own home and auth routes before calling SetupRoutes()
-	// We'll only set up optional routes that don't conflict
-
-	// Note: Home and auth routes are now expected to be provided by apps
-	// If you want default Dolphin routes, don't register custom ones
-
-	// Skip all default routes - apps should provide their own
-	// This prevents conflicts when apps register custom routes before SetupRoutes()
-	//
-	// If apps want to use Dolphin's default web routes, they can:
-	// 1. Not register custom routes, or
-	// 2. Register custom routes with different paths
-	_ = router // Keep router parameter for future use
+	// Register default home route if not already registered
+	// Apps can override this by registering their own "/" route before calling SetupRoutes()
+	router.Get("/", r.handleHome)
 }
 
 // handleHome renders the home page with HTMX integration
 func (r *Router) handleHome(w http.ResponseWriter, req *http.Request) {
-	// Try Fin template first, fallback to HTML
+	// Try Fin template first, fallback to built-in welcome page
 	data := map[string]interface{}{
 		"Version": version.GetVersion(),
 		"AppName": "Dolphin Framework",
 	}
 
-	if err := r.renderFin(w, req, "pages/home", data); err != nil {
-		// Fallback to traditional HTML rendering
-		if err := renderPage(w, "ui/views/pages/home.html"); err != nil {
-			http.Error(w, "Home view not found", http.StatusInternalServerError)
-		}
+	// Try to render Fin template (must include .fin.html extension)
+	if err := r.renderFin(w, req, "pages/home.fin.html", data); err != nil {
+		// Fallback to built-in welcome page
+		r.renderWelcomePage(w, req, data)
 	}
+}
+
+// renderWelcomePage renders a built-in welcome page
+func (r *Router) renderWelcomePage(w http.ResponseWriter, req *http.Request, data map[string]interface{}) {
+	appName := "Dolphin Framework"
+	if name, ok := data["AppName"].(string); ok {
+		appName = name
+	}
+	version := "1.0.0"
+	if v, ok := data["Version"].(string); ok {
+		version = v
+	}
+
+	html := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Welcome to %s</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+		<div class="text-center mb-12">
+			<div class="text-6xl mb-4">🐬</div>
+			<h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Welcome to %s</h1>
+			<p class="text-xl text-gray-600 mb-2">Version %s</p>
+			<p class="text-lg text-gray-500">A modern, full-stack Go web framework</p>
+		</div>
+
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+			<div class="bg-white rounded-lg shadow-lg p-6">
+				<div class="text-3xl mb-3">⚡</div>
+				<h3 class="text-xl font-semibold text-gray-900 mb-2">Fast & Efficient</h3>
+				<p class="text-gray-600">Built with Go for high performance and low memory footprint</p>
+			</div>
+			<div class="bg-white rounded-lg shadow-lg p-6">
+				<div class="text-3xl mb-3">🎨</div>
+				<h3 class="text-xl font-semibold text-gray-900 mb-2">Modern UI</h3>
+				<p class="text-gray-600">HTMX and TailwindCSS integrated by default for rapid development</p>
+			</div>
+			<div class="bg-white rounded-lg shadow-lg p-6">
+				<div class="text-3xl mb-3">🔧</div>
+				<h3 class="text-xl font-semibold text-gray-900 mb-2">Full-Stack</h3>
+				<p class="text-gray-600">Everything you need: routing, auth, database, queues, and more</p>
+			</div>
+		</div>
+
+		<div class="bg-white rounded-lg shadow-lg p-8">
+			<h2 class="text-2xl font-bold text-gray-900 mb-4">Quick Start</h2>
+			<div class="space-y-4">
+				<div>
+					<h3 class="text-lg font-semibold text-gray-800 mb-2">1. Create your views</h3>
+					<p class="text-gray-600">Create <code class="bg-gray-100 px-2 py-1 rounded">views/pages/home.fin.html</code> to customize this page</p>
+				</div>
+				<div>
+					<h3 class="text-lg font-semibold text-gray-800 mb-2">2. Add routes</h3>
+					<p class="text-gray-600">Register your routes before calling <code class="bg-gray-100 px-2 py-1 rounded">router.SetupRoutes()</code></p>
+				</div>
+				<div>
+					<h3 class="text-lg font-semibold text-gray-800 mb-2">3. Build your app</h3>
+					<p class="text-gray-600">Use Dolphin's powerful features: Fin templates, authentication, database ORM, and more</p>
+				</div>
+			</div>
+		</div>
+
+		<div class="mt-8 text-center">
+			<a href="/health" class="text-blue-600 hover:text-blue-800 mr-4">Health Check</a>
+			<a href="/swagger/index.html" class="text-blue-600 hover:text-blue-800">API Documentation</a>
+		</div>
+	</div>
+</body>
+</html>`, appName, appName, version)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(html))
 }
 
 // handleLoginPage renders the login page

@@ -6,7 +6,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -56,6 +60,7 @@ Examples:
 	}
 	serveCmd.Flags().IntP("port", "p", 8080, "Port to run the server on")
 	serveCmd.Flags().StringP("host", "H", "localhost", "Host to bind the server to")
+	serveCmd.Flags().String("asset-cmd", "", "Optional asset build command to run before and alongside the server")
 
 	// Migration commands
 	var migrateCmd = &cobra.Command{
@@ -436,6 +441,15 @@ Examples:
 		Run:   keyGenerate,
 	}
 
+	// Update command
+	var updateCmd = &cobra.Command{
+		Use:   "update",
+		Short: "Update the Dolphin CLI to the latest version",
+		Long:  "Updates the global Dolphin CLI installation by running 'go install' from the dolphin directory",
+		Run:   updateCLI,
+	}
+	updateCmd.Flags().BoolP("force", "f", false, "Force update even if already up to date")
+
 	// Add commands to root
 	rootCmd.AddCommand(serveCmd)
 
@@ -498,6 +512,9 @@ Examples:
 	// Key generation
 	rootCmd.AddCommand(keyGenerateCmd)
 
+	// Update command
+	rootCmd.AddCommand(updateCmd)
+
 	// Initialize configuration
 	var err error
 	cfg, err = config.Load()
@@ -513,6 +530,7 @@ Examples:
 func serve(cmd *cobra.Command, args []string) {
 	port, _ := cmd.Flags().GetInt("port")
 	host, _ := cmd.Flags().GetString("host")
+	assetCmd, _ := cmd.Flags().GetString("asset-cmd")
 
 	// Initialize logger
 	logger := logger.New(cfg.Log.Level, cfg.Log.Format)
@@ -537,6 +555,17 @@ func serve(cmd *cobra.Command, args []string) {
 		}
 		if dr := dbg.Router(); dr != nil {
 			r.Mount("/debug", dr)
+		}
+	}
+
+	var assetProcess *exec.Cmd
+	if assetCmd != "" {
+		logger.Info("Starting asset build command", zap.String("command", assetCmd))
+		proc, err := startAssetProcess(assetCmd)
+		if err != nil {
+			logger.Error("Failed to start asset build command", zap.String("command", assetCmd), zap.Error(err))
+		} else {
+			assetProcess = proc
 		}
 	}
 
@@ -575,7 +604,57 @@ func serve(cmd *cobra.Command, args []string) {
 		logger.Fatal("Server forced to shutdown", zap.Error(err))
 	}
 
+	if assetProcess != nil {
+		stopAssetProcess(assetProcess)
+	}
+
 	logger.Info("Server exited")
+}
+
+func startAssetProcess(command string) (*exec.Cmd, error) {
+	cmd := buildShellCommand(command)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = os.Environ()
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	return cmd, nil
+}
+
+func stopAssetProcess(cmd *exec.Cmd) {
+	if cmd.Process == nil {
+		return
+	}
+
+	// Attempt graceful shutdown first
+	if runtime.GOOS == "windows" {
+		_ = cmd.Process.Kill()
+	} else {
+		_ = cmd.Process.Signal(os.Interrupt)
+		done := make(chan struct{})
+		go func() {
+			_ = cmd.Wait()
+			close(done)
+		}()
+
+		select {
+		case <-done:
+		case <-time.After(3 * time.Second):
+			_ = cmd.Process.Kill()
+		}
+	}
+
+	if cmd.ProcessState == nil {
+		_ = cmd.Wait()
+	}
+}
+
+func buildShellCommand(command string) *exec.Cmd {
+	if runtime.GOOS == "windows" {
+		return exec.Command("cmd", "/C", command)
+	}
+	return exec.Command("sh", "-c", command)
 }
 
 func migrate(cmd *cobra.Command, args []string) {
@@ -1111,4 +1190,69 @@ func maintenanceStatus(cmd *cobra.Command, args []string) {
 		fmt.Println("Status: 🟢 DISABLED")
 		fmt.Println("Application is running normally")
 	}
+}
+
+func updateCLI(cmd *cobra.Command, args []string) {
+	force, _ := cmd.Flags().GetBool("force")
+	_ = force // Force flag is for future use
+
+	// Get the directory where dolphin source is located
+	// Try to find dolphin directory in common locations
+	homeDir, _ := os.UserHomeDir()
+	possiblePaths := []string{
+		filepath.Join(homeDir, "dev", "dolphin"),
+		filepath.Join(homeDir, "go", "src", "github.com", "mrhoseah", "dolphin"),
+		filepath.Join(homeDir, "projects", "dolphin"),
+		".",
+	}
+
+	var dolphinDir string
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(filepath.Join(path, "cmd", "dolphin", "main.go")); err == nil {
+			if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
+				// Check if go.mod contains module github.com/mrhoseah/dolphin
+				modContent, err := os.ReadFile(filepath.Join(path, "go.mod"))
+				if err == nil && strings.Contains(string(modContent), "module github.com/mrhoseah/dolphin") {
+					dolphinDir = path
+					break
+				}
+			}
+		}
+	}
+
+	// If still not found, try current directory
+	if dolphinDir == "" {
+		if _, err := os.Stat("cmd/dolphin/main.go"); err == nil {
+			if _, err := os.Stat("go.mod"); err == nil {
+				dolphinDir = "."
+			}
+		}
+	}
+
+	if dolphinDir == "" {
+		log.Fatal("Cannot find dolphin source directory. Please run 'dolphin update' from the dolphin source directory or specify the path.")
+	}
+
+	// Get absolute path
+	absPath, err := filepath.Abs(dolphinDir)
+	if err != nil {
+		log.Fatal("Failed to get absolute path:", err)
+	}
+
+	fmt.Println("🔄 Updating Dolphin CLI...")
+	fmt.Printf("   Source directory: %s\n", absPath)
+
+	// Run go install from the cmd/dolphin directory
+	installPath := filepath.Join(absPath, "cmd", "dolphin")
+	updateCmd := exec.Command("go", "install", ".")
+	updateCmd.Dir = installPath
+	updateCmd.Stdout = os.Stdout
+	updateCmd.Stderr = os.Stderr
+
+	if err := updateCmd.Run(); err != nil {
+		log.Fatal("Failed to update Dolphin CLI:", err)
+	}
+
+	fmt.Println("✅ Dolphin CLI updated successfully!")
+	fmt.Println("   Run 'dolphin --help' to verify")
 }

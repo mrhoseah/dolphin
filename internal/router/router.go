@@ -495,8 +495,8 @@ func (r *Router) renderErrorPage(w http.ResponseWriter, req *http.Request, statu
 		"Environment": r.app.Config().App.Environment,
 	}
 
-	// Try to render error page template
-	html, err := r.finEngine.Render("errors/error", errorData)
+	// Try to render error page template (must include .fin.html extension)
+	html, err := r.finEngine.Render("errors/error.fin.html", errorData)
 	if err != nil {
 		// Fallback to built-in error page
 		r.renderBuiltInErrorPage(w, req, statusCode, title, message, errorData)
